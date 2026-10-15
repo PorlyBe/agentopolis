@@ -75,11 +75,36 @@ export function createCity(api) {
     // roof furniture: a water tank or an antenna mast, a chimney
     const rx = b.x0 + 26 + b.seed % Math.max(1, b.w - 60)
     if (b.seed % 2) { R(c, '#6a5040', rx, top - 20, 16, 14); R(c, '#8a6a50', rx, top - 20, 16, 2); R(c, '#4a3a2c', rx + 2, top - 6, 2, 3); R(c, '#4a3a2c', rx + 12, top - 6, 2, 3) }
-    R(c, '#5a5f6a', b.x0 + b.w - 18, top - 26, 2, 23); R(c, '#5a5f6a', b.x0 + b.w - 22, top - 18, 10, 1)
+    antenna(c, b.x0 + b.w - 18, top, (b.seed >>> 3) % 3)
     R(c, '#7a7068', b.x0 + 10, top - 12, 8, 9)
     if (b.quiet) { c.fillStyle = 'rgba(28,32,52,.28)'; c.fillRect(b.x0 - 2, top - 30, b.w + 4, b.h + 30) }
     cache.set(k, cv); if (cache.size > 60) cache.delete(cache.keys().next().value)
     return cv
+  }
+
+  // a roof antenna whose tip sits at (x, top - 28), where the live layer blinks its CI beacon: a tapered lattice mast,
+  // a TV aerial with guy wires, or a dish on a short mast with a whip
+  function antenna(c, x, top, kind) {
+    const steel = '#5a5f6a', lite = '#7c828e', dark = '#3e424a'
+    R(c, dark, x - 3, top - 4, 8, 1); R(c, steel, x - 2, top - 5, 6, 1)
+    if (kind === 0) {
+      for (let y = top - 26; y < top - 5; y++) {
+        const t = (y - (top - 26)) / 21, hw = Math.round(1 + t * 2.5)
+        R(c, steel, x + 1 - hw, y, 1, 1); R(c, steel, x + hw, y, 1, 1)
+        if ((y - top) % 4 === 0) R(c, dark, x + 2 - hw, y, hw * 2 - 2, 1)
+        else if ((y - top) % 4 === 2) R(c, dark, x + 1 + (((y - top) >> 2) % 2 ? -1 : 1) * (hw - 1), y, 1, 1)
+      }
+      R(c, lite, x, top - 27, 2, 1); R(c, dark, x - 2, top - 16, 6, 1)
+    } else if (kind === 1) {
+      for (let i = 0; i < 16; i++) { const o = Math.round(i * 6 / 15); R(c, '#4a4e57', x - 1 - o, top - 20 + i, 1, 1); R(c, '#4a4e57', x + 2 + o, top - 20 + i, 1, 1) }
+      R(c, steel, x, top - 27, 2, 22); R(c, lite, x, top - 27, 1, 22)
+      for (const [dy, w] of [[-23, 13], [-19, 10], [-15, 7]]) { R(c, steel, x + 1 - (w >> 1), top + dy, w, 1); R(c, lite, x + 1 - (w >> 1), top + dy, 1, 2) }
+    } else {
+      R(c, steel, x, top - 27, 1, 22); R(c, lite, x + 1, top - 14, 1, 9)
+      R(c, dark, x - 5, top - 12, 6, 1); R(c, dark, x - 3, top - 11, 2, 6)
+      for (const [dx, dy, w] of [[-11, -20, 3], [-12, -19, 5], [-12, -18, 6], [-11, -17, 7], [-10, -16, 7], [-8, -15, 6], [-6, -14, 4]]) R(c, dy < -17 ? lite : '#c8ccd4', x + dx, top + dy, w, 1)
+      R(c, dark, x - 9, top - 20, 1, 4); R(c, dark, x - 10, top - 21, 2, 1)
+    }
   }
 
   // ---------- skyline (far, hazy, parallax) ----------
