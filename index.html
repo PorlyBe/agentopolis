@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agentopolis</title>
+<style>
+  :root {
+    --bg: #14151c; --panel: #1e2029; --ink: #ecebf3; --muted: #9897a8; --line: #31333f;
+    --tool: #5fd17a; --think: #63b3f0; --wait: #f4c64f; --deleg: #b996f5; --idle: #84829a;
+    /* the HUD: every floating card shares these */
+    --card: rgba(17, 18, 26, .88); --card-hi: rgba(255, 255, 255, .07); --card-line: rgba(255, 255, 255, .1);
+    --radius: 10px; --radius-s: 7px; --shadow: 0 8px 28px rgba(0, 0, 0, .45); --blur: blur(10px) saturate(1.2);
+    --gut: 12px; --fs: 12px; --fs-s: 11px; --fs-xs: 10px; --btn: 30px;
+    --font: ui-monospace, SFMono-Regular, Menlo, monospace;
+    --lift: 0px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--ink); font: 13px/1.4 var(--font); }
+  body { display: flex; flex-direction: column; }
+  button { font-family: var(--font); }
+  .card { background: var(--card); border: 1px solid var(--card-line); border-radius: var(--radius); box-shadow: var(--shadow);
+    -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur); }
+  .hbtn { width: var(--btn); height: var(--btn); display: grid; place-items: center; padding: 0; border: 0; border-radius: var(--radius-s);
+    background: transparent; color: var(--ink); font: 600 14px/1 var(--font); cursor: pointer; }
+  .hbtn:hover { background: var(--card-hi); }
+  .hbtn:active { background: rgba(255, 255, 255, .12); }
+  .hlbl { color: var(--muted); font-size: var(--fs-xs); letter-spacing: 1.5px; text-transform: uppercase; }
+
+  header { display: flex; gap: 14px; align-items: center; flex: none; height: 46px; padding: 0 var(--gut) 0 16px; z-index: 3;
+    background: #15161e; border-bottom: 1px solid var(--card-line); box-shadow: 0 2px 14px rgba(0, 0, 0, .35); }
+  header > * { flex: none; }
+  header h1 { font-size: 12px; margin: 0; letter-spacing: 1.5px; white-space: nowrap; }
+  #conn { color: var(--muted); font-size: var(--fs-s); white-space: nowrap; }
+  #conn::before { content: ''; display: inline-block; width: 7px; height: 7px; border-radius: 50%;
+    background: var(--idle); margin-right: 6px; vertical-align: 0; }
+  #conn.live::before { background: var(--tool); box-shadow: 0 0 6px var(--tool); }
+  .hsep { width: 1px; height: 20px; background: var(--card-line); }
+  #counts { display: flex; gap: 6px; }
+  .badge { display: flex; align-items: center; gap: 5px; height: 22px; padding: 0 8px; border-radius: 999px; font-size: var(--fs-s);
+    color: var(--muted); background: rgba(255, 255, 255, .05); border: 1px solid var(--card-line); white-space: nowrap; }
+  .badge b { color: var(--ink); }
+  #helpBtn { width: 26px; height: 26px; border-radius: 50%; border: 1px solid var(--card-line); font-size: 12px; }
+  #helpBtn.on { background: var(--card-hi); border-color: var(--muted); }
+  #help { position: absolute; top: 8px; right: var(--gut); z-index: 8; width: 330px; padding: 12px 14px; display: none; font-size: var(--fs); }
+  #help.on { display: block; }
+  #help .hlbl { margin: 0 0 6px; }
+  #help .hlbl + .hlbl, #help ul + .hlbl { margin-top: 12px; }
+  #help ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+  #help li { display: flex; gap: 8px; align-items: baseline; color: var(--muted); }
+  #help li b { color: var(--ink); font-weight: 600; white-space: nowrap; }
+  #help .dot { flex: none; width: 8px; height: 8px; border-radius: 2px; transform: translateY(-1px); }
+  #help .k { flex: none; min-width: 14px; text-align: center; }
+  @media (max-width: 900px) { #counts, header .hsep { display: none; } }
+  @media (max-width: 640px) { #conn { font-size: 0; } }
+
+  #wrap { position: relative; flex: 1; min-height: 0; overflow: hidden; }
+  /* features put their DOM here (the tower's canvas sits under it); it lets clicks through except on elements that opt back in */
+  #hud { position: absolute; inset: 0; pointer-events: none; z-index: 1; }
+  #hud > * { pointer-events: auto; }
+  #hud > #topstack { position: absolute; top: var(--gut); left: 50%; transform: translateX(-50%); z-index: 6; pointer-events: none;
+    display: flex; flex-direction: column; align-items: center; gap: 8px; max-width: calc(100% - 140px); }
+  #topstack > * { pointer-events: auto; max-width: 100%; }
+  #zoom { position: absolute; top: var(--gut); right: var(--gut); z-index: 4; display: flex; flex-direction: column; padding: 4px; gap: 2px;
+    transition: right .25s; }
+  #zoom .grp { display: flex; flex-direction: column; gap: 2px; }
+  #zoom .grp:empty { display: none; }
+  #zoom .grp + .grp { border-top: 1px solid var(--card-line); padding-top: 3px; margin-top: 1px; }
+  #zoom .hbtn { font-size: 15px; }
+  #tip { position: fixed; pointer-events: none; z-index: 9; max-width: 360px; display: none; padding: 9px 11px; font-size: var(--fs); }
+  #tip .t { font-weight: 700; margin-bottom: 3px; }
+  #tip .m { color: var(--muted); }
+  #tip .s { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 6px; }
+  #toast { display: none; padding: 8px 14px; font-size: var(--fs); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #empty { position: absolute; inset: 0; display: none; place-items: center; color: var(--muted); }
+</style>
+</head>
+<body>
+<header>
+  <h1>▣ AGENTOPOLIS</h1>
+  <span id="conn">connecting</span>
+  <i class="hsep"></i>
+  <span id="counts">
+    <span class="badge" title="Claude sessions open"><b id="nSessions">0</b> sessions</span>
+    <span class="badge" title="Subagents at work right now"><b id="nAgents">0</b> agents</span>
+  </span>
+  <button id="helpBtn" class="hbtn" title="What the colours mean">?</button>
+</header>
+<div id="wrap">
+  <div id="hud">
+    <div id="topstack"><div id="toast" class="card"></div></div>
+    <div id="zoom" class="card">
+      <div class="grp" id="tbZoom"><button class="hbtn" id="zoomIn" title="Zoom in (+)">+</button><button class="hbtn" id="zoomOut" title="Zoom out (−)">−</button><button class="hbtn" id="zoomFit" title="Fit to window (0)">⤢</button></div>
+      <div class="grp" id="tbReplay"></div>
+      <div class="grp" id="tbAlerts"></div>
+      <div class="grp" id="tbPhoto"></div>
+    </div>
+    <div id="help" class="card" role="dialog" aria-label="Help">
+      <div class="hlbl">What the colours mean</div>
+      <ul>
+        <li><i class="dot" style="background:var(--tool)"></i><span><b>using a tool</b> — running a command, editing, reading</span></li>
+        <li><i class="dot" style="background:var(--think)"></i><span><b>thinking</b> — the model is writing its next step</span></li>
+        <li><i class="dot" style="background:var(--deleg)"></i><span><b>delegating</b> — subagents are doing the work</span></li>
+        <li><i class="dot" style="background:var(--wait)"></i><span><b>your turn / done</b> — finished, waiting for you</span></li>
+        <li><i class="dot" style="background:#f29a4e"></i><span><b>building</b> — a build or CI run is going</span></li>
+        <li><i class="dot" style="background:#ef5a5a"></i><span><b>needs you</b> — a permission or a question</span></li>
+        <li><i class="dot" style="background:var(--idle)"></i><span><b>idle</b> — nothing for 5 minutes</span></li>
+      </ul>
+      <div class="hlbl">Tips</div>
+      <ul>
+        <li><span class="k">✥</span><span><b>drag</b> to pan, <b>scroll</b> or <b>+ − 0</b> to zoom</span></li>
+        <li><span class="k">▸</span><span><b>click a session</b> to open it in Orca</span></li>
+        <li><span class="k">▸</span><span><b>click a subagent</b> for its live transcript</span></li>
+        <li><span class="k">▸</span><span><b>double-click</b> anyone to follow them</span></li>
+        <li><span class="k">▸</span><span><b>header chips</b> fly to a floor, 👁 follows</span></li>
+        <li><span class="k">⎋</span><span><b>Esc</b> closes panels · <b>space</b> plays/pauses a replay</span></li>
+      </ul>
+    </div>
+  </div>
+  <div id="empty">No Claude sessions running.</div>
+</div>
+<div id="tip" class="card"></div>
+<script type="module" src="/app/main.js"></script>
+</body>
+</html>
