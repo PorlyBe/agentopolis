@@ -43,6 +43,10 @@ export function today() {
 }
 export function holidayOf(d = today()) {
   if (pinned === 'none' && !fixed && !DEMO) return null
+  return calendarOf(d)
+}
+// the calendar's holiday on d, whatever themes.js pinned
+export function calendarOf(d) {
   const y = d.getFullYear(), md = (d.getMonth() + 1) * 100 + d.getDate()
   for (const h of HOLIDAYS) {
     if (h.on) {

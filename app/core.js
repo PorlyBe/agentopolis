@@ -39,7 +39,7 @@ const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '
 const hooks = { sync: [], live: [] }
 const run = (name, ...args) => { for (const fn of hooks[name]) { try { fn(...args) } catch (e) { console.error(`[${name}]`, e) } } }
 
-let sessions = [], owner = 'You', live = true, lastLive = null, reserveBottom = 0
+let sessions = [], owner = 'You', live = true, lastLive = null, reserveBottom = 0, settings = null, pollTimer = 0
 function sync(data) {
   sessions = data.sessions
   owner = data.owner || owner
@@ -67,6 +67,9 @@ const api = {
   get reserveBottom() { return reserveBottom }, set reserveBottom(v) { reserveBottom = v },
   get sessions() { return sessions },
   get owner() { return owner },
+  // GET /api/settings as it was at startup ({ effective, saved, defaults, options }); the settings panel replaces it
+  get settings() { return settings }, set settings(v) { settings = v },
+  refresh: () => { if (polling) pollAgain = true; else { clearTimeout(pollTimer); poll() } },   // poll now, e.g. after a setting changed
   // replay: stop polling and push snapshots yourself (same shape as /api/state); resumeLive() goes back to live
   get live() { return live },
   get lastSnapshot() { return lastLive },
@@ -85,20 +88,24 @@ const api = {
   on(name, fn) { if (!hooks[name]) throw new Error('unknown hook ' + name); hooks[name].push(fn) },
 }
 
+let polling = false, pollAgain = false
 async function poll() {
   const conn = document.getElementById('conn')
-  if (!live) { setTimeout(poll, 1500); return }
-  try {
-    const r = await fetch('/api/state', { cache: 'no-store' })
-    const data = await r.json()
-    if (!live) { setTimeout(poll, 1500); return }   // replay began while this poll was in flight
-    lastLive = data; sync(data); conn.textContent = 'live'; conn.className = 'live'
-  } catch (e) { conn.textContent = 'server offline'; conn.className = ''; if (!(e instanceof TypeError)) console.error(e) }
-  setTimeout(poll, 1500)
+  if (live) {
+    polling = true
+    try {
+      const r = await fetch('/api/state', { cache: 'no-store' })
+      const data = await r.json()
+      if (live) { lastLive = data; sync(data); conn.textContent = 'live'; conn.className = 'live' }   // else replay began while this poll was in flight
+    } catch (e) { conn.textContent = 'server offline'; conn.className = ''; if (!(e instanceof TypeError)) console.error(e) }
+    polling = false
+  }
+  pollTimer = setTimeout(poll, pollAgain ? 0 : 1500); pollAgain = false
 }
 
 export async function start(features) {
   try { await assetsReady } catch (src) { document.getElementById('conn').textContent = 'missing asset ' + src; return }
+  try { const r = await fetch('/api/settings', { cache: 'no-store' }); if (r.ok) settings = await r.json() } catch {}
   for (const [name, init] of features) { try { await init(api) } catch (e) { console.error(`feature ${name} failed to start`, e) } }
   poll()
 }

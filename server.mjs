@@ -12,15 +12,11 @@ const flag = (name, dflt) => {
   return i === -1 ? dflt : args[i + 1]
 }
 const PORT = Number(flag('port', 4747))
-const OWNER = flag('name', 'You')   // the person in the CEO office
-const THEME = flag('theme', 'auto') // the tower's skin (app/tower/features/themes.js); ?theme= overrides it
-const AVATAR = flag('avatar', '')  // the user's look, "hair=bun,suit=navy,skin=3,pet=cat" (app/tower/features/avatar.js)
 const DEMO = args.includes('--demo') // synthetic data only: no transcripts, git, gh or network
 const HOST = '127.0.0.1'
 const PROJECTS = path.join(os.homedir(), '.claude', 'projects')
 const LIVE_SESSIONS = path.join(os.homedir(), '.claude', 'sessions') // <pid>.json per running Claude
 const ORCA = process.env.ORCA_CLI_BIN_DIR ? path.join(process.env.ORCA_CLI_BIN_DIR, 'orca') : 'orca'
-const SESSION_WINDOW_MS = Number(flag('window-min', 30)) * 60_000
 const AGENT_LINGER_MS = 45_000 // a finished subagent stays this long so it can walk out
 const AGENT_STALE_MS = 10 * 60_000 // an unfinished subagent silent this long is dropped
 const WORKING_STALE_MS = 5 * 60_000
@@ -36,6 +32,89 @@ const parseCache = new Map() // file -> { mtimeMs, size, result }
 //   snapshot(snap) -> mutate the whole snapshot after it is built (e.g. a cross-session feed).
 //   routes: { '/api/<name>/...': (req, res, url) => void } matched by path prefix.
 const ROOT = path.dirname(new URL(import.meta.url).pathname)
+
+// Settings: saved (~/.agentopolis/settings.json, written by the page's settings panel) > CLI flag > built-in default.
+// The flags are only startup defaults; a null in a POST drops the saved value, back to the flag's. --demo keeps them in memory.
+const OPTIONS = await import(path.join(ROOT, 'app', 'options.js'))
+const SETTINGS_FILE = path.join(os.homedir(), '.agentopolis', 'settings.json')
+const DEFAULTS = {
+  name: flag('name', 'You'),           // the person in the CEO office
+  theme: flag('theme', 'auto'),        // the tower's skin (app/tower/features/themes.js); ?theme= overrides it
+  avatar: flag('avatar', ''),          // the user's look, "hair=bun,suit=navy,skin=3,pet=cat" (app/tower/features/avatar.js)
+  disabled: [],                        // tower features that don't start (app/options.js FEATURE_GROUPS)
+  windowMin: Number(flag('window-min', 30)),
+  updateCheck: true,                   // ask GitHub whether main has new commits (server/update-check.mjs)
+}
+const VALIDATE = {
+  name: v => typeof v === 'string' && v.trim() && v.trim().length <= 40 && !/[\u0000-\u001f\u007f]/.test(v) ? v.trim() : Error('name: 1–40 characters'),
+  theme: v => {
+    if (typeof v !== 'string' || v.length > 60) return Error('theme: a name like cyberpunk+halloween')
+    const t = OPTIONS.parseTheme(v)
+    return t.bad.length ? Error(`theme: unknown ${t.bad.join(', ')}`) : t.name
+  },
+  avatar: v => {
+    const pairs = typeof v === 'string' ? v.split(',').filter(Boolean).map(p => p.split('=')) : v && typeof v === 'object' && !Array.isArray(v) ? Object.entries(v) : null
+    if (!pairs) return Error('avatar: "hair=bun,suit=navy" or an object')
+    const look = {}
+    for (const [k, val] of pairs) {
+      if (!Object.hasOwn(OPTIONS.AVATAR, k) || !OPTIONS.AVATAR[k].includes(String(val))) return Error(`avatar: unknown ${k}=${val}`)
+      look[k] = String(val)
+    }
+    return Object.keys(OPTIONS.AVATAR).filter(k => look[k]).map(k => `${k}=${look[k]}`).join(',')
+  },
+  disabled: v => {
+    if (!Array.isArray(v)) return Error('disabled: an array of feature names')
+    const bad = v.filter(f => !OPTIONS.FEATURE_NAMES.includes(f))
+    return bad.length ? Error(`disabled: unknown ${bad.slice(0, 5).join(', ')}`) : OPTIONS.FEATURE_NAMES.filter(f => v.includes(f))
+  },
+  windowMin: v => Number.isInteger(v) && v >= 5 && v <= 240 ? v : Error('windowMin: a whole number of minutes, 5–240'),
+  updateCheck: v => typeof v === 'boolean' ? v : Error('updateCheck: true or false'),
+}
+let saved = {}
+if (!DEMO) {
+  let file = {}
+  try { file = JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf8')) || {} } catch {}
+  for (const [k, v] of Object.entries(file)) { const ok = VALIDATE[k]?.(v); if (ok !== undefined && !(ok instanceof Error)) saved[k] = ok }
+}
+const effective = () => ({ ...DEFAULTS, ...saved })
+const settingsBody = () => ({
+  effective: effective(), saved, defaults: DEFAULTS,
+  options: { skins: OPTIONS.SKINS, holidays: OPTIONS.HOLIDAY_KEYS, avatar: OPTIONS.AVATAR, features: OPTIONS.FEATURE_GROUPS, windowMin: [5, 240] },
+  file: DEMO ? null : SETTINGS_FILE.replace(os.homedir(), '~'),
+})
+
+async function postSettings(req, res) {
+  if (req.headers['sec-fetch-site'] !== 'same-origin') return send(res, 403, { error: 'same-origin only' })
+  let body = ''
+  for await (const chunk of req) { body += chunk; if (body.length > 8000) return send(res, 413, { error: 'too large' }) }
+  let patch
+  try { patch = JSON.parse(body) } catch { return send(res, 400, { error: 'not JSON' }) }
+  if (!patch || typeof patch !== 'object' || Array.isArray(patch)) return send(res, 400, { error: 'expected an object' })
+  const next = { ...saved }
+  for (const [k, v] of Object.entries(patch)) {
+    if (!VALIDATE[k]) return send(res, 400, { error: `unknown setting ${k}` })
+    if (v === null) { delete next[k]; continue }
+    const ok = VALIDATE[k](v)
+    if (ok instanceof Error) return send(res, 400, { error: ok.message })
+    next[k] = ok
+  }
+  if (!DEMO) {
+    try {
+      fs.mkdirSync(path.dirname(SETTINGS_FILE), { recursive: true })
+      const tmp = `${SETTINGS_FILE}.${process.pid}.tmp`
+      fs.writeFileSync(tmp, JSON.stringify(next, null, 1))
+      fs.renameSync(tmp, SETTINGS_FILE)
+    } catch (e) { return send(res, 500, { error: `could not save: ${e.message}` }) }
+  }
+  saved = next
+  send(res, 200, settingsBody())
+}
+const updates = DEMO ? null : (await import(path.join(ROOT, 'server', 'update-check.mjs'))).updateChecker(ROOT, () => effective().updateCheck)
+async function postUpdateCheck(req, res) {
+  if (req.headers['sec-fetch-site'] !== 'same-origin') return send(res, 403, { error: 'same-origin only' })
+  const r = await updates.checkNow()
+  send(res, r.retryIn ? 429 : 200, r)
+}
 const features = []
 const seenLive = new Set(), endedAt = new Map() // session id -> when this server first saw its process gone
 const demo = DEMO ? await import(path.join(ROOT, 'server', 'demo.mjs')) : null
@@ -245,7 +324,8 @@ function send(res, status, obj) {
 }
 
 function snapshot() {
-  if (DEMO) return { ...demo.generate(Date.now()), owner: OWNER, theme: THEME, avatar: AVATAR }
+  const { name: owner, theme, avatar, windowMin } = effective()
+  if (DEMO) return { ...demo.generate(Date.now()), owner, theme, avatar, update: { status: 'off', ahead: 0, commits: [], checkedAt: null, branch: null } }
   const now = Date.now()
   const sessions = []
   const live = liveSessions()
@@ -264,7 +344,7 @@ function snapshot() {
       const agents = collectAgents(sessionDir, now)
       const lastAgent = Math.max(0, ...agents.map(a => a.lastActivity))
       const last = Math.max(st.mtimeMs, lastAgent)
-      if (now - last > SESSION_WINDOW_MS) continue
+      if (now - last > windowMin * 60_000) continue
       if (live.has(id)) { seenLive.add(id); endedAt.delete(id) }
       else if (!seenLive.has(id)) continue
       else if (now - (endedAt.get(id) ?? endedAt.set(id, now).get(id)) > ENDED_GRACE_MS) continue
@@ -292,7 +372,7 @@ function snapshot() {
     }
   }
   sessions.sort((a, b) => a.id.localeCompare(b.id))
-  const snap = { now, owner: OWNER, theme: THEME, avatar: AVATAR, sessions }
+  const snap = { now, owner, theme, avatar, sessions, update: updates.state() }
   for (const f of features) if (typeof f.snapshot === 'function') { try { f.snapshot(snap) } catch (e) { console.error(`[${f.name}.snapshot]`, e.message) } }
   return snap
 }
@@ -307,9 +387,12 @@ const server = http.createServer((req, res) => {
     res.writeHead(403).end('forbidden')
     return
   }
+  if (req.url === '/api/settings' && req.method === 'GET') return send(res, 200, settingsBody())
+  if (req.url === '/api/settings' && req.method === 'POST') return void postSettings(req, res)
   if (DEMO && req.url.startsWith('/api/') && req.url !== '/api/state') return send(res, 404, { error: 'Not available in the demo' })
   if (req.url === '/api/focus' && req.method === 'POST') return void focus(req, res)
   if (req.url === '/api/open' && req.method === 'POST') return void openExternal(req, res)
+  if (req.url === '/api/update/check' && req.method === 'POST') return void postUpdateCheck(req, res)
   if (req.url === '/api/state') {
     res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' })
     res.end(JSON.stringify(snapshot()))

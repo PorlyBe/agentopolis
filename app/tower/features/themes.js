@@ -1,10 +1,11 @@
 // themes: the tower's skin. A theme is a skin (materials for building.js and city.js, a tint over the finished frame and
 // its own decor) plus a holiday from holidays.js's calendar, whose decor holidays.js and ambience.js keep drawing.
-// --theme <name> on the server (snap.theme), ?theme=<name> overrides it; ?demo=themes cycles them every 8 s.
+// The ⚙ settings panel or --theme <name> on the server (snap.theme); ?theme=<name> overrides both; ?demo=themes cycles them every 8 s.
 // Names: auto (classic + the date's holiday), classic, cyberpunk, cottage, brutalist, a holiday key (halloween, christmas,
 // newyear, valentine, lunar, hanami, goldenweek, tanabata, obon, tsukimi: classic + that holiday) or skin+holiday.
 import { setPalette, BW, SHAFT, WALL, SLAB } from '../building.js'
 import { HOLIDAYS, pinHoliday } from './holidays.js'
+import { parseTheme } from '../../options.js'
 
 const R = (c, col, x, y, w = 1, h = 1) => { c.fillStyle = col; c.fillRect(Math.round(x), Math.round(y), w, h) }
 const pool = (c, x, y, r, rgb, a) => { const g = c.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, `rgba(${rgb},${a})`); g.addColorStop(1, `rgba(${rgb},0)`); c.fillStyle = g; c.fillRect(x - r, y - r, 2 * r, 2 * r) }
@@ -71,20 +72,7 @@ const SKINS = {
   },
 }
 const HOLI = new Map(HOLIDAYS.map(h => [h.key, h]))
-const ALIAS = { cherryblossom: 'hanami', sakura: 'hanami', 'new-year': 'newyear', valentines: 'valentine', xmas: 'christmas' }
 const CYCLE = ['classic', 'cyberpunk', 'cottage', 'brutalist', 'halloween', 'christmas', 'newyear', 'valentine', 'lunar', 'hanami', 'goldenweek', 'tanabata', 'obon', 'tsukimi', 'cyberpunk+halloween']
-
-// 'cyberpunk+halloween' → { skin, holiday }: holiday null = the date's own, 'none' = no holiday decor
-export function parseTheme(name) {
-  let skin = null, holiday = null
-  for (const raw of String(name || 'auto').toLowerCase().split(/[+, ]/)) {
-    const p = ALIAS[raw] || raw
-    if (SKINS[p] && !skin) skin = p
-    else if (HOLI.has(p) && !holiday) holiday = p
-  }
-  if (!skin && !holiday) return { skin: 'classic', holiday: null, name: 'auto' }
-  return { skin: skin || 'classic', holiday: holiday || 'none', name: [skin, holiday].filter(Boolean).join('+') }
-}
 
 export default function init(api, tower) {
   const { Z, font } = tower

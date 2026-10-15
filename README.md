@@ -52,7 +52,27 @@ AGENTOPOLIS_NAME="Ada" ./start.sh      # logs go to server.log
 pkill -f agentopolis/server.mjs       # stop it
 ```
 
+### Updating
+
+Agentopolis never updates itself. To get the latest version, in the folder you cloned:
+
+```sh
+git pull
+npm start             # after stopping the running server; or ./start.sh
+```
+
+You don't have to remember to look: every 6 hours the server asks GitHub whether `main` has commits you don't have,
+and a small ⬆ appears in the toolbar with the list. It only tells you; nothing is downloaded or run. Switch it off
+under **⚙ Settings → Updates**. It only checks a git clone of this repo, so a fork or a copy stays quiet.
+
 ### Options
+
+Most options live in the **⚙ Settings** panel at the bottom of the toolbar: your name, your character, the theme, which
+features run, the update check, and how long an inactive session keeps its floor. Changes show within a couple of seconds, without a
+restart; switching features on or off reloads the page. The panel saves to `~/.agentopolis/settings.json`.
+
+The flags below set the startup defaults. A value saved in the panel wins over its flag, and resetting it in the panel
+goes back to the flag's value.
 
 | Flag | Default | What it does |
 |---|---|---|
@@ -121,10 +141,15 @@ Add `?demo=<name>` to see any feature without waiting for it to happen. For exam
 
 - **Local only.** The server listens on `127.0.0.1` and refuses any other `Host`.
 - **Transcripts.** It only reads them (`~/.claude/projects`, `~/.claude/sessions`) and never writes under `~/.claude`.
-- **Its own data.** The only file it writes is `~/.agentopolis/records.json` (the hall of records). `--demo` writes
-  nothing.
+- **Its own data.** The only files it writes are `~/.agentopolis/records.json` (the hall of records) and
+  `~/.agentopolis/settings.json` (what you set in the ⚙ panel, which only the page itself can change). `--demo` writes
+  nothing; its settings last until the server stops.
 - **GitHub.** It runs `gh` without a shell, and only read commands (`pr list`, `run list`, `api` GETs), cached and
   rate-limited. It never writes to GitHub.
+- **Update check.** Every 6 hours (and when you press **Check now**) it sends one unauthenticated request to
+  `api.github.com` comparing your checkout's commit with `main`. The request carries that commit id and an
+  `agentopolis-update-check` user agent: no token, no cookies. It's skipped under `--demo`, when the folder isn't a git clone of this repo, and when you
+  switch it off in **⚙ Settings → Updates** (`"updateCheck": false` in `settings.json`).
 - **Outbound requests.** Apart from GitHub, it makes two: [Open-Meteo](https://open-meteo.com) for the weather, for a
   coarse location taken from your system time zone (there's no IP geolocation), and a public price feed for the
   BTC/BCH billboard. Neither carries any data about you.

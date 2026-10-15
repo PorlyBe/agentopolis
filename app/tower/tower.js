@@ -865,7 +865,8 @@ export default async function init(api) {
     vacate(id, on = true) { if (on) vacated.add(id); else vacated.delete(id) },
     city, crowd: people,
   }
-  for (const [name, fn] of FEATURES) { try { await fn(api, tower) } catch (e) { console.error(`tower feature ${name} failed to start`, e) } }
+  const switchedOff = new Set(api.settings?.effective?.disabled || [])   // switched off in the settings panel; they come back on a reload
+  for (const [name, fn] of FEATURES) { if (switchedOff.has(name)) continue; try { await fn(api, tower) } catch (e) { console.error(`tower feature ${name} failed to start`, e) } }
 
   try { localStorage.removeItem('agent-office:mode') } catch {}   // the old office/tower switch
   active = true; size(); fit(); requestAnimationFrame(frame)

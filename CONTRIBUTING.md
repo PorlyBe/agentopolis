@@ -13,6 +13,8 @@ npm run demo                                      # then open http://127.0.0.1:4
 
 `new-feature` copies the examples, registers the plugin in `app/tower/tower.js` (an import and a `FEATURES` entry),
 and refuses to overwrite anything. The copy is a working sticky note on every session floor; change it into your idea.
+To give it an on/off switch in the ⚙ Settings panel, add it with a one-line description to `FEATURE_GROUPS` in
+`app/options.js`; it then shows under the Features tab. A feature missing there always runs.
 
 ## How it fits together
 

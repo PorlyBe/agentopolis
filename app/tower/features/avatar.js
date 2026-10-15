@@ -1,18 +1,11 @@
 // avatar: the user's own look in the CEO office. --avatar "hair=bun,haircolour=red,suit=navy,skin=3,glasses=round,pet=cat"
-// on the server (snap.avatar) or ?avatar=... on the URL (wins) restyles char_0: hair (short, long, bun, curly, bald,
+// on the server or the ⚙ settings panel (snap.avatar), or ?avatar=... on the URL (wins), restyles char_0: hair (short, long, bun, curly, bald,
 // mohawk), hair colour, suit (charcoal, navy, burgundy, forest, cream), skin tone 1..6, glasses (none, round, square),
 // and a pet (none, cat, dog, claudio) that naps in a basket by the sofa. Unset keys keep today's look. tower.avatar.sheet()
 // is the restyled full sheet (tower.js seats it; walkers can use it too). ?demo=avatar cycles looks in a close-up.
 import { IX } from '../building.js'
+import { AVATAR as OPTS } from '../../options.js'
 
-const OPTS = {
-  hair: ['short', 'long', 'bun', 'curly', 'bald', 'mohawk'],
-  haircolour: ['brown', 'black', 'blonde', 'red', 'grey', 'white', 'pink', 'blue'],
-  suit: ['charcoal', 'navy', 'burgundy', 'forest', 'cream'],
-  skin: ['1', '2', '3', '4', '5', '6'],
-  glasses: ['none', 'round', 'square'],
-  pet: ['none', 'cat', 'dog', 'claudio'],
-}
 const ALIAS = { haircolor: 'haircolour', hc: 'haircolour', colour: 'haircolour', color: 'haircolour', tone: 'skin', specs: 'glasses' }
 const DEFAULT = { hair: 'short', haircolour: 'brown', suit: 'charcoal', skin: '2', glasses: 'none', pet: 'none' }
 const PRESETS = [
@@ -203,12 +196,20 @@ export default function init(api, tower) {
   const params = new URLSearchParams(location.search + '&' + location.hash.slice(1))
   const demo = params.getAll('demo').includes('avatar'), forced = params.get('avatar')
   let look = parseLook(forced || ''), key = null, sheet = null, pets = {}, demoAt = 0, demoIdx = -1
+  const previews = new Map()
   tower.avatar = {
     get look() { return { ...look } },
     sheet() {
       const src = api.charSheet(0, 0); if (!src?.width) return null
       const k = lookKey(look); if (k !== key) { key = k; sheet = restyle(src, look) }
       return sheet
+    },
+    // a restyled sheet for any look, for the settings panel's preview
+    preview(v) {
+      const src = api.charSheet(0, 0); if (!src?.width) return null
+      const l = parseLook(v), k = lookKey(l)
+      if (!previews.has(k)) { if (previews.size > 40) previews.clear(); previews.set(k, restyle(src, l)) }
+      return previews.get(k)
     },
   }
   tower.on('sync', snap => { if (!forced && !demo) look = parseLook(snap.avatar || '') })
