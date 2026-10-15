@@ -151,6 +151,7 @@ function sessionExt(s, x, now) {
     'cost-jar': { usdToday: usd, tokensToday: tokens, byModel: { [s.m.model]: { family: s.m.family, usd, tokens, messages: Math.round(tokens / 9000) } } },
     'desk-props': { top: s.stacks.map(([stack, share]) => ({ stack, w: Math.round(share * 300), share })), files: 40 + hash(s.key) % 300 },
     'time-clock': { in: clockIn, hours: [...new Set(hours)] },
+    'ivy-wear': { start: now - ({ payments: 9 * 24, mobile: 2 * 24 + 5, docs: 0.4, data: 5, auth: 31 * 24 }[s.key] ?? 3) * HOUR },
     walkabout: { at: now - 6 * MIN - hash(s.key) % (20 * MIN), text: s.prompt },
     'milestone-cake': { today: 300 + Math.round(into * 60) + hash(s.key) % 200, milestone: 500, at: now - 25 * MIN },
   }
@@ -345,6 +346,7 @@ export function generate(now) {
     sunrise: day + 6.75 * HOUR, sunset: day + 19 * HOUR, updated: now - (now % (10 * MIN)) }
   weather.isDay = now > weather.sunrise && now < weather.sunset
   const pay = out[0], mob = out[1]
+  pay.ext.courtroom = courtroom(now)
   const earned = [
     { id: 'first-pr', session: pay.id, holder: pay.title, at: now - 70 * MIN },
     { id: 'wrangler', session: mob.id, holder: mob.title, at: now - 40 * MIN },
@@ -381,6 +383,7 @@ export function generate(now) {
     skyline: { main: REPO, repos: [{ name: 'harbor-docs', full: 'acme/harbor-docs', sessions: [out[2].id] }, { name: 'data-lake', full: 'globex/data-lake', sessions: out.slice(3, 5).map(x => x.id) },
       { name: 'pixel-kit', full: 'pixel-kit', sessions: [out[1].id] }] },
     lostFound: { at: now, prsAt: now, prsKnown: true, repo: REPO, total: 0, inUse: 0, crates: [] },
+    branchMetro: branchMetro(now),
     priceBillboard: { ok: true, at: now - (now % MIN), list: [['BTC', 'Bitcoin', 98_000, 1.8], ['ETH', 'Ethereum', 3480, -0.8], ['USDT', 'Tether', 1, 0.01], ['XRP', 'XRP', 2.31, 4.2],
       ['BNB', 'BNB', 712, 1.1], ['SOL', 'Solana', 182, -3.6], ['USDC', 'USDC', 1, 0], ['DOGE', 'Dogecoin', 0.231, 6.4], ['ADA', 'Cardano', 0.78, -1.9], ['BCH', 'Bitcoin Cash', 410, -0.9]]
       .map(([sym, name, usd, ch], i) => ({ id: sym.toLowerCase(), sym, name, rank: i + 1, usd: usd * (1 + 0.004 * Math.sin(priceT / 30 + i)), ch24: ch + Math.sin(priceT / 40 + i) * 0.3,
@@ -415,8 +418,51 @@ export function generate(now) {
     tv: { ready: true, spark, toolsHour, tokensToday, outToday: Math.round(tokensToday / 180), prsWeek: 23, mergedWeek: 17,
       busiest: { name: 'build iOS 3.2', calls: 64, agent: true }, online, commits: tvCommits },
     weather,
+    ivyWear: { repoBorn: now - Math.round(2.4 * 365 * 24 * HOUR) },
+    memoryArchive: { day: new Date(now).toISOString().slice(0, 10), filings: [
+      [8.9, 0, null, 'claude', 'Edit', 'CLAUDE.md', 'Run the webhook suite before every PR'], [9.7, 2, null, 'memory', 'Write', '~/…/memory/docs-build-needs-node-22.md', 'The docs build needs Node 22'],
+      [10.4, 1, 'Explore', 'rules', 'Write', '.claude/rules/migrations.md', 'Migrations are append-only'], [11.1, 3, null, 'memory', 'Edit', '~/…/memory/MEMORY.md', 'Backfills run off-peak'],
+      [12.6, 0, 'general-purpose', 'skill', 'Write', '.claude/skills/release-notes/SKILL.md', 'Release notes'], [13.2, 4, null, 'agents', 'Edit', 'AGENTS.md', 'Token rotation is staged, never in place'],
+      [14.5, 1, null, 'claude', 'MultiEdit', 'apps/mobile/CLAUDE.md', 'Build iOS from the release branch only'], [15.3, 2, null, 'memory', 'Write', '~/…/memory/search-index-rebuilds-nightly.md', 'The search index rebuilds nightly'],
+      [16.1, 3, 'workflow', 'claude', 'Edit', 'CLAUDE.local.md', 'Local ports: 5173 web, 8080 api']]
+      .map(([h, i, agent, kind, tool, file, line]) => ({ id: 'toolu_' + hex('ma' + h, 20), at: day + h * HOUR, file, kind, tool, session: out[i % out.length].id, title: out[i % out.length].title,
+        agent: agent ? { id: hex('maa' + h, 17), type: agent, description: ['map the ledger', 'draft notes', 'tidy rules'][Math.floor(h) % 3] } : null, line }))
+      .concat([0, 1, 2].map(k => { const t = now - (now % (3 * MIN)) - k * 3 * MIN, n = Math.floor(t / (3 * MIN)), x = out[n % out.length], m = [['memory', '~/…/memory/flaky-e2e-needs-a-warm-cache.md', 'Flaky e2e needs a warm cache'], ['claude', 'services/payments/CLAUDE.md', 'Refunds settle through the ledger'], ['rules', '.claude/rules/tests.md', 'Name a test after the behaviour']][n % 3]
+        return { id: 'toolu_' + hex('mal' + n, 20), at: t, file: m[1], kind: m[0], tool: n % 2 ? 'Edit' : 'Write', session: x.id, title: x.title, agent: null, line: m[2] } }))
+      .filter(f => f.at <= now && f.at >= day).sort((a, b) => a.at - b.at).slice(-40) },
+    agentXp: (() => { const lv = Math.floor(now / (4 * MIN)) % 8, types = [['workflow', 412], ['general-purpose', 231], ['Explore', 220 + lv], ['code-reviewer', 64], ['Plan', 38], ['claude-code-guide', 17], ['fork', 9]]
+      .map(([type, xp]) => { const level = Math.floor(Math.sqrt(xp)); return { type, xp, level, next: (level + 1) ** 2 } })
+      return { types, recent: [['Explore', 2], ['workflow', 5], ['general-purpose', 9], ['Plan', 26]].map(([type, m]) => ({ type, at: now - m * MIN, description: '' })), total: types.reduce((a, t) => a + t.xp, 0), since: now - 90 * 24 * HOUR } })(),
+    ghostAnnex: { day: new Date(now).toISOString().slice(0, 10), ghosts: [['BILLING EXPORT', 'feat/csv-export', 'Bash', 'idle', 412, 50, 140], ['ONBOARDING COPY', 'docs/onboarding', 'Edit', 'waiting', 96, 95, 40],
+      ['FLAKY E2E HUNT', 'fix/e2e-timeouts', 'Bash', 'tool', 733, 170, 205], ['SEARCH INDEX', 'feat/search-reindex', 'Read', 'thinking', 208, 260, 75]]
+      .map(([title, branch, last, state, calls, ago, long], i) => ({ id: 'ghost-' + hex(title, 12), title, branch, worktree: null, opened: now - (ago + long) * MIN, closed: now - ago * MIN, calls, last, state, agents: i % 3 }))
+      .filter(g => g.opened >= day) },
     reportCard: (() => { const tools = out.reduce((a, x) => a + (x.ext['milestone-cake']?.today || 0), 0)
       return { ready: true, day, sessions: 7, agents: 23, tools, top: [['Bash', Math.round(tools * 0.31)], ['Read', Math.round(tools * 0.24)], ['Edit', Math.round(tools * 0.17)]],
         longest: { id: mob.id, ms: Math.min(now - day, 9 * HOUR + 14 * MIN) }, retried: { cmd: 'npm test -- payments/webhooks', n: 14 } } })(),
   }
+}
+
+// courtroom: a review on trial every five minutes, found guilty on three counts
+function courtroom(now) {
+  const cyc = 5 * MIN, t0 = now - (now % cyc), end = t0 + 90 * SEC
+  return { id: 'trial-' + t0, kind: 'skill', name: 'devils-advocate-review', start: t0, end: now >= end ? end : null, jurors: ['Review the refund webhook'],
+    ...(now >= end ? { verdict: 'guilty', count: 3, nits: 0, charges: ['unwrap on user input in parse_amount', 'the retry loop never backs off', 'a test asserts on a log line'] } : {}) }
+}
+
+// branch-metro: two weeks of main and the branches around it
+function branchMetro(now) {
+  const t = h => now - h * HOUR, commits = []
+  for (let h = 0.4; h < 90; h += 0.7 + (hash('bm' + Math.round(h * 10)) % 100) / 80) commits.push({ t: t(h), s: `skyline: change ${Math.round(h * 10)}` })
+  const b = (name, fork, last, ahead, behind, merged, subject, mergedSubject) => ({ name, fork: t(fork), last: t(last), ahead, behind, merged: merged == null ? null : t(merged), subject, mergedSubject: mergedSubject || null, local: true, remote: true })
+  return { at: now, since: now - 14 * 24 * HOUR, repo: REPO, trunk: 'main', commits, branches: [
+    b('feature/dark-mode', 40, 8, 9, 14, 7, 'theme: the dark palette for charts', 'web: dark mode for every page (#212)'),
+    b('fix/flaky-login', 6, 1.5, 2, 3, 1.2, 'auth: wait for the session cookie', 'auth: the login test waits for its cookie (#218)'),
+    b('bob-codes/invoice-pdf', 20, 2.4, 5, 9, 0.5, 'billing: embed the logo in the PDF', 'billing: invoices download as PDF (#220)'),
+    b('carol-ships/onboarding-copy', 30, 26, 3, 18, 25, 'copy: shorter welcome screen', 'onboarding: shorter copy (#209)'),
+    b('alice-dev/search-v2', 60, 3, 14, 40, null, 'search: rank exact matches first'),
+    b('feature/offline-cache', 12, 0.3, 6, 5, null, 'app: cache the last sync on disk'),
+    b('fix/tz-drift', 2, 0.2, 2, 1, null, 'time: store UTC, render local'),
+    b('spike/ledger-rewrite', 80, 36, 21, 60, null, 'ledger: try an append-only table'),
+  ] }
 }

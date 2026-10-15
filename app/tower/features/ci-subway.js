@@ -6,6 +6,7 @@
 // ?demo=cisubway fakes a queue that builds up and drains.
 const R = (c, col, x, y, w, h) => { c.fillStyle = col; c.fillRect(Math.round(x), Math.round(y), w, h) }
 const SX0 = -300, SX1 = -10, CEIL = 22, HALL = 26, PLAT = 84, TUN0 = 92, RAIL = 121, TUN1 = 126
+export const WALL_MAP = { x: -298, y: 48, w: 144, h: 29 }   // the back wall between the name plates and the benches, left of the stairs (branch-metro)
 const TOP = { x: -92, y: HALL }, FOOT = { x: -150, y: PLAT }, BOARD = { x: -84, y: 30, w: 70, h: 32 }, TOTEM = -84
 const LOOP = 900, GAP = 3, SLOW = 26, FAST = 64, OUT = 150, WALK = 26, DELAY = 5
 const LINES = ['#d8452e', '#2f78c8', '#e8a21a', '#3a9a52', '#9a4ab8', '#1aa0a8', '#c8508a', '#8a7a5a']

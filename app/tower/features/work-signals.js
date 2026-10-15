@@ -61,7 +61,7 @@ export default function init(api, tower) {
     return true
   }
   // ---------- bugs + the alarm beacon ----------
-  const crit = new Map(), alarms = new Map(), fake = new Map()
+  const crit = new Map(), alarms = new Map(), fake = new Map(), squashed = new Set()
   let demoBugsAt = 0
   const errsOf = s => fake.get(s.id) || s.ext?.bugs?.errs || []
   const burstEnd = errs => { let end = 0; for (let i = BURST_N - 1; i < errs.length; i++) if (errs[i] - errs[i - BURST_N + 1] <= BURST_WIN) end = errs[i]; return end }
@@ -76,7 +76,7 @@ export default function init(api, tower) {
     }
     for (const s of ss) {
       const f = tower.floor(s.id); if (!f) continue
-      const recent = errsOf(s).filter(t => now - t < BUG_LIFE).slice(-BUG_MAX)
+      const recent = errsOf(s).filter(t => now - t < BUG_LIFE).slice(-BUG_MAX).filter(t => !squashed.has(s.id + '|' + t))
       const kept = (crit.get(s.id) || []).filter(b => recent.includes(b.at))
       for (const at of recent) if (!kept.some(b => b.at === at)) {
         const h = api.hash(s.id + at), wall = h % 2
@@ -272,6 +272,20 @@ export default function init(api, tower) {
     s.state = 'building'; s.background = [{ label: 'cargo test --workspace', kind: 'shell', since: buildSince }]
   })
 
+  // ---------- bug-squash: each critter by id, and a way to squash one (it stays gone; a new error brings a new one) ----------
+  const alphaOf = (bg, now) => Math.min(1, (now - bg.born) / 400) * (Date.now() - bg.at < BUG_FADE ? 1 : Math.max(0, 1 - (Date.now() - bg.at - BUG_FADE) / (BUG_LIFE - BUG_FADE)))
+  tower.critters = {
+    list: () => [...crit].flatMap(([sid, l]) => { const f = tower.floor(sid); return f ? l.map(b => ({ id: sid + '|' + b.at, sid, x: b.x, y: f.y + b.ry, ry: b.ry, kind: b.kind, shell: b.shell, dir: b.dir, a: alphaOf(b, performance.now()) })) : [] }),
+    squash(id) {
+      squashed.add(id)
+      const i = id.lastIndexOf('|'), sid = id.slice(0, i), at = Number(id.slice(i + 1)), l = crit.get(sid), k = l ? l.findIndex(b => b.at === at) : -1
+      if (k >= 0) { l.splice(k, 1); if (!l.length) crit.delete(sid) }
+      return k >= 0
+    },
+    click: null,
+  }
+  tower.on('click', (w, person, m) => tower.critters.click?.(w, person, m) || false)
+
   // ---------- hooks ----------
   tower.on('sync', syncBugs)
   tower.on('step', (dt, now) => { stepBugs(dt); stepWavers(); stepHandoffs(dt, now) })
@@ -368,7 +382,7 @@ export default function init(api, tower) {
       const errs = errsOf(f.session).filter(t => Date.now() - t < BUG_LIFE)
       const bugHit = (crit.get(f.id) || []).some(b => Math.abs(b.x - w.x) < 5 && Math.abs(f.y + b.ry - w.y) < 5)
       if (errs.length && (bugHit || (alarms.has(f.id) && Math.abs(w.x - beaconAt(f).x) < 6 && w.y < f.top + 12))) {
-        return `<div class="t">🐞 ${errs.length} tool error${errs.length > 1 ? 's' : ''} in 10 min</div><div class="m">${esc(f.session.title)} · last ${ago(errs.at(-1))} ago${alarms.has(f.id) ? ' · a burst: 3+ within a minute' : ''}</div>`
+        return `<div class="t">🐞 ${errs.length} tool error${errs.length > 1 ? 's' : ''} in 10 min</div><div class="m">${esc(f.session.title)} · last ${ago(errs.at(-1))} ago${alarms.has(f.id) ? ' · a burst: 3+ within a minute' : ''}</div>${bugHit && tower.critters.click ? '<div class="m">🔨 click to squash it</div>' : ''}`
       }
     }
     return null

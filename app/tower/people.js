@@ -1,10 +1,11 @@
 // People in the tower: a session at its desk, its subagents along the floor, breaks on the shared floors,
-// arrivals through the lobby door and leavers back out of it. Floors are changed by the one glass elevator.
+// arrivals through the lobby door and leavers back out of it. Floors are changed by the glass elevator, and by the express
+// car in the shaft beside it while features/express-elevator.js has it open (xcar.active): calls go to the nearest car.
 // Tower features steer people (sendTo / release), add their own walkers (spawn, kind 'npc') and can hold a finished
 // subagent for a detour before it walks out (the 'leaving' hook, asked through `ask`). See tower.js for the API.
-import { SEAT, SEAT_H, MAX_DESKS, DOOR, DOOR_X, CAR_X, CAR_W, CAR_H, OUTSIDE, spotsFor, partnerOf } from './building.js'
+import { SEAT, SEAT_H, MAX_DESKS, DOOR, DOOR_X, CAR_X, CAR_W, CAR_H, XCAR_X, XCAR_W, OUTSIDE, spotsFor, partnerOf } from './building.js'
 
-const SPEED = 56, CAR_SPEED = 150, CAP = 6, DWELL = 0.9
+const SPEED = 56, CAR_SPEED = 150, XCAR_SPEED = 190, CAP = 6, DWELL = 0.9
 const RESTING = new Set(['waiting', 'idle', 'delegating', 'building'])
 const LONG_WAIT = new Set(['delegating', 'building'])
 const READING = /^(Read|Grep|Glob|WebFetch|WebSearch|ToolSearch)$|^mcp__|claude-in-chrome/
@@ -18,7 +19,9 @@ export function createPeople(api, demo, ask = () => false) {
   const claimed = new Map()              // spot id -> actor key
   const departed = new Set()
   let floors = [], byId = new Map(), spots = [], firstSync = true, arrivals = 0
-  const car = { y: 0, at: 'lobby', state: 'idle', dir: 0, t: 0, doors: 0, riders: [], moving: 0, queue: new Map() }
+  const queue = new Map()                // floor id -> people waiting there for whichever car comes
+  const mkCar = (x, w, speed, express) => ({ x, w, speed, express, active: !express, lit: express ? 0 : 1, y: 0, at: 'lobby', state: 'idle', dir: 0, t: 0, doors: 0, riders: [], moving: 0, queue })
+  const car = mkCar(CAR_X, CAR_W, CAR_SPEED, false), xcar = mkCar(XCAR_X, XCAR_W, XCAR_SPEED, true), cars = [car, xcar]
 
   const fy = id => byId.get(id)?.y
   const home = a => ({ floor: a.session, x: a.kind === 'session' ? SEAT.session : SEAT.agent(a.slot), then: () => sit(a) })
@@ -27,17 +30,19 @@ export function createPeople(api, demo, ask = () => false) {
   function setFloors(list) {
     floors = list; byId = new Map(list.map(f => [f.id, f]))
     spots = list.flatMap(spotsFor)
-    for (const [id, q] of car.queue) if (!byId.has(id)) { for (const a of q) a.leg = null; car.queue.delete(id) }
-    if (!byId.has(car.at)) { car.at = 'lobby'; car.state = 'idle' }
-    if (car.state !== 'moving') car.y = fy(car.at)
-    car.cableTop = list[list.length - 1].y - 4
+    for (const [id, q] of queue) if (!byId.has(id)) { for (const a of q) a.leg = null; queue.delete(id) }
+    for (const k of cars) {
+      if (!byId.has(k.at)) { k.at = 'lobby'; k.state = 'idle' }
+      if (k.state !== 'moving') k.y = fy(k.at)
+      k.cableTop = list[list.length - 1].y - 4
+    }
   }
 
   // ---------- routes ----------
   // A route is a list of legs: { walk: x } on the current floor, { lift: floorId }, { then: fn }.
   function go(a, goal) {
     if (a.leg?.lift && a.liftPhase === 'queued') unqueue(a)
-    if (a.liftPhase === 'boarding') { a.liftPhase = null; car.moving--; const i = car.riders.indexOf(a); if (i >= 0) car.riders.splice(i, 1) }
+    if (a.liftPhase === 'boarding') { const k = a.car; a.liftPhase = null; k.moving--; const i = k.riders.indexOf(a); if (i >= 0) k.riders.splice(i, 1) }
     const keep = a.liftPhase === 'riding' || a.liftPhase === 'exiting' ? [a.leg] : []
     const from = a.liftPhase === 'riding' ? null : a.floor
     if (a.liftPhase === 'riding') a.leg.lift = goal.floor
@@ -46,7 +51,7 @@ export function createPeople(api, demo, ask = () => false) {
     if (keep.length) a.route.unshift(keep[0]); else a.leg = null
     a.pose = null; a.anim = null; a.activity = null
   }
-  function unqueue(a) { const q = car.queue.get(a.floor); if (q) { const i = q.indexOf(a); if (i >= 0) q.splice(i, 1) } a.liftPhase = null }
+  function unqueue(a) { const q = queue.get(a.floor); if (q) { const i = q.indexOf(a); if (i >= 0) q.splice(i, 1) } a.liftPhase = null }
   const walkTo = (a, x, dt) => {
     const d = x - a.x, mv = SPEED * dt * (a.kind === 'session' ? 1.05 : 1)
     if (Math.abs(d) <= mv) { a.x = x; return true }
@@ -65,21 +70,22 @@ export function createPeople(api, demo, ask = () => false) {
       if (leg.lift != null) {
         if (!a.liftPhase) {
           if (a.floor === leg.lift || !byId.has(leg.lift)) { a.leg = null; continue }
-          const q = car.queue.get(a.floor) || []; q.push(a); car.queue.set(a.floor, q); a.liftPhase = 'queued'
+          const q = queue.get(a.floor) || []; q.push(a); queue.set(a.floor, q); a.liftPhase = 'queued'; a.queuedAt = performance.now()
         }
         if (a.liftPhase === 'queued') {
-          const q = car.queue.get(a.floor) || [], i = q.indexOf(a)
+          const q = queue.get(a.floor) || [], i = q.indexOf(a)
           if (walkTo(a, DOOR_X - 10 - Math.max(0, i) * 8, dt)) { a.face = 'right'; a.dir = 'right' }
           return
         }
         if (a.liftPhase === 'boarding') {
-          if (walkTo(a, CAR_X - 9 + (a.carSlot % 4) * 6, dt)) { a.liftPhase = 'riding'; a.face = a.carSlot % 2 ? 'left' : 'down'; car.moving-- }
+          const k = a.car, n = k.express ? 3 : 4
+          if (walkTo(a, k.x - 9 + (k.express ? 1 : 0) + (a.carSlot % n) * 6, dt)) { a.liftPhase = 'riding'; a.face = a.carSlot % 2 ? 'left' : 'down'; k.moving-- }
           return
         }
         if (a.liftPhase === 'riding') return
         if (a.liftPhase === 'exiting') {
           if (!walkTo(a, DOOR_X - 14 - (a.carSlot % 3) * 4, dt)) return
-          a.liftPhase = null; a.leg = null; car.moving--
+          a.liftPhase = null; a.leg = null; a.car.moving--
           if (a.floor !== leg.lift && byId.has(leg.lift)) a.route.unshift({ lift: leg.lift })
           continue
         }
@@ -88,31 +94,52 @@ export function createPeople(api, demo, ask = () => false) {
     }
   }
 
-  // ---------- the elevator ----------
-  // One car, collective control: keep going the way it is heading while anyone wants a floor that way.
-  function stops() {
+  // ---------- the elevators ----------
+  // Collective control per car: keep going the way it is heading while anyone wants a floor that way. A floor's call
+  // goes to the nearest car that has room (the express only while it is active); riders keep the car they boarded.
+  let calls = new Map()
+  function dispatch() {
+    calls = new Map()
+    const load = new Map(cars.map(k => [k, k.riders.length]))
+    for (const [id, q] of queue) {
+      if (!q.length || !byId.has(id)) continue
+      const y = fy(id)
+      let best = car, bc = Infinity
+      for (const k of cars) {
+        if (!k.active || k.riders.length >= CAP) continue
+        // distance, a detour if it is heading the other way, and a little for every rider and call it already has
+        const away = k.state === 'moving' && Math.abs(y - k.y) > 1 && Math.sign(y - k.y) !== k.dir
+        const c = Math.abs(y - k.y) + (away ? 160 : 0) + load.get(k) * 30 + (k.express ? 4 : 0)
+        if (c < bc) { bc = c; best = k }
+      }
+      calls.set(id, best); load.set(best, load.get(best) + q.length)
+    }
+  }
+  function stops(k) {
     const s = new Set()
-    for (const a of car.riders) if (a.leg?.lift && byId.has(a.leg.lift)) s.add(a.leg.lift)
-    for (const [id, q] of car.queue) if (q.length && byId.has(id)) s.add(id)
+    for (const a of k.riders) if (a.leg?.lift && byId.has(a.leg.lift)) s.add(a.leg.lift)
+    for (const [id, c] of calls) if (c === k) s.add(id)
+    if (!k.active && !s.size && byId.has('lobby')) s.add('lobby')        // a closed express car parks in the lobby
     return s
   }
-  function nextStop() {
-    // car.at is the floor last served; a stop the car is about to reach still counts as ahead (it slows to < 1 px a frame)
-    const s = [...stops()].filter(id => id !== car.at)
+  function nextStop(k) {
+    // k.at is the floor last served; a stop the car is about to reach still counts as ahead (it slows to < 1 px a frame)
+    const s = [...stops(k)].filter(id => id !== k.at)
     if (!s.length) return null
-    const pos = car.y, ahead = id => car.dir < 0 ? fy(id) < pos + 0.5 : fy(id) > pos - 0.5
-    let cands = car.dir ? s.filter(ahead) : []
+    const pos = k.y, ahead = id => k.dir < 0 ? fy(id) < pos + 0.5 : fy(id) > pos - 0.5
+    let cands = k.dir ? s.filter(ahead) : []
     if (!cands.length) { cands = s; }
     cands.sort((p, q) => Math.abs(fy(p) - pos) - Math.abs(fy(q) - pos))
     return cands[0]
   }
-  function stepCar(dt) {
+  const waiting = k => k.active && queue.get(k.at)?.length && k.riders.length < CAP
+  function stepCar(car, dt) {
     if (car.state === 'moving') {
       // rethink the target every frame, so a call from a floor on the way stops the car there
-      const target = nextStop() ?? car.target
+      const target = nextStop(car) ?? car.target
       car.target = target
       const ty = fy(target); if (ty == null) { car.state = 'idle'; return }
-      const d = ty - car.y, v = Math.min(CAR_SPEED, 30 + Math.abs(d) * 3) * dt
+      const d = ty - car.y, v = Math.min(car.speed, 30 + Math.abs(d) * 3) * dt
       car.dir = Math.sign(d) || car.dir
       if (Math.abs(d) <= v) { car.y = ty; car.at = target; car.state = 'open'; car.t = 0 }
       else car.y += Math.sign(d) * v
@@ -126,15 +153,15 @@ export function createPeople(api, demo, ask = () => false) {
       for (const a of [...car.riders]) if (a.leg?.lift === car.at || !byId.has(a.leg?.lift)) {
         car.riders.splice(car.riders.indexOf(a), 1); a.floor = car.at; a.y = undefined; a.liftPhase = 'exiting'; car.moving++
       }
-      const q = car.queue.get(car.at) || []
-      while (q.length && car.riders.length < CAP) {
-        const a = q.shift(); a.liftPhase = 'boarding'; a.carSlot = car.riders.length + Math.floor(Math.random() * 3); car.riders.push(a); car.moving++
+      const q = queue.get(car.at) || []
+      while (car.active && q.length && car.riders.length < CAP) {
+        const a = q.shift(); a.liftPhase = 'boarding'; a.car = car; a.carSlot = car.riders.length + Math.floor(Math.random() * 3); car.riders.push(a); car.moving++
         a.ridingFrom = car.at
       }
       if (car.t > DWELL && car.moving <= 0) {
         car.moving = 0
         for (const a of car.riders) if (a.liftPhase === 'riding') a.floor = null
-        const next = nextStop()
+        const next = nextStop(car)
         if (!next) { car.state = 'closing'; car.target = null; return }
         car.target = next; car.state = 'closing'
       }
@@ -144,14 +171,14 @@ export function createPeople(api, demo, ask = () => false) {
       car.doors = Math.max(0, car.doors - dt * 4)
       if (car.doors > 0) return
       // reopen only for someone who can still get on; a full car leaves them waiting and comes back for them
-      if (car.queue.get(car.at)?.length && car.riders.length < CAP) { car.state = 'open'; car.t = 0; return }
-      const next = nextStop()
+      if (waiting(car)) { car.state = 'open'; car.t = 0; return }
+      const next = nextStop(car)
       if (next) { car.target = next; car.dir = Math.sign(fy(next) - car.y); car.state = 'moving' } else car.state = 'idle'
       return
     }
     // idle: open for someone waiting here, or set off toward the nearest call
-    if (car.queue.get(car.at)?.length) { car.state = 'open'; car.t = 0; return }
-    const next = nextStop()
+    if (waiting(car)) { car.state = 'open'; car.t = 0; return }
+    const next = nextStop(car)
     if (next) { car.target = next; car.dir = Math.sign(fy(next) - car.y); car.state = 'moving' }
   }
 
@@ -321,16 +348,16 @@ export function createPeople(api, demo, ask = () => false) {
   let planAt = 0
   function step(dt, perf) {
     if (perf - planAt > 400) { planAt = perf; planBreaks(perf) }
-    stepCar(dt)
+    dispatch(); for (const k of cars) stepCar(k, dt)
     for (const [k, a] of actors) {
-      if (a.fade != null) { a.fade -= dt * 1.6; if (a.fade <= 0) { endBreak(a); if (a.liftPhase === 'queued') unqueue(a); const i = car.riders.indexOf(a); if (i >= 0) car.riders.splice(i, 1); actors.delete(k) } continue }
+      if (a.fade != null) { a.fade -= dt * 1.6; if (a.fade <= 0) { endBreak(a); if (a.liftPhase === 'queued') unqueue(a); for (const c of cars) { const i = c.riders.indexOf(a); if (i >= 0) c.riders.splice(i, 1) } actors.delete(k) } continue }
       // an actor whose floor vanished (its session ended) just fades
       if (a.floor && !byId.has(a.floor)) { a.fade = 1; continue }
       stepActor(a, dt)
       if (a.leaving && !a.steered && a.floor === 'lobby' && a.x < OUTSIDE + 30 && !a.route.length && !a.leg) a.fade = a.fade ?? 1
     }
   }
-  const yOf = a => a.liftPhase === 'riding' ? car.y : fy(a.floor) ?? a.lastY ?? 0
+  const yOf = a => a.liftPhase === 'riding' ? a.car.y : fy(a.floor) ?? a.lastY ?? 0
 
   // ---------- drawing ----------
   // A sitter's hips sit on the seat's cushion: HIP is the sprite row their hips end on, per sheet row (down, up, side).
@@ -362,24 +389,26 @@ export function createPeople(api, demo, ask = () => false) {
     if (api.wear?.length && a.data) { const p = person(a); for (const w of api.wear) { try { w(c, p, { row, frame, now }) } catch (e) { console.error('[wear]', e) } } }
     c.restore()
   }
-  function drawCar(c, front) {
-    const x = CAR_X - CAR_W / 2, y = car.y
+  function drawCar(c, front) { for (const k of cars) drawOne(c, k, front) }
+  function drawOne(c, car, front) {
+    const W = car.w, x = car.x - W / 2, y = car.y, lit = car.lit
     if (!front) {
-      c.fillStyle = 'rgba(30,40,55,.35)'; c.fillRect(x, y - CAR_H, CAR_W, CAR_H)
-      c.fillStyle = '#4a4f5a'; c.fillRect(CAR_X - 1, car.cableTop, 2, y - CAR_H - car.cableTop)          // the cable
+      c.fillStyle = `rgba(30,40,55,${0.35 + 0.15 * (1 - lit)})`; c.fillRect(x, y - CAR_H, W, CAR_H)
+      c.fillStyle = '#4a4f5a'; c.fillRect(car.x - 1, car.cableTop, 2, y - CAR_H - car.cableTop)          // the cable
       return
     }
-    c.fillStyle = 'rgba(170,215,240,.22)'; c.fillRect(x, y - CAR_H, CAR_W, CAR_H)
-    c.fillStyle = 'rgba(255,255,255,.25)'; c.fillRect(x + 4, y - CAR_H + 4, 2, CAR_H - 12)
-    c.fillStyle = '#9aa6b6'; c.fillRect(x - 1, y - CAR_H - 3, CAR_W + 2, 4); c.fillRect(x - 1, y - 2, CAR_W + 2, 3)
-    c.fillRect(x - 1, y - CAR_H, 2, CAR_H); c.fillRect(x + CAR_W - 1, y - CAR_H, 2, CAR_H)
+    c.fillStyle = `rgba(170,215,240,${0.1 + 0.12 * lit})`; c.fillRect(x, y - CAR_H, W, CAR_H)
+    c.fillStyle = `rgba(255,255,255,${0.1 + 0.15 * lit})`; c.fillRect(x + 4, y - CAR_H + 4, 2, CAR_H - 12)
+    c.fillStyle = car.express ? '#8e9aac' : '#9aa6b6'; c.fillRect(x - 1, y - CAR_H - 3, W + 2, 4); c.fillRect(x - 1, y - 2, W + 2, 3)
+    c.fillRect(x - 1, y - CAR_H, 2, CAR_H); c.fillRect(x + W - 1, y - CAR_H, 2, CAR_H)
+    if (car.express && lit > 0) { c.fillStyle = `rgba(255,236,170,${0.8 * lit})`; c.fillRect(x + 3, y - CAR_H, W - 6, 1) }
     // doors: the left side slides open toward the floor
     const open = car.doors
     c.fillStyle = '#c3ccd8'; c.fillRect(x - 1, y - CAR_H, 2, Math.round((CAR_H - 2) * (1 - open)))
-    c.fillStyle = car.state === 'moving' ? (car.dir < 0 ? '#5fd17a' : '#f4c64f') : '#7a8494'; c.fillRect(CAR_X - 2, y - CAR_H - 2, 4, 2)
+    c.fillStyle = car.state === 'moving' ? (car.dir < 0 ? '#5fd17a' : '#f4c64f') : '#7a8494'; c.fillRect(car.x - 2, y - CAR_H - 2, 4, 2)
   }
   return {
-    actors, slots, overflow, car, setFloors, sync, step, drawActor, drawCar, yOf, sitDy, sendTo, release, spawn, person, find,
+    actors, slots, overflow, car, xcar, cars, queue, setFloors, sync, step, drawActor, drawCar, yOf, sitDy, sendTo, release, spawn, person, find,
     get spots() { return spots },
     occupied: activity => { let n = 0; for (const a of actors.values()) if (a.activity === activity && !a.walking) n++; return n },
   }

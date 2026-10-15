@@ -95,6 +95,9 @@ export const AVATAR = {
 
 export const FEATURE_GROUPS = [
   { id: 'work', label: 'Work signals', features: [
+    ['memory-archive', 'A records room files every write to a CLAUDE.md, rule, skill or memory file'],
+    ['courtroom', 'A review in progress turns the meeting room into a court with a verdict'],
+    ['smokestack', 'A roof chimney whose smoke follows the live token rate'],
     ['storm-cloud', 'A little rain cloud over a floor when your messages to it sound grumpy; a thanks brings the sun back'],
     ['work-signals', 'Task boards, bug critters and error beacons on each floor'],
     ['mess', 'Floors get messier as context fills; a janitor tidies after a compaction'],
@@ -116,6 +119,9 @@ export const FEATURE_GROUPS = [
     ['security-desk', 'A guard stamps DENIED on blocked actions'],
   ] },
   { id: 'life', label: 'Office life', features: [
+    ['express-elevator', 'A second glass elevator opens when the line gets long'],
+    ['ghost-annex', 'Sessions closed today haunt a translucent side wing at night'],
+    ['ivy-wear', 'Ivy on long-running floors; plaques shine new and gather patina'],
     ['readable-monitors', 'Zoom in on a desk to read its monitor: the live command, file or diff line'],
     ['floor-sounds', 'Zoomed in, you hear that floor: keyboards, the copier, the lift, coffee, traffic, roof wind'],
     ['cat-chaos', 'A stray cat makes mischief on floors that have been quiet for 10+ minutes'],
@@ -135,6 +141,7 @@ export const FEATURE_GROUPS = [
     ['wardrobe', 'Outfits follow the model'],
   ] },
   { id: 'github', label: 'GitHub', features: [
+    ['branch-metro', 'A metro map of the repo’s branches on the subway wall'],
     ['my-prs', 'Your open PRs on a board in your office'],
     ['post-room', 'A parcel per open PR in the basement'],
     ['merge-stamp', 'A MERGED stamp drops on merged parcels'],
@@ -151,6 +158,9 @@ export const FEATURE_GROUPS = [
     ['price-billboard', 'A crypto price billboard on the roof'],
   ] },
   { id: 'fun', label: 'Fun', features: [
+    ['director-mode', 'Auto-pilot camera for a TV; 🎬 or D toggles it'],
+    ['agent-xp', 'Subagent types level up with use; ranks board in the meeting room'],
+    ['bug-squash', 'Click the bug critters to squash them; lobby high scores'],
     ['easter-eggs', 'A few hidden surprises around the tower'],
     ['tamagotchi-plant', 'A plant in your office that grows with your daily streak and wilts on a day off'],
   ] },

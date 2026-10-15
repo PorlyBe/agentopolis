@@ -143,7 +143,8 @@ export default function init(api, tower) {
       if (f.kind === 'session') { c.fillStyle = `hsl(${f.hue} 55% 62%)`; c.fillRect(mx(IX), my(f.top), 2, (f.y - f.top) * s) }
     }
     c.fillStyle = '#2a2f3c'; c.fillRect(mx(BW), my(fl[fl.length - 1].y - 8), SHAFT * s, my(fl[0].y) - my(fl[fl.length - 1].y - 8))
-    const car = tower.car; c.fillStyle = '#c8d8ec'; c.fillRect(mx(BW + 6), my(car.y - 40), (SHAFT - 12) * s, 40 * s)
+    const car = tower.car; c.fillStyle = '#c8d8ec'; c.fillRect(mx(BW + 6), my(car.y - 40), 28 * s, 40 * s)
+    const xc = tower.xcar; if (xc) { c.fillStyle = xc.lit > 0.5 ? '#f0dca0' : '#5a6070'; c.fillRect(mx(xc.x - 11), my(xc.y - 40), 22 * s, 40 * s) }
     const st = p => api.COLORS[p.state] || api.COLORS.idle, ppl = tower.people
     for (const p of ppl) if (p.kind !== 'session') { c.fillStyle = st(p); c.beginPath(); c.arc(mx(p.x), my(p.y - 8), 1.6, 0, 7); c.fill() }
     for (const p of ppl) if (p.kind === 'session') {

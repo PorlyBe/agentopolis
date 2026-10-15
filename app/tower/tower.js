@@ -6,7 +6,8 @@
 //
 // ===== Tower feature API (app/tower/features/*.js: export default function init(api, tower), tower === api.tower) =====
 // Coordinates: world pixels. x = 0 is the tower's left outer wall (interior tower.interior.x0..x1 = 8..488), the street
-// door is in that wall, the street furniture stands left of it (x < 0), the elevator shaft is right of it. y = 0 is street
+// door is in that wall, the street furniture stands left of it (x < 0), the elevator shafts are right of it (BW..BW+SHAFT: the main
+// car's, then the express car's, tower.xcar). y = 0 is street
 // level and the lobby floor; up is negative. A floor's people stand on f.y; f.top is its ceiling. Rects are { x, y, w, h }
 // with y their top. Everything moves when sessions come and go: read geometry every frame (or on 'layout'), never cache.
 // Hooks — tower.on(name, fn); a throwing hook is logged and skipped:
@@ -125,14 +126,25 @@ import stormCloud from './features/storm-cloud.js'
 import easterEggs from './features/easter-eggs.js'
 import catChaos from './features/cat-chaos.js'
 import tamagotchiPlant from './features/tamagotchi-plant.js'
+import directorMode from './features/director-mode.js'
+import ghostAnnex from './features/ghost-annex.js'
+import memoryArchive from './features/memory-archive.js'
+import agentXp from './features/agent-xp.js'
+import branchMetro from './features/branch-metro.js'
+import courtroom from './features/courtroom.js'
+import bugSquash from './features/bug-squash.js'
+import ivyWear from './features/ivy-wear.js'
+import smokestack from './features/smokestack.js'
 import postRoom from './features/post-room.js'
+import expressElevator from './features/express-elevator.js'
 
 const FEATURES = [['ceo-office', ceoOffice], ['desk-kit', deskKit], ['work-signals', workSignals], ['interactions', interactions], ['social', social], ['ambience', ambience], ['mess', mess], ['my-prs', myPrs], ['move-in-out', moveInOut], ['waiting-line', waitingLine], ['deploy-rocket', deployRocket],
   ['printer-jam', printerJam], ['groundhog', groundhog], ['fire-drill', fireDrill], ['security-desk', securityDesk], ['vending', vending], ['library', library], ['test-lab', testLab], ['plan-whiteboard', planWhiteboard], ['parking-garage', parkingGarage], ['friday-drinks', fridayDrinks], ['lost-found', lostFound], ['interoffice-mail', interofficeMail], ['post-room', postRoom],
   ['walkabout', walkabout], ['milestone-cake', milestoneCake], ['reviewer-visits', reviewerVisits], ['refactor-crane', refactorCrane], ['time-clock', timeClock], ['holidays', holidays], ['window-cleaner', windowCleaner], ['phone-booth', phoneBooth], ['it-tech', itTech], ['helipad', helipad],
   ['ci-subway', ciSubway], ['release-party', releaseParty], ['tug-of-war', tugOfWar], ['drones', drones], ['commit-stamps', commitStamps], ['merge-stamp', mergeStamp], ['price-billboard', priceBillboard], ['screensaver', screensaver], ['standup', standup], ['lunch-rush', lunchRush],
   ['seismograph', seismograph], ['window-heatmap', windowHeatmap], ['hall-of-records', hallOfRecords], ['blimp', blimp], ['uniforms', uniforms], ['wardrobe', wardrobe], ['themes', themes], ['skyline-towers', skylineTowers], ['avatar', avatar],
-  ['readable-monitors', readableMonitors], ['floor-sounds', floorSounds], ['storm-cloud', stormCloud], ['easter-eggs', easterEggs], ['cat-chaos', catChaos], ['tamagotchi-plant', tamagotchiPlant]]
+  ['readable-monitors', readableMonitors], ['floor-sounds', floorSounds], ['storm-cloud', stormCloud], ['easter-eggs', easterEggs], ['cat-chaos', catChaos], ['tamagotchi-plant', tamagotchiPlant],
+  ['director-mode', directorMode], ['ghost-annex', ghostAnnex], ['memory-archive', memoryArchive], ['agent-xp', agentXp], ['branch-metro', branchMetro], ['courtroom', courtroom], ['bug-squash', bugSquash], ['ivy-wear', ivyWear], ['smokestack', smokestack], ['express-elevator', expressElevator]]
 const Z = { BEHIND: -100, WALL: 10, FLOOR: 50, SEATED: 120, STAND: 130, WALK: 140, RIDE: 150, FRONT: 200, OUTSIDE: 300, TOP: 400 }
 
 const MAX_ZOOM = 8
@@ -532,6 +544,7 @@ export default async function init(api) {
       for (let k = 0; k < f.desks; k++) { const a = deskOccupant(f, k); if (a && a.data?.state !== 'idle') pool(SEAT.agent(k) + 13, f.y - 20, 14, '110,170,255', 0.4) }
     }
     pool(CAR_X, people.car.y - CAR_H / 2, 30, '220,235,255', 0.35)
+    if (people.xcar.lit > 0.02) pool(people.xcar.x, people.xcar.y - CAR_H / 2, 26, '255,236,190', 0.32 * people.xcar.lit)
     const roof = floors[floors.length - 1]
     stringLights(c, roof, now, true)
     pool(BW / 2, roof.y - 40, 160, '255,200,120', 0.12)
@@ -855,6 +868,7 @@ export default async function init(api) {
     person: id => { const a = people.find(id); return a ? people.person(a) : null },
     sendTo: (id, floor, x, opts) => people.sendTo(id, floor, x, opts), release: id => people.release(id), spawn: o => people.spawn(o),
     get car() { const c = people.car; return { y: c.y, at: c.at, state: c.state, x: CAR_X } },
+    get xcar() { const c = people.xcar; return { y: c.y, at: c.at, state: c.state, x: c.x, active: c.active, lit: c.lit, riders: c.riders.length } },
     // camera
     flyTo, follow, get following() { return following && people.actors.get(following)?.id || null }, fit,
     get zoom() { return cam.zoom }, fitZoom, cam, worldToScreen, screenToWorld: (sx, sy) => toWorld(sx, sy),

@@ -5,12 +5,14 @@
 // office (the user's penthouse, tall) and the roof.
 // Features read every rect here through api.tower (geometry(), deskGeo(), ceoSlots()); all of them move when sessions
 // come and go, so read them every frame rather than caching them.
-export const T = 16, FH = 80, SLAB = 6, WALL = 8, FW = 480, BW = FW + 2 * WALL, SHAFT = 40
+// SHAFT spans both glass shafts: the main one (SHAFT1) against the wall and the express one (XSHAFT) right of it
+export const T = 16, FH = 80, SLAB = 6, WALL = 8, FW = 480, BW = FW + 2 * WALL, SHAFT1 = 40, XSHAFT = 36, SHAFT = SHAFT1 + XSHAFT
 export const IX = WALL, IX1 = WALL + FW
 export const PLAQUE = { w: 192, h: 17 }       // each floor's name plaque, set into the slab above it, flush with the facade
 export const STREET_L = -110                 // the street furniture's left end (news box, arrivals)
 export const GROUND = 18                      // sidewalk + road band below y = 0; the basement sits under it
-export const CAR_X = BW + SHAFT / 2, CAR_W = 30, CAR_H = 46
+export const CAR_X = BW + SHAFT1 / 2, CAR_W = 30, CAR_H = 46
+export const XCAR_X = BW + SHAFT1 + XSHAFT / 2, XCAR_W = 26
 export const DOOR_X = IX1 - 6                 // where people step between the floor and the car
 export const SEAT = { session: IX + 30, agent: k => IX + 116 + k * 40 }   // a desk's seat anchor: where its sitter's x is
 // How high a seat is above its floor (its cushion's top): a sitter's hips rest there (people.js lines each sprite row's hips up).
@@ -168,20 +170,23 @@ function plaque(c, lc, f) {
 }
 
 function shaft(c, floors, low, roof) {
-  const x = BW, top = roof.y - 34, pit = low.y > 0 ? low.y + SLAB : GROUND
-  c.fillStyle = 'rgba(170,205,230,.16)'; c.fillRect(x + 3, top, SHAFT - 6, -top)
+  const x = BW, top = roof.y - 34, pit = low.y > 0 ? low.y + SLAB : GROUND, S = SHAFT1, xx = BW + SHAFT1
+  c.fillStyle = 'rgba(170,205,230,.16)'; c.fillRect(x + 3, top, S - 6, -top)
+  c.fillStyle = 'rgba(170,200,230,.10)'; c.fillRect(xx, top, XSHAFT - 3, -top)
   if (low.y > 0) { R(c, '#262b36', x + 3, 0, SHAFT - 6, pit); R(c, '#4a4f5a', x, low.y, SHAFT, SLAB) }     // underground: a concrete well
-  R(c, P.shaft, x, top, 3, pit - top); R(c, P.shaft, x + SHAFT - 3, top, 3, pit - top)
-  R(c, P.shaftHi, x, top, 1, pit - top); R(c, P.shaftHi, x + SHAFT - 3, top, 1, pit - top)
+  for (const wx of [x, x + S - 3, BW + SHAFT - 3]) { R(c, P.shaft, wx, top, 3, pit - top); R(c, P.shaftHi, wx, top, 1, pit - top) }
   for (let i = low.n; i < roof.n; i++) {
     const y = floors[i].y, ny = floors[i + 1].y
-    R(c, '#7b8492', x + 3, y, SHAFT - 6, 2); c.fillStyle = 'rgba(109,118,132,.5)'; c.beginPath(); c.moveTo(x + 3, y); c.lineTo(x + SHAFT - 3, ny + 2); c.lineTo(x + SHAFT - 3, ny + 3); c.lineTo(x + 3, y + 1); c.fill()
+    R(c, '#7b8492', x + 3, y, S - 6, 2); c.fillStyle = 'rgba(109,118,132,.5)'; c.beginPath(); c.moveTo(x + 3, y); c.lineTo(x + S - 3, ny + 2); c.lineTo(x + S - 3, ny + 3); c.lineTo(x + 3, y + 1); c.fill()
+    R(c, '#7b8492', x + S - 3, y, 3, 2)                                                       // the landing across to the express car
+    R(c, '#737c8a', xx, y, XSHAFT - 3, 2); R(c, 'rgba(109,118,132,.45)', xx + 3, ny + 2, 1, y - ny - 2); R(c, 'rgba(109,118,132,.45)', xx + XSHAFT - 7, ny + 2, 1, y - ny - 2)
   }
   R(c, '#7b8492', x + 3, roof.y, SHAFT - 6, 2)
   if (low.y <= 0) R(c, '#4a4f5a', x, 0, SHAFT, GROUND)
-  // the machine room on the roof
+  // the machine room on the roof, over both shafts
   R(c, P.machine, x - 6, top, SHAFT + 8, 34); R(c, P.machineHi, x - 6, top, SHAFT + 8, 2); R(c, P.machineLo, x - 6, top + 32, SHAFT + 8, 2)
   R(c, '#2a2f3a', x + 8, top + 8, 14, 9); R(c, '#4a5568', x + 9, top + 9, 12, 2)
+  R(c, P.machineLo, xx - 1, top + 2, 1, 30); R(c, '#2a2f3a', xx + 10, top + 8, 12, 9); R(c, '#4a5568', xx + 11, top + 9, 10, 2)
 }
 
 // ---------- props (side view; x, y: left edge and the floor surface) ----------

@@ -5,7 +5,7 @@
 // Hover the pad for what is out. ?demo=helipad fakes a quick publish and a long remote review.
 import { BW, SHAFT } from '../building.js'
 
-const HX = BW + 19, LAD = BW - 8, STAND = BW - 16, TIMEOUT = 30 * 60_000, MIN_AWAY = 12_000, OLD = 3 * 60_000, WAIT = 45
+const HX = BW + Math.round(SHAFT / 2), LAD = BW - 8, STAND = BW - 16, TIMEOUT = 30 * 60_000, MIN_AWAY = 12_000, OLD = 3 * 60_000, WAIT = 45
 const R = (c, col, x, y, w, h) => { c.fillStyle = col; c.fillRect(Math.round(x), Math.round(y), w, h) }
 const ease = t => t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2
 const ICON = { artifact: '📄', cron: '⏰', schedule: '⏰', trigger: '📡', agent: '☁️', workflow: '☁️', review: '🔎' }
@@ -124,7 +124,7 @@ export default function init(api, tower) {
     const x0 = BW - 1, x1 = BW + SHAFT + 1
     R(c, '#3a3d45', x0, y - 2, x1 - x0, 2)
     for (let x = x0; x < x1; x += 6) R(c, '#f2c230', x, y - 2, 3, 1)
-    R(c, '#2a2d34', BW + 25, y + 3, 7, 7); R(c, '#f2c230', BW + 26, y + 4, 1, 5); R(c, '#f2c230', BW + 30, y + 4, 1, 5); R(c, '#f2c230', BW + 27, y + 6, 3, 1)  // the H plate
+    const hx = Math.round((x0 + x1) / 2) - 3; R(c, '#2a2d34', hx, y + 3, 7, 7); R(c, '#f2c230', hx + 1, y + 4, 1, 5); R(c, '#f2c230', hx + 5, y + 4, 1, 5); R(c, '#f2c230', hx + 2, y + 6, 3, 1)  // the H plate
     // the windsock
     R(c, '#5a5f6a', x1 - 2, y - 16, 1, 14)
     const flap = Math.round(Math.sin(now / 400))

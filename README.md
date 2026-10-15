@@ -127,6 +127,13 @@ And a lot more, each driven by something real in your transcripts or on GitHub:
   secrets to find.
 - **Share your day:** the 📊 button draws a daily report card (sessions, tool calls, PRs, deploys, spend, the moment of
   the day) as an image to paste into Slack.
+- **Watch it on a TV:** 🎬 director mode (or `D`, or `?director=1`) flies a slow auto-pilot camera between whatever is
+  happening, with a small caption; touching the view pauses it for a minute.
+- **More of the building:** a second express elevator opens when the line gets long; a ghost annex keeps today's
+  closed sessions as translucent floors at night; a records room files every write to a CLAUDE.md or memory file;
+  the subway wall carries a metro map of your branches; a review turns the meeting room into a courtroom; ivy grows on
+  long-running floors; a roof smokestack puffs with the token rate; subagent types level up; and you can squash the
+  bug critters for a high score.
 - **Infrastructure:** a server room with a rack per background job, a parking garage with one car per session's
   model, an IT technician when a tool server drops, and a security desk that stamps DENIED on blocked actions.
 - **Around the building:** weather and a day–night cycle for your time zone, the Gazette (a daily paper of the repo),
@@ -140,7 +147,8 @@ Add `?demo=<name>` to see any feature without waiting for it to happen. For exam
 `waitline`, `myprs`, `postroom`, `rocket`, `helipad`, `firedrill`, `printerjam`, `groundhog`, `milestonecake`,
 `walkabout`, `reviewervisits`, `fridaydrinks`, `standup`, `lunchrush`, `screensaver`, `cisubway`, `seismograph`,
 `windowheatmap`, `readablemonitors`, `floorsounds`, `stormcloud`, `catchaos`, `tamagotchiplant`, `reportcard`,
-`hallofrecords`, `blimp`, `uniforms`, `wardrobe`, `themes`, `skylinetowers`, `avatar`,
+`hallofrecords`, `expresselevator`, `directormode`, `ghostannex`, `memoryarchive`, `agentxp`, `branchmetro`,
+`courtroom`, `bugsquash`, `ivywear`, `smokestack`, `blimp`, `uniforms`, `wardrobe`, `themes`, `skylinetowers`, `avatar`,
 `holidays&date=2026-12-25`.
 
 `?towerzoom=min` shows the whole street.
