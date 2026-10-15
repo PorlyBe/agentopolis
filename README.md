@@ -12,24 +12,68 @@ and a failing CI run sets them on fire.
 It is a read-only window onto `~/.claude`. It installs no hooks, changes no settings and runs no agents. It's a plain
 Node server with no dependencies and a canvas page.
 
-## Quick start
+## Getting started
+
+### 1. What you need
+
+- **Node.js 24.** It's the version Agentopolis is tested on. Check with `node -v`; get it from
+  [nodejs.org](https://nodejs.org) or `nvm install 24`. There's nothing to `npm install`, because there are no
+  dependencies.
+- **Claude Code**, running on the same machine. Agentopolis shows the sessions that are open right now.
+- **Optional: the [GitHub CLI](https://cli.github.com), signed in** (`gh auth login`). This lights up the street,
+  post room, CI subway, deploy rockets and your PR board for the GitHub repo your sessions are working in. Without
+  it the tower still works and the street stays quiet.
+- Tested on macOS. Linux and Windows (WSL) should work but haven't been tried yet; reports welcome.
+
+### 2. Try the demo (no setup)
 
 ```sh
-git clone https://github.com/<you>/agentopolis && cd agentopolis
-node server.mjs --name Ada # → http://127.0.0.1:4747  (your name goes on the CEO office)
-node server.mjs --demo     # a made-up office, no Claude Code needed
+git clone https://github.com/PorlyBe/agentopolis.git
+cd agentopolis
+node server.mjs --demo
 ```
 
-You need Node 24 (the version it's tested on) and Claude Code sessions on the same machine. A few things are optional:
+Open **http://127.0.0.1:4747**. You get a made-up office with five sessions, teammates, PRs and deploys. The demo
+reads nothing from your machine and makes no network calls.
 
-- **The street (needs [`gh`](https://cli.github.com))**: if you're signed in to `gh`, the street, the post room, CI and
-  deploys come alive for the GitHub repo your sessions are working in. All of these calls only read.
-- **Orca**: if you run your sessions in Orca, clicking a floor jumps to that
-  session's terminal.
-- **No data needed for the demo**: `--demo` serves an invented office (sessions, teammates, PRs, deploys). It reads
-  nothing from your machine and makes no network calls, so you can try it with nothing running.
+### 3. Run it on your own sessions
 
-`./start.sh` starts the server in the background and opens the page.
+```sh
+node server.mjs --name "Ada"     # your name goes on the CEO office
+```
+
+Open **http://127.0.0.1:4747**, then start or switch to a Claude Code session in any terminal. Its floor is
+built within a couple of seconds, and each subagent it spawns walks in through the lobby.
+
+To keep it running in the background and open the browser for you:
+
+```sh
+AGENTOPOLIS_NAME="Ada" ./start.sh      # logs go to server.log
+pkill -f agentopolis/server.mjs       # stop it
+```
+
+### Options
+
+| Flag | Default | What it does |
+|---|---|---|
+| `--name <you>` | `You` | The name on the CEO office |
+| `--port <n>` | `4747` | Port, always on 127.0.0.1 |
+| `--demo` | off | An invented office; no real data is read |
+| `--window-min <n>` | `30` | How long a running but inactive session keeps its floor |
+
+`?demo=<feature>` on the URL plays any single feature (see [Demos](#demos)), and `?towerzoom=min` shows the whole
+street.
+
+### Troubleshooting
+
+- **"No Claude sessions running".** Only sessions whose Claude Code process is alive are shown; they're read from
+  `~/.claude/sessions/` and `~/.claude/projects/`. Start a session, or check that you run the server as the same
+  user as Claude Code.
+- **The street is empty.** Run `gh auth status`. The repo is taken from the `origin` remote of your sessions'
+  working directories, so it needs to be on GitHub, and your account needs read access to it.
+- **"Port 4747 is in use".** It's already running, or something else holds the port. Use `--port 4800`.
+- **Clicking a floor says it isn't in an Orca terminal.** Jumping to a session's terminal needs
+  Orca; everything else works without it.
 
 ## What's in the building
 
@@ -96,8 +140,6 @@ gh (read-only)             ─┘   server/features/*.mjs        polls 1.5 s    
 
 To add a feature, drop a file into `app/tower/features/`, register it in `tower.js`, and give it a `?demo=`.
 
-Server options: `--port <n>` (default 4747), `--name <you>` (default "You"), `--demo`, `--window-min <n>` (how long an inactive but running session stays,
-default 30).
 
 ## Credits
 

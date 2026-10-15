@@ -233,7 +233,8 @@ async function openExternal(req, res) {
   for await (const chunk of req) { body += chunk; if (body.length > 4000) break }
   const url = (() => { try { return new URL(JSON.parse(body).url) } catch { return null } })()
   if (!url || url.protocol !== 'https:' || url.hostname !== 'github.com') return send(res, 400, { error: 'only https://github.com links' })
-  execFile('open', [url.href], err => err ? send(res, 502, { error: err.message }) : send(res, 200, { ok: true }))
+  const [cmd, ...pre] = process.platform === 'darwin' ? ['open'] : process.platform === 'win32' ? ['rundll32', 'url.dll,FileProtocolHandler'] : ['xdg-open']
+  execFile(cmd, [...pre, url.href], err => err ? send(res, 502, { error: err.message }) : send(res, 200, { ok: true }))
 }
 
 function send(res, status, obj) {
@@ -344,4 +345,5 @@ const server = http.createServer((req, res) => {
   res.writeHead(404).end('not found')
 })
 
+server.on('error', e => { console.error(e.code === 'EADDRINUSE' ? `Port ${PORT} is in use (is Agentopolis already running?). Try --port <n>.` : e.message); process.exit(1) })
 server.listen(PORT, HOST, () => console.log(`Agentopolis${DEMO ? ' (demo)' : ''}: http://${HOST}:${PORT}`))

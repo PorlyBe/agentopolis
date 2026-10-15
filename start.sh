@@ -1,6 +1,6 @@
 #!/bin/sh
 # Start the Agentopolis server if it isn't running, then open it in an Orca browser tab.
-PORT="${AGENT_OFFICE_PORT:-4747}"
+PORT="${AGENTOPOLIS_PORT:-${AGENT_OFFICE_PORT:-4747}}"
 DIR="$(cd "$(dirname "$0")" && pwd)"
 URL="http://127.0.0.1:$PORT/"
 
@@ -13,4 +13,5 @@ fi
 if command -v orca >/dev/null 2>&1; then
   orca tab create --url "$URL" >/dev/null && echo "Opened $URL in Orca" && exit 0
 fi
-open "$URL" && echo "Opened $URL in your browser"
+if command -v open >/dev/null 2>&1; then open "$URL"; elif command -v xdg-open >/dev/null 2>&1; then xdg-open "$URL" >/dev/null 2>&1; fi
+echo "Agentopolis: $URL"

@@ -41,7 +41,7 @@ async function save(req, res) {
   }
   if (!file) return send(res, 500, { error: 'no free file name' })
   console.log(`[photo-booth] saved ${file} (${buf.length} bytes)`)
-  if (process.env.AGENT_OFFICE_NO_REVEAL !== '1') execFile('open', ['-R', file], () => {})
+  if (process.platform === 'darwin' && process.env.AGENT_OFFICE_NO_REVEAL !== '1') execFile('open', ['-R', file], () => {})
   send(res, 200, { ok: true, path: file })
 }
 
