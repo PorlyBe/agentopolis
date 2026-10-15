@@ -35,6 +35,17 @@ const step = (key, now, ms = 4500) => {
   return { k, at: k * ms - off }
 }
 const pick = (key, script, k) => SCRIPTS[script][(k + hash(key)) % SCRIPTS[script].length]
+const LANG = [[/\.rs$/, 'rust'], [/\.py$/, 'python'], [/\.swift$/, 'swift'], [/\.kts?$/, 'kotlin'], [/\.sql$/, 'sql'], [/\.(md|mdx|txt)$/, 'docs'], [/\.(ts|tsx|js)$/, 'ts'], [/\.go$/, 'go'], [/\.css$/, 'css'], [/\.sh$/, 'shell']]
+// uniforms: the latest file the script edited and read, walking back from its current step
+function uniformOf(key, script, k, now, ms = 4500) {
+  const out = {}
+  for (let i = 0; i < SCRIPTS[script].length; i++) {
+    const x = pick(key, script, k - i), lang = x && /^(Edit|Write|Read)$/.test(x[0]) && LANG.find(([re]) => re.test(x[1]))?.[1]
+    const kind = x?.[0] === 'Read' ? 'read' : 'edit'
+    if (lang && !out[kind]) out[kind] = { lang, at: now - i * ms }
+  }
+  return Object.keys(out).length ? out : undefined
+}
 
 // An agent slot comes and goes: present for `life`, lingers 20 s as done, then gone until the next period.
 function slot(sid, key, now, { period, life, off = 0 }) {
@@ -106,7 +117,8 @@ function agentsOf(s, now) {
     return {
       id: sl.id, type, description, phase: extra.phase || null, workflow: extra.workflow || null, workflowRun: extra.workflowRun || null,
       state: sl.done ? 'done' : x ? 'tool' : 'thinking', tool: x?.[0] ?? null, detail: x?.[1] ?? null, lastActivity: Math.min(now, at), script, key,
-      ext: { 'context-meter': { used: Math.round(ctx * 200_000), window: 200_000, pct: ctx, model: SONNET.model } },
+      ext: { 'context-meter': { used: Math.round(ctx * 200_000), window: 200_000, pct: ctx, model: SONNET.model },
+        uniforms: uniformOf(sl.id, script, k, now, 3800), ...(key === 'explore' && { wardrobe: { model: 'claude-haiku-4-5', big: false } }) },
     }
   }
   if (s.key === 'payments') return [mk('rev', 'reviewer', 'code-reviewer', 'Review the refund changes', slot(s.id, 'rev', now, { period: 4 * MIN, life: 100 * SEC }))].filter(Boolean)
@@ -135,6 +147,7 @@ function sessionExt(s, x, now) {
   const hours = []; for (let t = clockIn; t <= now; t += HOUR) hours.push(new Date(t).getHours())
   const ext = {
     'context-meter': { used: Math.round(ctxPct * s.m.window), window: s.m.window, pct: ctxPct, model: s.m.model },
+    uniforms: SCRIPTS[s.key] ? uniformOf(s.key, s.key, step(s.key, now).k, now) : undefined,
     'cost-jar': { usdToday: usd, tokensToday: tokens, byModel: { [s.m.model]: { family: s.m.family, usd, tokens, messages: Math.round(tokens / 9000) } } },
     'desk-props': { top: s.stacks.map(([stack, share]) => ({ stack, w: Math.round(share * 300), share })), files: 40 + hash(s.key) % 300 },
     'time-clock': { in: clockIn, hours: [...new Set(hours)] },
@@ -347,6 +360,8 @@ export function generate(now) {
       engineer: { login: 'erin-reviews', actions: 14, openPrs: 1, merges: 1 }, coderabbit: null, weather: 'clear, 22°',
     },
     street: st,
+    skyline: { main: REPO, repos: [{ name: 'harbor-docs', full: 'acme/harbor-docs', sessions: [out[2].id] }, { name: 'data-lake', full: 'globex/data-lake', sessions: out.slice(3, 5).map(x => x.id) },
+      { name: 'pixel-kit', full: 'pixel-kit', sessions: [out[1].id] }] },
     lostFound: { at: now, prsAt: now, prsKnown: true, repo: REPO, total: 0, inUse: 0, crates: [] },
     priceBillboard: { ok: true, at: now - (now % MIN), list: [['BTC', 'Bitcoin', 98_000, 1.8], ['ETH', 'Ethereum', 3480, -0.8], ['USDT', 'Tether', 1, 0.01], ['XRP', 'XRP', 2.31, 4.2],
       ['BNB', 'BNB', 712, 1.1], ['SOL', 'Solana', 182, -3.6], ['USDC', 'USDC', 1, 0], ['DOGE', 'Dogecoin', 0.231, 6.4], ['ADA', 'Cardano', 0.78, -1.9], ['BCH', 'Bitcoin Cash', 410, -0.9]]
@@ -358,7 +373,23 @@ export function generate(now) {
       { id: 'toolu_' + hex('sd2', 20), t: now - 18 * MIN, kind: 'hook', tool: 'Bash', what: 'Wait for the build', reason: 'Blocked: use a background job instead of sleep', session: mob.id, agent: null, sessionTitle: mob.title, agentName: null }] },
     serverRoom: { running: out.flatMap(x => (x.background || []).map(b => ({ id: hex(x.id + b.label, 9), kind: b.kind, label: b.label, session: x.id, title: x.title, since: b.since }))), failed: [] },
     mail: mob.agents.filter(a => a.state === 'done').map(a => ({ id: 'slip:' + a.id, t: now - 10 * SEC, kind: 'slip', from: { agent: a.id, name: null, session: mob.id }, to: { session: mob.id }, text: `${a.description}: done`, status: 'completed' })),
+    records: { day: new Date(now).toISOString().slice(0, 10), streak: 9, list: [
+      ['longest-session', 'Longest-running session', 'ms', 31 * HOUR + 12 * MIN, 9, mob.title], ['tools-day', 'Most tool calls in a day', 'n', 1987, 12, `busiest: ${pay.title}`],
+      ['agents-once', 'Most subagents at once', 'n', 14, 3, `9 for ${mob.title}`], ['biggest-pr', 'Biggest merged PR', 'lines', 2100, 6, '#424 mobile: release checklist for 3.2 (+1240 −860)'],
+      ['priciest-day', 'Priciest day', 'usd', 182.4, 20, `top desk: ${mob.title}`], ['commits-day', 'Most commits in a day', 'n', 23, 2, `most in ${pay.title}`],
+      ['green-streak', 'Longest green CI streak', 'n', 17, 15, 'tests on payments-webhook']]
+      .map(([key, label, unit, value, days, what]) => ({ key, label, unit, value, at: day - days * 24 * HOUR + 15 * HOUR, what, prev: null, fresh: false })) },
     ticker: ticker.slice(0, 40),
+    heatmap: { day, hours: Array.from({ length: 24 }, (_, h) => { const at = day + h * HOUR; if (at > now) return 0
+      const v = Math.round((h < 8 ? 3 : 40 + 110 * Math.exp(-((h - 11) ** 2) / 6) + 95 * Math.exp(-((h - 16) ** 2) / 5)) * (0.8 + (hash('hm' + h) % 40) / 100))
+      return at + HOUR > now ? Math.round(v * (now - at) / HOUR) : v }) },
+    seismograph: { day, events: [
+      [9.6, 0, 'git reset --hard origin/main', 'reset --hard', 1], [11.2, 1, 'git push --force-with-lease origin release/3.2', 'force push', 3],
+      [13.9, 2, 'rm -rf build/ dist/', 'rm -rf', 3], [15.4, 0, 'git branch -D spike/old-ledger', 'branch -D', 2], [16.8, 3, 'docker system prune -af', 'docker prune', 2]]
+      .map(([h, i, cmd, kind, size]) => ({ id: 'toolu_' + hex('sg' + h, 20), at: day + h * HOUR, session: out[i % out.length].id, who: out[i % out.length].id, cmd, kind, size }))
+      .concat([0, 1].map(k => { const t = now - (now % (6 * MIN)) - k * 6 * MIN, n = Math.floor(t / (6 * MIN)), x = out[n % out.length], c = [['git push --force origin feature/dark-mode', 'force push', 3], ['git reset --hard HEAD~2', 'reset --hard', 1], ['git clean -fdx', 'clean -fd', 2]][n % 3]
+        return { id: 'toolu_' + hex('sgl' + n, 20), at: t, session: x.id, who: x.id, cmd: c[0], kind: c[1], size: c[2] } }))
+      .filter(e => e.at <= now && e.at >= day).sort((a, b) => a.at - b.at) },
     trophies: { merged: 2, open: 3, closed: 0, gh: true, pending: 0, items: [
       ...st.mine.map(p => ({ n: p.number, repo: REPO, at: p.updatedAt, state: 'OPEN', mergedAt: 0, title: p.title, checked: true })),
       ...MERGED.filter(m => m[1] === ME).map(([n, , title], i) => ({ n, repo: REPO, at: now - (3 + i) * HOUR, state: 'MERGED', mergedAt: now - (1 + i * 2) * HOUR, title, checked: true }))] },

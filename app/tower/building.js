@@ -20,8 +20,17 @@ export const BANNER = { x0: IX + 202, x1: IX + 384 }
 export const DOOR = { x: -4 }                 // the lobby's street door, in the left wall
 export const OUTSIDE = -96                    // where arrivals appear and leavers vanish, on the sidewalk
 
-const INTERIOR = { session: '#d6cdbd', lobby: '#ddd6ca', meeting: '#cdd3d8', cafe: '#dedbd0', ceo: '#d8ccb2', server: '#2c3242', post: '#cbc6b4' }
-const WAINSCOT = { session: '#b4a690', lobby: '#8f8070', meeting: '#a5adb6', cafe: '#c4bfae', ceo: '#5a3a26', server: '#232836', post: '#6f7462' }
+// the tower's materials; features/themes.js swaps them (setPalette) and the layers are rebuilt
+const CLASSIC = {
+  interior: { session: '#d6cdbd', lobby: '#ddd6ca', meeting: '#cdd3d8', cafe: '#dedbd0', ceo: '#d8ccb2', server: '#2c3242', post: '#cbc6b4' },
+  wainscot: { session: '#b4a690', lobby: '#8f8070', meeting: '#a5adb6', cafe: '#c4bfae', ceo: '#5a3a26', server: '#232836', post: '#6f7462' },
+  slabTop: '#8f6c4a', slab: '#565060', slabLine: '#3f3a48', roofSlab: '#6b6470', roofSlabTop: '#8b8490', wall: '#9d9488', wallEdge: '#7d7468',
+  footing: '#5f5866', footingLine: '#4a4452', doorFrame: '#6f675c', glass: '#8fa8bb', skirting: '#6e5a44',
+  shaft: '#6d7684', shaftHi: '#8d96a4', machine: '#8b8490', machineHi: '#a29ba6', machineLo: '#6b6470', deck: '#9a7a56', deckLine: '#7a5e40',
+  lamp: '255,200,120', roomGlow: 'rgba(70,52,30,.55)',
+}
+let P = CLASSIC
+export const setPalette = p => { P = p ? { ...CLASSIC, ...p, interior: { ...CLASSIC.interior, ...p.interior }, wainscot: { ...CLASSIC.wainscot, ...p.wainscot } } : CLASSIC }
 export const TALL = FH + 32                   // the café + lounge and the CEO office are taller than a working floor
 const HEIGHT = { cafe: TALL, ceo: TALL }
 const LOUNGE_X = IX + 170                     // where the café ends and the lounge begins
@@ -73,19 +82,19 @@ export function buildLayers(floors) {
   shaft(bc, floors, low, roof)
   for (const f of floors) {
     if (f.kind === 'roof') continue
-    R(bc, '#8f6c4a', 0, f.y, BW, 2); R(bc, '#565060', 0, f.y + 2, BW, SLAB - 2)    // the slab under each floor
-    R(bc, '#3f3a48', 0, f.y + SLAB - 1, BW, 1)
+    R(bc, P.slabTop, 0, f.y, BW, 2); R(bc, P.slab, 0, f.y + 2, BW, SLAB - 2)    // the slab under each floor
+    R(bc, P.slabLine, 0, f.y + SLAB - 1, BW, 1)
   }
-  R(bc, '#6b6470', 0, roof.y, BW, SLAB); R(bc, '#8b8490', 0, roof.y, BW, 2)        // the roof slab
+  R(bc, P.roofSlab, 0, roof.y, BW, SLAB); R(bc, P.roofSlabTop, 0, roof.y, BW, 2)        // the roof slab
   // outer walls: the street door in the left one, a shaft door per served floor in the right one
   for (const [x, edge] of [[0, 0], [BW - WALL, WALL - 1]]) {
-    R(bc, '#9d9488', x, roof.y, WALL, -roof.y + GROUND); R(bc, '#7d7468', x + edge, roof.y, 1, -roof.y + GROUND)
+    R(bc, P.wall, x, roof.y, WALL, -roof.y + GROUND); R(bc, P.wallEdge, x + edge, roof.y, 1, -roof.y + GROUND)
   }
   R(bc, '#2c3242', 0, GROUND, WALL, floors[0].y - GROUND); R(bc, '#2c3242', BW - WALL, GROUND, WALL, floors[0].y - GROUND)
-  R(bc, '#5f5866', 0, floors[0].y, BW, PLAQUE.h); R(bc, '#4a4452', 0, floors[0].y + PLAQUE.h - 1, BW, 1)   // the footing
-  R(bc, '#565060', WALL, SLAB, FW, GROUND - SLAB); R(bc, '#3f3a48', WALL, GROUND - 1, FW, 1)              // the ground slab
+  R(bc, P.footing, 0, floors[0].y, BW, PLAQUE.h); R(bc, P.footingLine, 0, floors[0].y + PLAQUE.h - 1, BW, 1)   // the footing
+  R(bc, P.slab, WALL, SLAB, FW, GROUND - SLAB); R(bc, P.slabLine, WALL, GROUND - 1, FW, 1)              // the ground slab
   bc.clearRect(0, -42, WALL, 42)
-  R(bc, '#6f675c', 0, -44, WALL, 2); R(bc, '#8fa8bb', 1, -42, 2, 42); R(bc, '#8fa8bb', 5, -42, 2, 42)   // door frame, glass panes
+  R(bc, P.doorFrame, 0, -44, WALL, 2); R(bc, P.glass, 1, -42, 2, 42); R(bc, P.glass, 5, -42, 2, 42)   // door frame, glass panes
   for (const f of floors) if (f.kind !== 'roof' && f.kind !== 'server') inside(f, f => {
     bc.clearRect(BW - WALL, f.y - 42, WALL, 42)
     R(bc, '#8a96a6', BW - WALL, f.y - 44, WALL, 2); R(bc, '#5c6573', BW - WALL, f.y - 42, 1, 42)
@@ -103,7 +112,7 @@ export function buildLayers(floors) {
   for (const f of floors) if (f.kind !== 'roof' && !(f.open != null && f.y - f.top < 20)) plaque(fc, lc, f)
   // interiors glow faintly at night even away from the lamps
   lc.globalCompositeOperation = 'destination-over'
-  for (const f of floors) if (f.kind !== 'roof' && f.y > f.top) { lc.fillStyle = f.kind === 'server' ? 'rgba(40,70,120,.25)' : 'rgba(70,52,30,.55)'; lc.fillRect(IX, f.top, FW, f.y - f.top) }
+  for (const f of floors) if (f.kind !== 'roof' && f.y > f.top) { lc.fillStyle = f.kind === 'server' ? 'rgba(40,70,120,.25)' : P.roomGlow; lc.fillRect(IX, f.top, FW, f.y - f.top) }
   lc.globalCompositeOperation = 'source-over'
   // the penthouse window stays a hole in every layer, so the real sky shows through it
   const ceo = floors.find(f => f.kind === 'ceo')
@@ -116,13 +125,13 @@ function lamp(c, lc, x, f) {
   const d = Math.round((f.y - f.top - FH + SLAB) * 0.6), t = f.top + d     // tall rooms hang their lamps lower
   R(c, '#4a4452', x, f.top, 1, 4 + d); R(c, '#3a3542', x - 4, t + 4, 9, 3); R(c, '#fff1c8', x - 2, t + 7, 5, 1)
   const g = lc.createRadialGradient(x, t + 8, 0, x, t + 30, 64)
-  g.addColorStop(0, 'rgba(255,200,120,.75)'); g.addColorStop(1, 'rgba(255,200,120,0)')
+  g.addColorStop(0, `rgba(${P.lamp},.75)`); g.addColorStop(1, `rgba(${P.lamp},0)`)
   lc.fillStyle = g; lc.fillRect(x - 64, f.top, 128, f.y - f.top)
 }
 
 function room(c, f) {
   const k = f.kind, h = f.y - f.top
-  R(c, INTERIOR[k], IX, f.top, FW, h)
+  R(c, P.interior[k], IX, f.top, FW, h)
   if (k === 'cafe') {
     const lw = IX1 - LOUNGE_X
     c.fillStyle = 'rgba(0,0,0,.05)'; for (let x = IX; x < LOUNGE_X; x += 8) c.fillRect(x, f.top, 1, h); for (let y = f.top + 4; y < f.y; y += 8) c.fillRect(IX, y, LOUNGE_X - IX, 1)
@@ -130,11 +139,11 @@ function room(c, f) {
   }
   if (k === 'lobby') { c.fillStyle = 'rgba(0,0,0,.05)'; for (let x = IX; x < IX1; x += 24) c.fillRect(x, f.top, 1, h - 20) }
   if (k === 'ceo') { c.fillStyle = 'rgba(90,60,30,.06)'; for (let x = IX + 10; x < IX1; x += 20) c.fillRect(x, f.top, 1, h - 20) }
-  R(c, WAINSCOT[k], IX, f.y - 18, FW, 18)
+  R(c, P.wainscot[k], IX, f.y - 18, FW, 18)
   if (k === 'cafe') R(c, '#b09a86', LOUNGE_X, f.y - 18, IX1 - LOUNGE_X, 18)
   if (k === 'ceo') { c.fillStyle = '#6e4a32'; for (let x = IX + 4; x < IX1; x += 24) c.fillRect(x, f.y - 15, 18, 10); R(c, '#c9a25a', IX, f.y - 19, FW, 1) }
   R(c, k === 'server' ? '#1c2030' : 'rgba(0,0,0,.18)', IX, f.y - 19, FW, 1)
-  R(c, k === 'server' ? '#161a26' : k === 'ceo' ? '#3e2716' : '#6e5a44', IX, f.y - 2, FW, 2)
+  R(c, k === 'server' ? '#161a26' : k === 'ceo' ? '#3e2716' : P.skirting, IX, f.y - 2, FW, 2)
   R(c, 'rgba(0,0,0,.12)', IX, f.top, FW, 2)                                      // the ceiling's shadow
   if (k === 'session') R(c, `hsl(${f.hue} 45% 55%)`, IX, f.y - 20, FW, 1)         // the session's accent, a thin rail
 }
@@ -160,8 +169,8 @@ function shaft(c, floors, low, roof) {
   const x = BW, top = roof.y - 34, pit = low.y > 0 ? low.y + SLAB : GROUND
   c.fillStyle = 'rgba(170,205,230,.16)'; c.fillRect(x + 3, top, SHAFT - 6, -top)
   if (low.y > 0) { R(c, '#262b36', x + 3, 0, SHAFT - 6, pit); R(c, '#4a4f5a', x, low.y, SHAFT, SLAB) }     // underground: a concrete well
-  R(c, '#6d7684', x, top, 3, pit - top); R(c, '#6d7684', x + SHAFT - 3, top, 3, pit - top)
-  R(c, '#8d96a4', x, top, 1, pit - top); R(c, '#8d96a4', x + SHAFT - 3, top, 1, pit - top)
+  R(c, P.shaft, x, top, 3, pit - top); R(c, P.shaft, x + SHAFT - 3, top, 3, pit - top)
+  R(c, P.shaftHi, x, top, 1, pit - top); R(c, P.shaftHi, x + SHAFT - 3, top, 1, pit - top)
   for (let i = low.n; i < roof.n; i++) {
     const y = floors[i].y, ny = floors[i + 1].y
     R(c, '#7b8492', x + 3, y, SHAFT - 6, 2); c.fillStyle = 'rgba(109,118,132,.5)'; c.beginPath(); c.moveTo(x + 3, y); c.lineTo(x + SHAFT - 3, ny + 2); c.lineTo(x + SHAFT - 3, ny + 3); c.lineTo(x + 3, y + 1); c.fill()
@@ -169,7 +178,7 @@ function shaft(c, floors, low, roof) {
   R(c, '#7b8492', x + 3, roof.y, SHAFT - 6, 2)
   if (low.y <= 0) R(c, '#4a4f5a', x, 0, SHAFT, GROUND)
   // the machine room on the roof
-  R(c, '#8b8490', x - 6, top, SHAFT + 8, 34); R(c, '#a29ba6', x - 6, top, SHAFT + 8, 2); R(c, '#6b6470', x - 6, top + 32, SHAFT + 8, 2)
+  R(c, P.machine, x - 6, top, SHAFT + 8, 34); R(c, P.machineHi, x - 6, top, SHAFT + 8, 2); R(c, P.machineLo, x - 6, top + 32, SHAFT + 8, 2)
   R(c, '#2a2f3a', x + 8, top + 8, 14, 9); R(c, '#4a5568', x + 9, top + 9, 12, 2)
 }
 
@@ -417,7 +426,7 @@ function serverFloor(c, f) {
 export const RACKS = 14, rackX = k => IX + 14 + k * 28
 function roofDeck(c, fc, f) {
   const y = f.y
-  c.fillStyle = '#9a7a56'; c.fillRect(0, y - 3, BW, 3); c.fillStyle = '#7a5e40'; for (let x = 0; x < BW; x += 12) c.fillRect(x, y - 3, 1, 3)
+  c.fillStyle = P.deck; c.fillRect(0, y - 3, BW, 3); c.fillStyle = P.deckLine; for (let x = 0; x < BW; x += 12) c.fillRect(x, y - 3, 1, 3)
   // railing
   R(c, '#5a5f6a', 0, y - 18, BW, 2); R(c, '#5a5f6a', 0, y - 10, BW, 1)
   for (let x = 0; x <= BW - 2; x += 22) R(c, '#5a5f6a', x, y - 18, 2, 15)

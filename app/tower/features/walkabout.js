@@ -27,7 +27,7 @@ export default function init(api, tower) {
     return (sheet = cv)
   }
   function drawWalker(c, p, now) {
-    const sh = paulSheet(); if (!sh) return
+    const sh = tower.avatar?.sheet() || paulSheet(); if (!sh) return
     let row = 2, frame = 1, flip = false
     if (p.riding) { row = 0 }
     else if (p.walking) { flip = p.dir === 'left'; frame = [0, 1, 2, 1][Math.floor(now / 130) % 4] }

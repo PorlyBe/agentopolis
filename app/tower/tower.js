@@ -110,12 +110,22 @@ import priceBillboard from './features/price-billboard.js'
 import screensaver from './features/screensaver.js'
 import standup from './features/standup.js'
 import lunchRush from './features/lunch-rush.js'
+import seismograph from './features/seismograph.js'
+import windowHeatmap from './features/window-heatmap.js'
+import hallOfRecords from './features/hall-of-records.js'
+import blimp from './features/blimp.js'
+import uniforms from './features/uniforms.js'
+import wardrobe from './features/wardrobe.js'
+import themes from './features/themes.js'
+import skylineTowers from './features/skyline-towers.js'
+import avatar from './features/avatar.js'
 import postRoom from './features/post-room.js'
 
 const FEATURES = [['ceo-office', ceoOffice], ['desk-kit', deskKit], ['work-signals', workSignals], ['interactions', interactions], ['social', social], ['ambience', ambience], ['mess', mess], ['my-prs', myPrs], ['move-in-out', moveInOut], ['waiting-line', waitingLine], ['deploy-rocket', deployRocket],
   ['printer-jam', printerJam], ['groundhog', groundhog], ['fire-drill', fireDrill], ['security-desk', securityDesk], ['vending', vending], ['library', library], ['test-lab', testLab], ['plan-whiteboard', planWhiteboard], ['parking-garage', parkingGarage], ['friday-drinks', fridayDrinks], ['lost-found', lostFound], ['interoffice-mail', interofficeMail], ['post-room', postRoom],
   ['walkabout', walkabout], ['milestone-cake', milestoneCake], ['reviewer-visits', reviewerVisits], ['refactor-crane', refactorCrane], ['time-clock', timeClock], ['holidays', holidays], ['window-cleaner', windowCleaner], ['phone-booth', phoneBooth], ['it-tech', itTech], ['helipad', helipad],
-  ['ci-subway', ciSubway], ['release-party', releaseParty], ['tug-of-war', tugOfWar], ['drones', drones], ['commit-stamps', commitStamps], ['merge-stamp', mergeStamp], ['price-billboard', priceBillboard], ['screensaver', screensaver], ['standup', standup], ['lunch-rush', lunchRush]]
+  ['ci-subway', ciSubway], ['release-party', releaseParty], ['tug-of-war', tugOfWar], ['drones', drones], ['commit-stamps', commitStamps], ['merge-stamp', mergeStamp], ['price-billboard', priceBillboard], ['screensaver', screensaver], ['standup', standup], ['lunch-rush', lunchRush],
+  ['seismograph', seismograph], ['window-heatmap', windowHeatmap], ['hall-of-records', hallOfRecords], ['blimp', blimp], ['uniforms', uniforms], ['wardrobe', wardrobe], ['themes', themes], ['skyline-towers', skylineTowers], ['avatar', avatar]]
 const Z = { BEHIND: -100, WALL: 10, FLOOR: 50, SEATED: 120, STAND: 130, WALK: 140, RIDE: 150, FRONT: 200, OUTSIDE: 300, TOP: 400 }
 
 const MAX_ZOOM = 8
@@ -464,7 +474,7 @@ export default async function init(api) {
   }
   function drawPaul(c, now) {
     if (!slots) return
-    const sh = paulSheet(); if (!sh) return
+    const sh = api.tower?.avatar?.sheet() || paulSheet(); if (!sh) return   // features/avatar.js restyles him
     const y = slots.floor.y, x = slots.seat
     // mostly at work, now and then reading the paper; looking up while the phone rings
     const frame = needsPaul().length ? 3 : Math.floor(now / 7000) % 3 === 2 ? 5 + Math.floor(now / 600) % 2 : 3 + (Math.floor(now / 900) % 4 === 0 ? 1 : 0)

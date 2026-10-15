@@ -13,6 +13,8 @@ const flag = (name, dflt) => {
 }
 const PORT = Number(flag('port', 4747))
 const OWNER = flag('name', 'You')   // the person in the CEO office
+const THEME = flag('theme', 'auto') // the tower's skin (app/tower/features/themes.js); ?theme= overrides it
+const AVATAR = flag('avatar', '')  // the user's look, "hair=bun,suit=navy,skin=3,pet=cat" (app/tower/features/avatar.js)
 const DEMO = args.includes('--demo') // synthetic data only: no transcripts, git, gh or network
 const HOST = '127.0.0.1'
 const PROJECTS = path.join(os.homedir(), '.claude', 'projects')
@@ -243,7 +245,7 @@ function send(res, status, obj) {
 }
 
 function snapshot() {
-  if (DEMO) return { ...demo.generate(Date.now()), owner: OWNER }
+  if (DEMO) return { ...demo.generate(Date.now()), owner: OWNER, theme: THEME, avatar: AVATAR }
   const now = Date.now()
   const sessions = []
   const live = liveSessions()
@@ -290,7 +292,7 @@ function snapshot() {
     }
   }
   sessions.sort((a, b) => a.id.localeCompare(b.id))
-  const snap = { now, owner: OWNER, sessions }
+  const snap = { now, owner: OWNER, theme: THEME, avatar: AVATAR, sessions }
   for (const f of features) if (typeof f.snapshot === 'function') { try { f.snapshot(snap) } catch (e) { console.error(`[${f.name}.snapshot]`, e.message) } }
   return snap
 }

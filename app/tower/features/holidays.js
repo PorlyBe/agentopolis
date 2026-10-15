@@ -9,16 +9,16 @@ const MD = s => s.split('-').map(Number)
 // [key, name, icon, from, to (MM-DD, inclusive, may wrap the year) | per-year dates ±days, claims]
 // claims: lobby (the big spot left of reception), door (both sides of the street door), strand (the bulb strands)
 export const HOLIDAYS = [
-  { key: 'newyear', name: 'New Year · Shōgatsu', icon: '🎍', from: '12-31', to: '01-07', door: true },
+  { key: 'newyear', name: 'New Year · Shōgatsu', icon: '🎍', from: '12-31', to: '01-07', pin: '01-01', door: true },
   { key: 'valentine', name: "Valentine's Day", icon: '💝', from: '02-08', to: '02-14' },
   { key: 'lunar', name: 'Lunar New Year', icon: '🧧', on: { 2025: '01-29', 2026: '02-17', 2027: '02-06', 2028: '01-26', 2029: '02-13', 2030: '02-03', 2031: '01-23', 2032: '02-11' }, before: 3, after: 14 },
-  { key: 'hanami', name: 'Hanami · cherry blossoms', icon: '🌸', from: '03-25', to: '04-10', lobby: true },
+  { key: 'hanami', name: 'Hanami · cherry blossoms', icon: '🌸', from: '03-25', to: '04-10', pin: '03-31', lobby: true },
   { key: 'goldenweek', name: 'Golden Week · Kodomo no Hi', icon: '🎏', from: '04-29', to: '05-05' },
   { key: 'tanabata', name: 'Tanabata · star festival', icon: '🎋', from: '07-01', to: '07-07', lobby: true },
-  { key: 'obon', name: 'Obon', icon: '🏮', from: '08-13', to: '08-16', strand: true },
+  { key: 'obon', name: 'Obon', icon: '🏮', from: '08-13', to: '08-16', pin: '08-14', strand: true },
   { key: 'tsukimi', name: 'Tsukimi · moon viewing', icon: '🎑', on: { 2025: '10-06', 2026: '09-25', 2027: '09-15', 2028: '10-03', 2029: '09-22', 2030: '09-12', 2031: '10-01', 2032: '09-19' }, before: 2, after: 2, lobby: true },
-  { key: 'halloween', name: 'Halloween', icon: '🎃', from: '10-10', to: '11-01' },
-  { key: 'christmas', name: 'Christmas', icon: '🎄', from: '12-01', to: '12-26' },
+  { key: 'halloween', name: 'Halloween', icon: '🎃', from: '10-10', to: '11-01', pin: '10-31' },
+  { key: 'christmas', name: 'Christmas', icon: '🎄', from: '12-01', to: '12-26', pin: '12-24' },
 ]
 
 const params = new URLSearchParams(location.search + '&' + location.hash.slice(1))
@@ -26,17 +26,23 @@ const DEMO = params.getAll('demo').includes('holidays'), T0 = Date.now()
 const DEMO_DATES = ['12-31', '02-14', '03-31', '05-03', '07-07', '08-14', '09-25', '10-31', '12-24']
 const fixed = (params.get('date') || '').match(/^(\d{4})-(\d{2})-(\d{2})$/)
 const forcedTime = (params.get('time') || '').match(/^(\d{1,2}):(\d{2})$/)
+// themes.js pins the calendar: a holiday key (its day stands in for today), 'none' (no holiday) or null (the real date)
+let pinned = null
+export const pinHoliday = key => { pinned = key || null }
+const pinDay = y => { const h = HOLIDAYS.find(h => h.key === pinned); if (!h) return null; const s = h.on ? h.on[y] || Object.values(h.on)[0] : h.pin || h.to; return MD(s) }
 // the day the tower lives in: ?date= (or the demo's cycle) at the real (or ?time=) time of day
 export function today() {
   const now = new Date()
   let y = now.getFullYear(), m = now.getMonth() + 1, d = now.getDate()
   if (fixed) [y, m, d] = [+fixed[1], +fixed[2], +fixed[3]]
   else if (DEMO) [m, d] = MD(DEMO_DATES[Math.floor((Date.now() - T0) / 12000) % DEMO_DATES.length])
-  if (!fixed && !DEMO && !forcedTime) return now
+  else if (pinDay(y)) [m, d] = pinDay(y)
+  if (!fixed && !DEMO && !forcedTime && !pinDay(y)) return now
   const [hh, mm] = forcedTime ? [+forcedTime[1], +forcedTime[2]] : [now.getHours(), now.getMinutes()]
   return new Date(y, m - 1, d, hh, mm, now.getSeconds())
 }
 export function holidayOf(d = today()) {
+  if (pinned === 'none' && !fixed && !DEMO) return null
   const y = d.getFullYear(), md = (d.getMonth() + 1) * 100 + d.getDate()
   for (const h of HOLIDAYS) {
     if (h.on) {

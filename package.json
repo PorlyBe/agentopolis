@@ -1,0 +1,13 @@
+{
+  "name": "agentopolis",
+  "private": true,
+  "type": "module",
+  "description": "A living pixel-art skyscraper of your Claude Code sessions",
+  "license": "MIT",
+  "engines": { "node": ">=24" },
+  "scripts": {
+    "start": "node server.mjs",
+    "demo": "node server.mjs --demo",
+    "new-feature": "node scripts/new-feature.mjs"
+  }
+}

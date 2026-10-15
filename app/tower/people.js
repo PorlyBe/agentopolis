@@ -357,7 +357,9 @@ export function createPeople(api, demo, ask = () => false) {
     c.save()
     if (a.fade != null) c.globalAlpha = Math.max(0, a.fade)
     if (flip) { c.translate(dx + 16, dy); c.scale(-1, 1); c.drawImage(sheet, frame * 16, row * 32, 16, 32, 0, 0, 16, 32) }
-    else c.drawImage(sheet, frame * 16, row * 32, 16, 32, dx, dy, 16, 32)
+    else { c.translate(dx, dy); c.drawImage(sheet, frame * 16, row * 32, 16, 32, 0, 0, 16, 32) }
+    // features dress people (uniforms, wardrobe): api.wear = [fn(c, person, { row, frame, now })], c in sprite pixels
+    if (api.wear?.length && a.data) { const p = person(a); for (const w of api.wear) { try { w(c, p, { row, frame, now }) } catch (e) { console.error('[wear]', e) } } }
     c.restore()
   }
   function drawCar(c, front) {

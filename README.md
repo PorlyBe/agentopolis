@@ -30,7 +30,7 @@ Node server with no dependencies and a canvas page.
 ```sh
 git clone https://github.com/PorlyBe/agentopolis.git
 cd agentopolis
-node server.mjs --demo
+npm run demo          # or: node server.mjs --demo
 ```
 
 Open **http://127.0.0.1:4747**. You get a made-up office with five sessions, teammates, PRs and deploys. The demo
@@ -39,7 +39,7 @@ reads nothing from your machine and makes no network calls.
 ### 3. Run it on your own sessions
 
 ```sh
-node server.mjs --name "Ada"     # your name goes on the CEO office
+npm start -- --name "Ada"        # or: node server.mjs --name "Ada"; your name goes on the CEO office
 ```
 
 Open **http://127.0.0.1:4747**, then start or switch to a Claude Code session in any terminal. Its floor is
@@ -60,6 +60,8 @@ pkill -f agentopolis/server.mjs       # stop it
 | `--port <n>` | `4747` | Port, always on 127.0.0.1 |
 | `--demo` | off | An invented office; no real data is read |
 | `--window-min <n>` | `30` | How long a running but inactive session keeps its floor |
+| `--avatar "<look>"` | today's look | Your character, e.g. `"hair=bun,haircolour=red,suit=navy,skin=3,glasses=round,pet=cat"`: hair `short` `long` `bun` `curly` `bald` `mohawk`; haircolour `brown` `black` `blonde` `red` `grey` `white` `pink` `blue`; suit `charcoal` `navy` `burgundy` `forest` `cream`; skin `1`–`6`; glasses `none` `round` `square`; pet `none` `cat` `dog` `claudio`. `?avatar=` on the URL overrides it |
+| `--theme <name>` | `auto` | The tower's skin: `classic`, `cyberpunk`, `cottage`, `brutalist`, or a holiday (`halloween`, `christmas`, `newyear`, `valentine`, `lunar`, `hanami`, `goldenweek`, `tanabata`, `obon`, `tsukimi`), or a mix like `cyberpunk+halloween`. `auto` is classic plus whatever holiday the date brings. `?theme=` overrides it |
 
 `?demo=<feature>` on the URL plays any single feature (see [Demos](#demos)), and `?towerzoom=min` shows the whole
 street.
@@ -94,6 +96,10 @@ And a lot more, each driven by something real in your transcripts or on GitHub:
 - **Office life:** floors are built with scaffolding and a ribbon-cut when a session starts, and a closed one moves
   out with boxes. There's a cake at 100, 500 and 1000 tool calls, a punch clock with each session's hours, a stand-up
   at 10:00, a lunch rush at noon, a screensaver when you've been away, and holidays on the calendar.
+- **Character:** outfits follow the model (a suit for Opus, a hoodie for Haiku), and hats follow the language
+  being edited (a crab for Rust, a snake scarf for Python). Destructive commands shake their floor and draw on the
+  lobby seismograph, a hall of records keeps your all-time bests, a blimp trails the day's headline, and at night
+  the windows chart today's activity by hour.
 - **Infrastructure:** a server room with a rack per background job, a parking garage with one car per session's
   model, an IT technician when a tool server drops, and a security desk that stamps DENIED on blocked actions.
 - **Around the building:** weather and a day–night cycle for your time zone, the Gazette (a daily paper of the repo),
@@ -105,7 +111,8 @@ And a lot more, each driven by something real in your transcripts or on GitHub:
 
 Add `?demo=<name>` to see any feature without waiting for it to happen. For example: `towerlife`, `moveinout`,
 `waitline`, `myprs`, `postroom`, `rocket`, `helipad`, `firedrill`, `printerjam`, `groundhog`, `milestonecake`,
-`walkabout`, `reviewervisits`, `fridaydrinks`, `standup`, `lunchrush`, `screensaver`, `cisubway`,
+`walkabout`, `reviewervisits`, `fridaydrinks`, `standup`, `lunchrush`, `screensaver`, `cisubway`, `seismograph`,
+`windowheatmap`, `hallofrecords`, `blimp`, `uniforms`, `wardrobe`, `themes`, `skylinetowers`, `avatar`,
 `holidays&date=2026-12-25`.
 
 `?towerzoom=min` shows the whole street.
@@ -114,6 +121,8 @@ Add `?demo=<name>` to see any feature without waiting for it to happen. For exam
 
 - **Local only.** The server listens on `127.0.0.1` and refuses any other `Host`.
 - **Transcripts.** It only reads them (`~/.claude/projects`, `~/.claude/sessions`) and never writes under `~/.claude`.
+- **Its own data.** The only file it writes is `~/.agentopolis/records.json` (the hall of records). `--demo` writes
+  nothing.
 - **GitHub.** It runs `gh` without a shell, and only read commands (`pr list`, `run list`, `api` GETs), cached and
   rate-limited. It never writes to GitHub.
 - **Outbound requests.** Apart from GitHub, it makes two: [Open-Meteo](https://open-meteo.com) for the weather, for a
@@ -138,7 +147,18 @@ gh (read-only)             ─┘   server/features/*.mjs        polls 1.5 s    
   The full plugin API is documented at the top of `tower.js`.
 - **Page.** The DOM around the canvas (header, side panel, toasts, replay) lives in `app/features/`.
 
-To add a feature, drop a file into `app/tower/features/`, register it in `tower.js`, and give it a `?demo=`.
+## Write your own floor
+
+Most of the building is plugins, and adding one takes one command:
+
+```sh
+npm run new-feature coffee-machine              # app/tower/features/coffee-machine.js, registered in tower.js
+npm run new-feature coffee-machine -- --server  # also server/features/coffee-machine.mjs
+npm run demo                                    # then open http://127.0.0.1:4747/?demo=coffeemachine
+```
+
+The copy starts as a working, commented example. [CONTRIBUTING.md](CONTRIBUTING.md) covers how plugins work, demos,
+the privacy rules every plugin follows, and how to check yours with screenshots.
 
 
 ## Credits

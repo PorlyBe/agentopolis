@@ -1,0 +1,36 @@
+// example: counts the tool calls in each transcript's tail, for app/tower/features/_example.js.
+// This file is a teaching copy. The server loads every server/features/*.mjs, and this one ends in .mjs.example, so
+// it is never loaded. `npm run new-feature <name> --server` copies it to server/features/<name>.mjs.
+//
+// A server feature's default export may have any of these (all optional); see the comment near the top of server.mjs:
+//   session(ctx) / agent(ctx)  return plain JSON; it lands on session.ext[<file name>] / agent.ext[<file name>].
+//                              Cached until the transcript changes, so leave anything time-based to the client.
+//   snapshot(snap)             edit the whole snapshot after it is built (a cross-session total, a feed).
+//   routes                     { '/api/<name>/...': (req, res, url) => {} }, matched by path prefix.
+// Rules: read ~/.claude, never write under it. No network calls unless the README's Privacy section says so.
+// None of this runs under --demo: add matching invented data to server/demo.mjs so the demo shows your feature.
+
+const NAME = 'example'   // the file name: session.ext[NAME] on the client
+
+// ctx.entries: the parsed tail of the transcript, one object per JSONL line
+function session(ctx) {
+  let calls = 0
+  for (const e of ctx.entries) {
+    const content = e.message?.content
+    if (Array.isArray(content)) for (const b of content) if (b?.type === 'tool_use') calls++
+  }
+  return { calls }
+}
+
+function snapshot(snap) {
+  snap[NAME] = { calls: snap.sessions.reduce((n, s) => n + (s.ext?.[NAME]?.calls || 0), 0) }
+}
+
+const routes = {
+  [`/api/${NAME}`]: (req, res) => {
+    res.writeHead(200, { 'content-type': 'application/json' })
+    res.end(JSON.stringify({ ok: true }))
+  },
+}
+
+export default { session, snapshot, routes }

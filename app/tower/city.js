@@ -9,9 +9,17 @@ const SHOP = 40, STOREY = 26, MAX_PRS = 12
 const STYLES = [['#9a5a48', '#7a4436', '#c48a6a'], ['#b8a27e', '#97835f', '#d8c6a0'], ['#8c8f98', '#6f727c', '#b0b4bc'], ['#5f8a8c', '#4a6e70', '#8ab4b4'], ['#6a6f86', '#53586c', '#9095ac'], ['#a07858', '#80603f', '#c8a07c']]
 const mix = (a, b, t) => a.map((v, i) => Math.round(v + (b[i] - v) * t))
 const rgb = a => `rgb(${a[0]},${a[1]},${a[2]})`
+// the street's colours; features/themes.js swaps them through setTheme
+const CLASSIC = {
+  id: 'classic', styles: STYLES, skyFar: '#9fb2cc', skyNear: '#8799b6', skyWin: '255,236,170', soil: '#4a3a2e', pebble: '#56443a',
+  walk: '#b9b4ab', walkLine: '#a29d94', road: '#3d3f47', lane: '#d8c25a', curb: '#8a867e', curbLine: '#6a665e',
+  post: '#3a3d46', bulb: '#e8e0c0', lampGlow: '255,220,150', trunk: '#5a3e2a', leaf: '#3f7a44', leafHi: '#56994f', winLit: 'rgba(255,205,110,.85)',
+  dayTop: [91, 143, 208], dayHz: [183, 211, 238], nightTop: [8, 12, 32], nightHz: [30, 40, 82],
+}
 
 export function createCity(api) {
-  let buildings = [], key = '', repo = null
+  let buildings = [], key = '', repo = null, P = CLASSIC
+  const backdrop = []                                  // (c, v, now, n) painters between the far skyline and the street
   const cache = new Map()
   const LEFT0 = STREET_L - 14, RIGHT0 = BW + SHAFT + 34
   const shown = e => [...e.prs].sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0)).slice(0, MAX_PRS).sort((a, b) => a.n - b.n)
@@ -30,7 +38,7 @@ export function createCity(api) {
       if (i % 2 === 0) { x0 = left - w; left = x0 - gap } else { x0 = right; right = x0 + w + gap }
       const fire = prs.map((p, j) => p.ci === 'failed' && !p.draft ? j : -1).filter(j => j >= 0)
       return { e, x0, w, prs, more: e.prs.length - prs.length, floors: prs.length + 1, h: SHOP + prs.length * STOREY + 3, cols: Math.floor((w - 30) / 20),
-        style: STYLES[h % STYLES.length], seed: h, fire, burning: fire.length > 0, ci: prs.some(p => p.ci === 'running') || e.ciRunning > 0, quiet: !prs.length && !(e.level > 0) }
+        style: h % STYLES.length, seed: h, fire, burning: fire.length > 0, ci: prs.some(p => p.ci === 'running') || e.ciRunning > 0, quiet: !prs.length && !(e.level > 0) }
     })
   }
 
@@ -39,11 +47,11 @@ export function createCity(api) {
   const wins = (b, j) => { const y = storey(b, j).y + 7, x0 = b.x0 + 28 + Math.floor((b.w - 30 - b.cols * 20) / 2); return Array.from({ length: b.cols }, (_, k) => ({ x: x0 + k * 20, y })) }
   const plate = (b, j) => ({ x: b.x0 + 5, y: storey(b, j).y + 10, w: 19, h: 7 })
   function sprite(b) {
-    const k = `${b.e.login}|${b.w}|${b.quiet}|${b.prs.map(p => p.n + (p.draft ? 'd' : '')).join(',')}`
+    const k = `${P.id}|${b.e.login}|${b.w}|${b.quiet}|${b.prs.map(p => p.n + (p.draft ? 'd' : '')).join(',')}`
     if (cache.has(k)) return cache.get(k)
     const cv = document.createElement('canvas'); cv.width = b.w + 8; cv.height = b.h + 30
     const c = cv.getContext('2d'); c.translate(4 - b.x0, b.h + 30)    // y = 0 is the street
-    const [body, dark, trim] = b.style, top = -b.h
+    const [body, dark, trim] = P.styles[b.style % P.styles.length], top = -b.h
     R(c, body, b.x0, top, b.w, b.h); R(c, dark, b.x0 + b.w - 4, top, 4, b.h); R(c, trim, b.x0, top, b.w, 3)
     R(c, trim, b.x0 - 2, top - 3, b.w + 4, 4)                                                // the parapet
     b.prs.forEach((p, j) => {
@@ -75,19 +83,21 @@ export function createCity(api) {
 
   // ---------- skyline (far, hazy, parallax) ----------
   const SKY_W = 1400
-  const skyline = (() => {
+  const makeSkyline = () => {
     const cv = document.createElement('canvas'); cv.width = SKY_W; cv.height = 260
     const c = cv.getContext('2d'), wins = []
     let x = 0, i = 0
     while (x < SKY_W) {
       const h = api.hash('sky' + i), w = 34 + h % 60, ht = 70 + (h >>> 4) % 170, far = (h >>> 9) % 2
-      c.fillStyle = far ? '#9fb2cc' : '#8799b6'; c.fillRect(x, 260 - ht, w, ht)
+      c.fillStyle = far ? P.skyFar : P.skyNear; c.fillRect(x, 260 - ht, w, ht)
       if ((h >>> 12) % 4 === 0) c.fillRect(x + w / 2 - 1, 260 - ht - 16, 2, 16)
       for (let wy = 260 - ht + 8; wy < 250; wy += 12) for (let wx = x + 5; wx < x + w - 6; wx += 9) if (api.hash(`w${i}:${wx}:${wy}`) % 7 === 0) wins.push([wx, wy - 260])
       x += w + (h >>> 7) % 10; i++
     }
     return { cv, wins }
-  })()
+  }
+  let skyline = makeSkyline()
+  function setTheme(t) { const n = t ? { ...CLASSIC, ...t } : CLASSIC; if (n.id === P.id) return; P = n; skyline = makeSkyline() }
   const skyX = v => (v.x0 + v.x1) / 2 * 0.55
 
   // ---------- drawing ----------
@@ -96,23 +106,24 @@ export function createCity(api) {
     for (let k = Math.floor((v.x0 - sx) / SKY_W); k * SKY_W + sx < v.x1; k++) {
       c.drawImage(skyline.cv, Math.round(k * SKY_W + sx), -260)
       // far windows sit behind the near buildings, so they are lit here and the night tint only dims them
-      if (n > 0.05) { c.fillStyle = `rgba(255,236,170,${n})`; for (const [x, y] of skyline.wins) c.fillRect(Math.round(k * SKY_W + sx + x), y, 2, 3) }
+      if (n > 0.05) { c.fillStyle = `rgba(${P.skyWin},${n})`; for (const [x, y] of skyline.wins) c.fillRect(Math.round(k * SKY_W + sx + x), y, 2, 3) }
     }
+    for (const fn of backdrop) { c.save(); try { fn(c, v, now, n) } catch (e) { console.error('[city:backdrop]', e) } c.restore() }
     // the ground: sidewalk, road, curb, then soil
     const x0 = Math.floor(v.x0) - 2, w = Math.ceil(v.x1 - v.x0) + 4
-    R(c, '#4a3a2e', x0, GROUND, w, Math.max(0, v.y1 - GROUND))
-    c.fillStyle = '#56443a'; for (let gx = Math.floor(x0 / 37) * 37; gx < x0 + w; gx += 37) for (let gy = GROUND + 10; gy < v.y1; gy += 23) { const h = api.hash(`${gx}:${gy}`); c.fillRect(gx + h % 20, gy + (h >>> 5) % 12, 4 + h % 4, 2) }
-    R(c, '#b9b4ab', x0, 0, w, 4); c.fillStyle = '#a29d94'; for (let gx = Math.floor(x0 / 24) * 24; gx < x0 + w; gx += 24) c.fillRect(gx, 0, 1, 4)
-    R(c, '#3d3f47', x0, 4, w, 10); c.fillStyle = '#d8c25a'; for (let gx = Math.floor(x0 / 32) * 32; gx < x0 + w; gx += 32) c.fillRect(gx, 9, 14, 1)
-    R(c, '#8a867e', x0, 14, w, 4); R(c, '#6a665e', x0, 17, w, 1)
+    R(c, P.soil, x0, GROUND, w, Math.max(0, v.y1 - GROUND))
+    c.fillStyle = P.pebble; for (let gx = Math.floor(x0 / 37) * 37; gx < x0 + w; gx += 37) for (let gy = GROUND + 10; gy < v.y1; gy += 23) { const h = api.hash(`${gx}:${gy}`); c.fillRect(gx + h % 20, gy + (h >>> 5) % 12, 4 + h % 4, 2) }
+    R(c, P.walk, x0, 0, w, 4); c.fillStyle = P.walkLine; for (let gx = Math.floor(x0 / 24) * 24; gx < x0 + w; gx += 24) c.fillRect(gx, 0, 1, 4)
+    R(c, P.road, x0, 4, w, 10); c.fillStyle = P.lane; for (let gx = Math.floor(x0 / 32) * 32; gx < x0 + w; gx += 32) c.fillRect(gx, 9, 14, 1)
+    R(c, P.curb, x0, 14, w, 4); R(c, P.curbLine, x0, 17, w, 1)
     for (const b of buildings) if (b.x0 < v.x1 && b.x0 + b.w > v.x0) c.drawImage(sprite(b), b.x0 - 4, -b.h - 30)
     // street lamps and trees, kept clear of the tower and its door
     for (let k = Math.floor(v.x0 / 160) - 1; k * 160 < v.x1 + 160; k++) {
       const lx = k * 160 + 40, tx = k * 160 + 118
-      if (lx < LEFT0 - 10 || lx > RIGHT0 - 10) { R(c, '#3a3d46', lx, -48, 2, 48); R(c, '#3a3d46', lx, -48, 8, 2); R(c, '#e8e0c0', lx + 5, -46, 4, 2) }
+      if (lx < LEFT0 - 10 || lx > RIGHT0 - 10) { R(c, P.post, lx, -48, 2, 48); R(c, P.post, lx, -48, 8, 2); R(c, P.bulb, lx + 5, -46, 4, 2) }
       if (tx < LEFT0 - 20 || tx > RIGHT0) {
-        R(c, '#5a3e2a', tx + 6, -16, 3, 16)
-        c.fillStyle = '#3f7a44'; c.fillRect(tx, -34, 15, 18); c.fillRect(tx + 2, -38, 11, 24); c.fillStyle = '#56994f'; c.fillRect(tx + 3, -35, 6, 6)
+        R(c, P.trunk, tx + 6, -16, 3, 16)
+        c.fillStyle = P.leaf; c.fillRect(tx, -34, 15, 18); c.fillRect(tx + 2, -38, 11, 24); c.fillStyle = P.leafHi; c.fillRect(tx + 3, -35, 6, 6)
       }
     }
   }
@@ -179,13 +190,13 @@ export function createCity(api) {
     c.globalAlpha = k
     for (const b of buildings) {
       if (b.x0 > v.x1 || b.x0 + b.w < v.x0) continue
-      b.prs.forEach((p, j) => { c.fillStyle = p.draft ? 'rgba(170,200,230,.3)' : 'rgba(255,205,110,.85)'; for (const { x, y } of wins(b, j)) c.fillRect(x, y, 12, 14) })
+      b.prs.forEach((p, j) => { c.fillStyle = p.draft ? 'rgba(170,200,230,.3)' : P.winLit; for (const { x, y } of wins(b, j)) c.fillRect(x, y, 12, 14) })
       c.fillStyle = 'rgba(160,200,240,.35)'; c.fillRect(b.x0 + 10, -24, b.w / 2 - 14, 22)
       for (const j of b.fire) { const s = storey(b, j); glow(c, b.x0 + b.w / 2, s.y + s.h / 2, 60, '255,120,40', 0.5 + 0.1 * Math.sin(now / 90 + j)) }
     }
     for (let n = Math.floor(v.x0 / 160) - 1; n * 160 < v.x1 + 160; n++) {
       const lx = n * 160 + 40
-      if (lx < LEFT0 - 10 || lx > RIGHT0 - 10) { glow(c, lx + 7, -40, 46, '255,220,150', 0.5); R(c, '#fff4d0', lx + 5, -46, 4, 2) }
+      if (lx < LEFT0 - 10 || lx > RIGHT0 - 10) { glow(c, lx + 7, -40, 46, P.lampGlow, 0.5); R(c, '#fff4d0', lx + 5, -46, 4, 2) }
     }
     c.globalAlpha = 1
   }
@@ -228,8 +239,8 @@ export function createCity(api) {
       }
       c.globalAlpha = 1
     }
-    const dayTop = grey ? [128, 146, 170] : [91, 143, 208], dayHz = grey ? [176, 186, 198] : [183, 211, 238]
-    let tp = mix(dayTop, [8, 12, 32], n), hz = mix(dayHz, [30, 40, 82], n)
+    const dayTop = grey ? [128, 146, 170] : P.dayTop, dayHz = grey ? [176, 186, 198] : P.dayHz
+    let tp = mix(dayTop, P.nightTop, n), hz = mix(dayHz, P.nightHz, n)
     const warm = Math.max(0, 1 - Math.abs(n - 0.4) / 0.35) * (grey ? 0.25 : 0.65)
     if (lightColor && warm > 0) hz = mix(hz, lightColor, warm)
     const g = c.createLinearGradient(0, top, 0, horizon)
@@ -259,5 +270,5 @@ export function createCity(api) {
   // the PR numbers on the floor plates (the top one says how many more did not fit)
   function plates() { return buildings.flatMap(b => b.prs.map((p, j) => ({ ...plate(b, j), text: `${p.n}`, more: j === b.prs.length - 1 && b.more > 0 ? b.more : 0, draft: p.draft, fire: p.ci === 'failed' && !p.draft }))) }
   const extent = () => buildings.reduce((m, b) => ({ x0: Math.min(m.x0, b.x0), x1: Math.max(m.x1, b.x0 + b.w) }), { x0: LEFT0, x1: RIGHT0 })
-  return { setStreet, drawBack, drawLive, drawLights, drawSky, drawWeather, buildingAt, floorAt, labels, plates, extent, set hover(h) { hover = h }, get repo() { return repo }, get buildings() { return buildings } }
+  return { setStreet, setTheme, backdrop, drawBack, drawLive, drawLights, drawSky, drawWeather, buildingAt, floorAt, labels, plates, extent, set hover(h) { hover = h }, get repo() { return repo }, get buildings() { return buildings } }
 }
