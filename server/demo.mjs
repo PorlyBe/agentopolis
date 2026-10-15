@@ -193,6 +193,7 @@ function sessionExt(s, x, now) {
   if (s.key === 'data') {
     ext['test-lab'] = { flasks: [{ service: 'pipeline', suite: 'pytest', result: 'fail', at: now - 3 * MIN, summary: '2 failed, 118 passed', runningSince: null }] }
     ext['desk-props'].files = 88
+    ext['storm-cloud'] = { level: 2, score: 3.1, word: 'still failing', at: now - 3 * MIN, since: now - 8 * MIN }
   }
   if (s.key === 'auth') {
     ext['waiting-line'] = { text: 'Rotate the signing keys now, or at the next deploy?', kind: 'question', more: 0 }
@@ -283,12 +284,29 @@ const CATALOGUE = {
   'full-house': { title: 'Full house', icon: '🏠', tier: 'bronze' },
 }
 
+// readable-monitors: what each desk's tiny terminal prints for the current step
+const SHELL = { 'Run the refunds test suite': 'cargo test -p refunds -- --nocapture', 'Check the backfill progress': 'psql -c "select count(*) from events_sept"',
+  'Build the docs site': 'npm run build --workspace docs', 'Backfill September events': 'python -m pipeline.backfill --month 2026-09',
+  'Build the iOS app for the simulator': 'xcodebuild -scheme App -sdk iphonesimulator', 'Run the Android unit tests': './gradlew :app:testDebugUnitTest',
+  'Check every store listing field': 'fastlane run validate_listing' }
+const DIFF = { 'src/refunds/webhook.rs': ['-if seen(&id) { return Ok(()) }', '+if store.seen(&delivery_id).await? { return Ok(Ack) }'],
+  'src/ledger/entry.rs': ['-pub amount: i64,', '+pub amount: Money,'], 'content/quickstart.mdx': ['-## Install', '+## Install in one minute'],
+  'pipeline/backfill.py': ['-for day in days:', '+for day in tqdm(days, desc="sept"):'], 'ios/App/Settings/SettingsView.swift': ['-Toggle("Beta", isOn: $beta)', '+Toggle("Beta features", isOn: $beta)'],
+  'android/app/build.gradle.kts': ['-versionCode = 311', '+versionCode = 320'], 'RELEASE_NOTES.md': ['+## 3.2 - faster sign-in'] }
+function monitorOf(o) {
+  const t = o.tool, d = o.detail; if (!t || !d) return undefined
+  const lines = t === 'Bash' ? ['$ ' + (SHELL[d] || d)] : t === 'Edit' ? ['vi ' + d, ...(DIFF[d] || [])] : t === 'Write' ? ['vi ' + d, ...(DIFF[d] || [])]
+    : t === 'Read' ? ['cat ' + d] : t === 'Grep' ? [`rg ${d} src`] : t === 'Glob' ? ['ls ' + d] : t === 'WebSearch' ? ['? ' + d] : t === 'Agent' ? ['spawn Explore', d] : null
+  return lines ? { id: 'toolu_' + hex(t + d, 20), tool: t, lines } : undefined
+}
+
 export function generate(now) {
   const sessions = SESSIONS.map(s => {
     const core = sessionCore(s, now)
     const agents = agentsOf(s, now)
     const x = { ...core, agents }
     x.ext = sessionExt(s, x, now)
+    for (const o of [x, ...agents]) { const m = monitorOf(o); if (m) o.ext['readable-monitors'] = m }
     const bg = background(s, now); if (bg.length) x.background = bg
     if (s.key === 'auth') x.attention = { kind: 'question', label: 'question for you', since: now - 4 * MIN }
     if (s.key === 'data') {
@@ -383,6 +401,7 @@ export function generate(now) {
     heatmap: { day, hours: Array.from({ length: 24 }, (_, h) => { const at = day + h * HOUR; if (at > now) return 0
       const v = Math.round((h < 8 ? 3 : 40 + 110 * Math.exp(-((h - 11) ** 2) / 6) + 95 * Math.exp(-((h - 16) ** 2) / 5)) * (0.8 + (hash('hm' + h) % 40) / 100))
       return at + HOUR > now ? Math.round(v * (now - at) / HOUR) : v }) },
+    tamagotchiPlant: { streak: 12, best: 23, today: true, yesterday: true, last: 12, ready: true },
     seismograph: { day, events: [
       [9.6, 0, 'git reset --hard origin/main', 'reset --hard', 1], [11.2, 1, 'git push --force-with-lease origin release/3.2', 'force push', 3],
       [13.9, 2, 'rm -rf build/ dist/', 'rm -rf', 3], [15.4, 0, 'git branch -D spike/old-ledger', 'branch -D', 2], [16.8, 3, 'docker system prune -af', 'docker prune', 2]]
@@ -396,5 +415,8 @@ export function generate(now) {
     tv: { ready: true, spark, toolsHour, tokensToday, outToday: Math.round(tokensToday / 180), prsWeek: 23, mergedWeek: 17,
       busiest: { name: 'build iOS 3.2', calls: 64, agent: true }, online, commits: tvCommits },
     weather,
+    reportCard: (() => { const tools = out.reduce((a, x) => a + (x.ext['milestone-cake']?.today || 0), 0)
+      return { ready: true, day, sessions: 7, agents: 23, tools, top: [['Bash', Math.round(tools * 0.31)], ['Read', Math.round(tools * 0.24)], ['Edit', Math.round(tools * 0.17)]],
+        longest: { id: mob.id, ms: Math.min(now - day, 9 * HOUR + 14 * MIN) }, retried: { cmd: 'npm test -- payments/webhooks', n: 14 } } })(),
   }
 }

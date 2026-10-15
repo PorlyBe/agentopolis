@@ -21,7 +21,7 @@ export const DOOR = { x: -4 }                 // the lobby's street door, in the
 export const OUTSIDE = -96                    // where arrivals appear and leavers vanish, on the sidewalk
 
 // the tower's materials; features/themes.js swaps them (setPalette) and the layers are rebuilt
-const CLASSIC = {
+export const CLASSIC = {
   interior: { session: '#d6cdbd', lobby: '#ddd6ca', meeting: '#cdd3d8', cafe: '#dedbd0', ceo: '#d8ccb2', server: '#2c3242', post: '#cbc6b4' },
   wainscot: { session: '#b4a690', lobby: '#8f8070', meeting: '#a5adb6', cafe: '#c4bfae', ceo: '#5a3a26', server: '#232836', post: '#6f7462' },
   slabTop: '#8f6c4a', slab: '#565060', slabLine: '#3f3a48', roofSlab: '#6b6470', roofSlabTop: '#8b8490', wall: '#9d9488', wallEdge: '#7d7468',
@@ -30,6 +30,8 @@ const CLASSIC = {
   lamp: '255,200,120', roomGlow: 'rgba(70,52,30,.55)',
 }
 let P = CLASSIC
+let floorStyle = () => {}
+export const setFloorStyle = fn => { floorStyle = fn || (() => {}) }   // features/floor-decor.js papers a session floor's walls
 export const setPalette = p => { P = p ? { ...CLASSIC, ...p, interior: { ...CLASSIC.interior, ...p.interior }, wainscot: { ...CLASSIC.wainscot, ...p.wainscot } } : CLASSIC }
 export const TALL = FH + 32                   // the café + lounge and the CEO office are taller than a working floor
 const HEIGHT = { cafe: TALL, ceo: TALL }
@@ -145,7 +147,7 @@ function room(c, f) {
   R(c, k === 'server' ? '#1c2030' : 'rgba(0,0,0,.18)', IX, f.y - 19, FW, 1)
   R(c, k === 'server' ? '#161a26' : k === 'ceo' ? '#3e2716' : P.skirting, IX, f.y - 2, FW, 2)
   R(c, 'rgba(0,0,0,.12)', IX, f.top, FW, 2)                                      // the ceiling's shadow
-  if (k === 'session') R(c, `hsl(${f.hue} 45% 55%)`, IX, f.y - 20, FW, 1)         // the session's accent, a thin rail
+  if (k === 'session') { R(c, `hsl(${f.hue} 45% 55%)`, IX, f.y - 20, FW, 1); floorStyle(c, f) }   // the session's accent, a thin rail
 }
 
 // The floor plaques: a slim bronze plate set into the slab over each floor (the roof slab for the penthouse, the ground

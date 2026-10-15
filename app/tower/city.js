@@ -10,7 +10,7 @@ const STYLES = [['#9a5a48', '#7a4436', '#c48a6a'], ['#b8a27e', '#97835f', '#d8c6
 const mix = (a, b, t) => a.map((v, i) => Math.round(v + (b[i] - v) * t))
 const rgb = a => `rgb(${a[0]},${a[1]},${a[2]})`
 // the street's colours; features/themes.js swaps them through setTheme
-const CLASSIC = {
+export const CLASSIC = {
   id: 'classic', styles: STYLES, skyFar: '#9fb2cc', skyNear: '#8799b6', skyWin: '255,236,170', soil: '#4a3a2e', pebble: '#56443a',
   walk: '#b9b4ab', walkLine: '#a29d94', road: '#3d3f47', lane: '#d8c25a', curb: '#8a867e', curbLine: '#6a665e',
   post: '#3a3d46', bulb: '#e8e0c0', lampGlow: '255,220,150', trunk: '#5a3e2a', leaf: '#3f7a44', leafHi: '#56994f', winLit: 'rgba(255,205,110,.85)',
@@ -20,6 +20,7 @@ const CLASSIC = {
 export function createCity(api) {
   let buildings = [], key = '', repo = null, P = CLASSIC
   const backdrop = []                                  // (c, v, now, n) painters between the far skyline and the street
+  const behind = []                                    // (c, v, now, n) painters in front of the sky, behind the far skyline
   const cache = new Map()
   const LEFT0 = STREET_L - 14, RIGHT0 = BW + SHAFT + 34
   const shown = e => [...e.prs].sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0)).slice(0, MAX_PRS).sort((a, b) => a.n - b.n)
@@ -103,6 +104,7 @@ export function createCity(api) {
   // ---------- drawing ----------
   function drawBack(c, v, now, n = 0) {
     const sx = skyX(v)
+    for (const fn of behind) { c.save(); try { fn(c, v, now, n) } catch (e) { console.error('[city:behind]', e) } c.restore() }
     for (let k = Math.floor((v.x0 - sx) / SKY_W); k * SKY_W + sx < v.x1; k++) {
       c.drawImage(skyline.cv, Math.round(k * SKY_W + sx), -260)
       // far windows sit behind the near buildings, so they are lit here and the night tint only dims them
@@ -270,5 +272,5 @@ export function createCity(api) {
   // the PR numbers on the floor plates (the top one says how many more did not fit)
   function plates() { return buildings.flatMap(b => b.prs.map((p, j) => ({ ...plate(b, j), text: `${p.n}`, more: j === b.prs.length - 1 && b.more > 0 ? b.more : 0, draft: p.draft, fire: p.ci === 'failed' && !p.draft }))) }
   const extent = () => buildings.reduce((m, b) => ({ x0: Math.min(m.x0, b.x0), x1: Math.max(m.x1, b.x0 + b.w) }), { x0: LEFT0, x1: RIGHT0 })
-  return { setStreet, setTheme, backdrop, drawBack, drawLive, drawLights, drawSky, drawWeather, buildingAt, floorAt, labels, plates, extent, set hover(h) { hover = h }, get repo() { return repo }, get buildings() { return buildings } }
+  return { setStreet, setTheme, backdrop, behind, drawBack, drawLive, drawLights, drawSky, drawWeather, buildingAt, floorAt, labels, plates, extent, set hover(h) { hover = h }, get repo() { return repo }, get buildings() { return buildings } }
 }

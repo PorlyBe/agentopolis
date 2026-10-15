@@ -2,7 +2,10 @@
 // the inactive-session window save to the server as you change them (POST /api/settings, ~/.agentopolis/settings.json)
 // and show on the next poll; tower features are switched on or off with "Apply & reload", since the tower starts them
 // once. ?demo=settings or ?settings=open opens it on the last tab; ?settings=<tab> (you, look, features…) on that tab.
-import { parseTheme } from '../options.js'
+// The Look tab holds the skin grid, the custom theme editor (live on the tower through api.theme.preview until saved) and
+// the floor decorator's rules; ?settings=editor opens the editor.
+import { parseTheme, slugOf, checkCustomTheme, checkFloorRules } from '../options.js'
+import { thumb, skinLabel, coloursOf, builtinSkin } from '../tower/features/themes.js'
 import { HOLIDAYS, calendarOf } from '../tower/features/holidays.js'
 import { parseLook } from '../tower/features/avatar.js'
 
@@ -10,6 +13,9 @@ const LOOK_LABEL = { hair: 'Hair', haircolour: 'Hair colour', suit: 'Suit', skin
 const TABS = [['you', 'You'], ['look', 'Look'], ['features', 'Features'], ['updates', 'Updates'], ['advanced', 'Advanced']]
 const TAB_KEY = 'agent-office.settings-tab'
 const cap = s => s[0].toUpperCase() + s.slice(1)
+const words = s => cap(s.replace(/-/g, ' '))
+const SLOT_LABEL = { sky: 'Sky', horizon: 'Horizon', night: 'Night sky', skyline: 'Skyline', facade: 'Facade', floor: 'Floor walls', slab: 'Slabs', street: 'Street', accent: 'Accent / neon' }
+const RULE_LABEL = { wallpaper: 'Wallpaper', carpet: 'Carpet', plants: 'Plants', props: 'Props' }
 
 export default function init(api) {
   const { esc } = api
@@ -46,6 +52,26 @@ export default function init(api) {
   #settings :is(input, select, button):focus-visible { outline: 2px solid var(--think); outline-offset: 1px; }
   #settings .note { color: var(--muted); font-size: var(--fs-s); margin: 6px 0 0; }
   #settings .note.warn { color: var(--wait); }
+  #settings .skins { display: grid; grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); gap: 6px; }
+  #settings .sk { position: relative; display: grid; gap: 3px; justify-items: center; padding: 5px 4px 4px; border: 1px solid var(--card-line); border-radius: var(--radius-s);
+    background: rgba(255, 255, 255, .03); color: var(--muted); font: var(--fs-s) var(--font); cursor: pointer; text-align: center; }
+  #settings .sk:hover { background: var(--card-hi); color: var(--ink); }
+  #settings .sk input { position: absolute; opacity: 0; pointer-events: none; }
+  #settings .sk canvas { width: 100%; aspect-ratio: 64 / 44; image-rendering: pixelated; border-radius: 3px; }
+  #settings .sk:has(input:checked) { border-color: var(--think); color: var(--ink); background: var(--card-hi); }
+  #settings .sk:has(input:focus-visible) { outline: 2px solid var(--think); outline-offset: 1px; }
+  #settings .sk.new { place-content: center; border-style: dashed; min-height: 70px; }
+  #settings .sk.new b { font-size: 18px; font-weight: 400; }
+  #settings h3 { margin: 18px 0 6px; font-size: var(--fs-s); letter-spacing: 1px; color: var(--muted); text-transform: uppercase; }
+  #settings .ed { margin-top: 10px; padding: 10px; border: 1px solid var(--card-line); border-radius: var(--radius-s); display: grid; gap: 10px; }
+  #settings .cols { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 6px 10px; }
+  #settings .cols label { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: var(--fs-s); cursor: pointer; }
+  #settings input[type=color] { width: 30px; height: 22px; padding: 0; border: 1px solid var(--card-line); border-radius: 4px; background: none; cursor: pointer; }
+  #settings textarea { width: 100%; padding: 6px 8px; border-radius: var(--radius-s); border: 1px solid var(--card-line); background: rgba(255, 255, 255, .05); color: var(--ink);
+    font: var(--fs-xs) ui-monospace, monospace; resize: vertical; }
+  #settings .rule { display: grid; grid-template-columns: minmax(90px, 1.3fr) repeat(4, minmax(70px, 1fr)) auto auto; gap: 4px; align-items: center; margin-bottom: 4px; }
+  #settings .rule :is(input, select) { height: 26px; font-size: var(--fs-s); padding: 0 4px; }
+  #settings .rule .hbtn { width: 24px; height: 24px; font-size: 11px; }
   #settings .look { display: grid; grid-template-columns: 78px 1fr; gap: 12px; align-items: start; margin-top: 12px; }
   #settings .look canvas { width: 78px; height: 138px; padding: 4px 6px; image-rendering: pixelated; border-radius: var(--radius-s); background: rgba(255, 255, 255, .04);
     border: 1px solid var(--card-line); }
@@ -77,7 +103,7 @@ export default function init(api) {
   #settings .apply { flex: none; padding: 10px 16px; border-top: 1px solid var(--card-line); display: none; }
   #settings .apply.on { display: flex; }
   #settings .ft { flex: none; padding: 8px 16px; border-top: 1px solid var(--card-line); color: var(--muted); font-size: var(--fs-xs); }
-  @media (max-width: 460px) { #settings .grid { grid-template-columns: 1fr; } #settings .look { grid-template-columns: 1fr; } #settings .look canvas { margin: 0 auto; } }`
+  @media (max-width: 460px) { #settings .rule { grid-template-columns: 1fr 1fr; } #settings .grid { grid-template-columns: 1fr; } #settings .look { grid-template-columns: 1fr; } #settings .look canvas { margin: 0 auto; } }`
   document.head.append(style)
 
   const btn = document.createElement('button'); btn.className = 'hbtn'; btn.id = 'settingsBtn'
@@ -103,7 +129,7 @@ export default function init(api) {
   dlg.addEventListener('keydown', e => {
     e.stopPropagation()   // the tower's zoom keys and the replay's space stay out of the form
     if (e.key !== 'Tab') return
-    const f = [...dlg.querySelectorAll('button, input, select')].filter(x => !x.disabled && x.offsetParent && x.tabIndex >= 0)
+    const f = [...dlg.querySelectorAll('button, input, select, textarea')].filter(x => !x.disabled && x.offsetParent && x.tabIndex >= 0)
     if (!f.length) return
     if (e.shiftKey && document.activeElement === f[0]) { e.preventDefault(); f.at(-1).focus() }
     else if (!e.shiftKey && document.activeElement === f.at(-1)) { e.preventDefault(); f[0].focus() }
@@ -133,7 +159,7 @@ export default function init(api) {
   }
   function close() {
     if (!isOpen) return
-    flush(); isOpen = false; back.classList.remove('on'); btn.setAttribute('aria-expanded', 'false')
+    endEdit(); flush(); isOpen = false; back.classList.remove('on'); btn.setAttribute('aria-expanded', 'false')
     ;(lastFocus?.isConnected ? lastFocus : btn).focus?.()
   }
 
@@ -155,6 +181,7 @@ export default function init(api) {
 
   // ---------- the form ----------
   function render() {
+    endEdit()
     const e = st.effective, o = st.options, look = parseLook(e.avatar), t = parseTheme(e.theme)
     const today = calendarOf(new Date())
     const sel = (name, opts, cur, label) => `<label class="f" for="${id(name)}">${label}<select id="${id(name)}" data-k="${name}">${opts.map(([v, l]) => `<option value="${esc(v)}"${v === cur ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select></label>`
@@ -165,12 +192,31 @@ export default function init(api) {
         <div class="grid">${Object.entries(o.avatar).map(([k, vals]) => sel('look-' + k, vals.map(v => [v, k === 'skin' ? 'Tone ' + v : cap(v)]), look[k], LOOK_LABEL[k] || k)).join('')}</div></div>
       <p class="note warn" data-n="avatar"></p>`)
     + panel('look', `
-      <div class="grid">
-        ${sel('skin', [['auto', 'Auto'], ...o.skins.map(s => [s, cap(s)])], e.theme === 'auto' ? 'auto' : t.skin, 'Theme')}
+      <div class="skins" role="radiogroup" aria-label="Theme">
+        ${skinChoices().map(([v, l]) => `<label class="sk"><input type="radio" name="${id('skin')}" data-k="skin" value="${esc(v)}"${v === (e.theme === 'auto' ? 'auto' : t.skin) ? ' checked' : ''}><canvas width="64" height="44" data-thumb="${esc(v)}" aria-hidden="true"></canvas>${esc(l)}</label>`).join('')}
+        <button type="button" class="sk new" data-a="cnew" title="Make your own theme from the selected one"><b>＋</b>Custom…</button>
+      </div>
+      <div class="row" style="margin-top:8px"><button class="btn" data-a="cedit" hidden>Edit this theme</button></div>
+      <div class="ed" hidden role="group" aria-label="Theme editor">
+        <div class="row" style="align-items:end">
+          <label class="f" for="${id('cname')}" style="flex:1 1 140px">Name<input type="text" id="${id('cname')}" maxlength="24" autocomplete="off" spellcheck="false"></label>
+          <label class="f" for="${id('cbase')}" style="flex:1 1 140px">Start from<select id="${id('cbase')}">${skinChoices().filter(([v]) => v !== 'auto').map(([v, l]) => `<option value="${esc(v)}">${esc(l)}</option>`).join('')}</select></label>
+          <button class="btn" data-a="cdup">Duplicate</button>
+        </div>
+        <div class="cols">${o.themeSlots.map(k => `<label><input type="color" data-slot="${k}">${esc(SLOT_LABEL[k] || k)}</label>`).join('')}</div>
+        <div class="row"><button class="btn go" data-a="csave">Save</button><button class="btn" data-a="cexport">Export</button><button class="btn danger" data-a="cdel">Delete</button><button class="btn" data-a="ccancel">Cancel</button></div>
+        <textarea id="${id('cjson')}" rows="3" spellcheck="false" aria-label="Theme JSON, to share or import" placeholder="Paste a shared theme’s JSON here, then Import"></textarea>
+        <div class="row"><button class="btn" data-a="cimport">Import</button><span class="note" style="margin:0" data-n="cmsg" role="status"></span></div>
+      </div>
+      <div class="grid" style="margin-top:12px">
         ${sel('holiday', [['none', 'No holiday'], ...HOLIDAYS.filter(h => o.holidays.includes(h.key)).map(h => [h.key, `${h.icon} ${h.name}`])], t.holiday && t.holiday !== 'none' ? t.holiday : 'none', 'Holiday decor')}
       </div>
       <p class="note">Auto is Classic with the date’s holiday — today ${today ? `${today.icon} ${esc(today.name)}` : 'none'}.</p>
-      <p class="note warn" data-n="theme"></p>`)
+      <p class="note warn" data-n="theme"></p>
+      <h3>Floor decorator</h3>
+      <p class="note" style="margin:0 0 8px">Style a session’s floor by its title: <code>*api*</code> matches any title with “api” in it. The first matching rule wins.</p>
+      <div class="rules"></div>
+      <div class="row"><button class="btn" data-a="radd">Add rule</button><span class="note warn" style="margin:0" data-n="rules"></span></div>`)
     + panel('features', `
       <input type="search" id="${id('filter')}" placeholder="Filter features…" aria-label="Filter features" autocomplete="off" spellcheck="false" value="${esc(filter)}">
       ${o.features.map(g => `<div class="acc" data-g="${g.id}">
@@ -187,12 +233,90 @@ export default function init(api) {
       <label class="f" for="${id('win')}">Minutes an inactive session keeps its floor (${o.windowMin[0]}–${o.windowMin[1]})<input type="number" id="${id('win')}" min="${o.windowMin[0]}" max="${o.windowMin[1]}" step="1" value="${e.windowMin}"></label>
       <div class="row" style="margin-top:16px"><button class="btn danger" data-a="reset">Reset all to defaults</button></div>`)
     ft.textContent = st.file ? `Saved to ${st.file}. Command-line flags are startup defaults; what you set here wins.` : 'Demo: settings last until the server stops.'
-    paintTheme(); paintFeatures(); paintNotes(); preview()
+    paintTheme(); paintFeatures(); paintNotes(); preview(); paintThumbs(); rules = (e.floorRules || []).map(r => ({ ...r })); paintRules()
   }
   const val = k => bd.querySelector(`[data-k="${k}"]`)?.value
   const lookNow = () => Object.keys(st.options.avatar).map(k => `${k}=${val('look-' + k)}`).join(',')
-  const themeNow = () => val('skin') === 'auto' ? 'auto' : val('skin') + (val('holiday') !== 'none' ? '+' + val('holiday') : '')
-  function paintTheme() { const h = bd.querySelector('[data-k="holiday"]'); h.disabled = val('skin') === 'auto'; if (h.disabled) h.value = 'none' }
+  const skinNow = () => bd.querySelector('[data-k="skin"]:checked')?.value || 'auto'
+  const themeNow = () => skinNow() === 'auto' ? 'auto' : skinNow() + (val('holiday') !== 'none' ? '+' + val('holiday') : '')
+  function paintTheme() {
+    const h = bd.querySelector('[data-k="holiday"]'); h.disabled = skinNow() === 'auto'; if (h.disabled) h.value = 'none'
+    bd.querySelector('[data-a="cedit"]').hidden = !customOf(skinNow())
+  }
+
+  // ---------- custom themes ----------
+  const customs = () => st.effective.customThemes || []
+  const customOf = v => v?.startsWith('custom:') ? customs().find(d => 'custom:' + slugOf(d.name) === v) || null : null
+  const skinChoices = () => [['auto', 'Auto'], ...st.options.skins.map(k => [k, skinLabel(k)]), ...customs().map(d => ['custom:' + slugOf(d.name), d.name])]
+  function paintThumbs() { for (const cv of bd.querySelectorAll('canvas[data-thumb]')) { const v = cv.dataset.thumb; thumb(cv, v === 'auto' ? 'classic' : customOf(v) || v) } }
+  let ed = null, previewRaf = 0                                 // { orig: the saved name being edited or null, name, base, colours }
+  const edEl = () => bd.querySelector('.ed'), cmsg = (t, warn) => { const n = bd.querySelector('[data-n="cmsg"]'); n.textContent = t; n.classList.toggle('warn', !!warn) }
+  function startEdit(def, orig) {
+    ed = { orig, name: def.name, base: def.base, colours: { ...def.colours } }
+    const el = edEl(); el.hidden = false
+    el.querySelector('#' + id('cname')).value = ed.name
+    el.querySelector('[data-a="cdel"]').hidden = !orig
+    paintEditor(); cmsg(''); livePreview()
+    el.querySelector('#' + id('cname')).focus(); el.scrollIntoView({ block: 'nearest' })
+  }
+  function fromChoice(v) {
+    const d = customOf(v); if (d) return { name: d.name, base: d.base, colours: coloursOf(d) }
+    const base = v === 'auto' ? 'classic' : v
+    return { name: '', base, colours: coloursOf(base) }
+  }
+  function freeName(stem) { const used = new Set(customs().map(d => slugOf(d.name))); let n = stem.slice(0, 21), k = 2; while (used.has(slugOf(n))) n = `${stem.slice(0, 20)} ${k++}`; return n }
+  function paintEditor() {
+    const el = edEl(); if (!ed || el.hidden) return
+    for (const i of el.querySelectorAll('[data-slot]')) i.value = ed.colours[i.dataset.slot]
+    const b = el.querySelector('#' + id('cbase')); if (builtinSkin(ed.base)) b.value = ed.base
+  }
+  const exportJson = () => JSON.stringify({ agentopolisTheme: 1, name: ed.name, base: ed.base, colours: ed.colours })
+  function livePreview() { cancelAnimationFrame(previewRaf); previewRaf = requestAnimationFrame(() => { if (ed) api.theme?.preview({ name: ed.name || 'preview', base: ed.base, colours: ed.colours }) }) }
+  function endEdit() { if (!ed) return; ed = null; cancelAnimationFrame(previewRaf); api.theme?.preview(null); const el = edEl(); if (el) el.hidden = true }
+  async function saveCustom() {
+    ed.name = bd.querySelector('#' + id('cname')).value.trim().toLowerCase()
+    const ok = checkCustomTheme(ed)
+    if (ok instanceof Error) return cmsg(ok.message.replace(/^custom theme:? ?/, ''), true)
+    const others = customs().filter(d => d.name !== ed.orig)
+    if (others.some(d => slugOf(d.name) === slugOf(ok.name))) return cmsg(`There is already a theme called ${ok.name}.`, true)
+    if (!ed.orig && others.length >= st.options.maxCustom) return cmsg(`Up to ${st.options.maxCustom} custom themes; delete one first.`, true)
+    const list = ed.orig ? customs().map(d => d.name === ed.orig ? ok : d) : [...customs(), ok]
+    const h = val('holiday')
+    Object.assign(pending, { customThemes: list, theme: 'custom:' + slugOf(ok.name) + (h && h !== 'none' ? '+' + h : '') })
+    if (await flush()) { endEdit(); render(); showTab('look'); api.toast(`Saved ${ok.name}`, 1400) }
+  }
+  async function deleteCustom() {
+    const gone = 'custom:' + slugOf(ed.orig), list = customs().filter(d => d.name !== ed.orig)
+    Object.assign(pending, { customThemes: list }, parseTheme(st.effective.theme).skin === gone ? { theme: 'auto' } : {})
+    if (await flush()) { endEdit(); render(); showTab('look') }
+  }
+  function importCustom() {
+    const txt = bd.querySelector('#' + id('cjson')).value.trim()
+    let obj; try { obj = JSON.parse(txt) } catch { return cmsg('That isn’t theme JSON — paste what Export copied.', true) }
+    const ok = checkCustomTheme(obj)
+    if (ok instanceof Error) return cmsg(ok.message, true)
+    const taken = customs().some(d => slugOf(d.name) === slugOf(ok.name))
+    startEdit({ ...ok, name: taken ? freeName(ok.name) : ok.name }, null)
+    cmsg(`Imported ${ok.name}${taken ? ' under a new name' : ''}. Save to keep it.`)
+  }
+
+  // ---------- floor rules ----------
+  let rules = []
+  const ruleRow = (r, i) => `<div class="rule" data-i="${i}">
+      <input type="text" data-r="pattern" value="${esc(r.pattern)}" maxlength="40" placeholder="*api*" aria-label="Rule ${i + 1}: title pattern" spellcheck="false">
+      ${Object.entries(st.options.floorPresets).map(([k, vals]) => `<select data-r="${k}" aria-label="Rule ${i + 1}: ${RULE_LABEL[k]}" title="${RULE_LABEL[k]}">${vals.map(v => `<option value="${v}"${v === r[k] ? ' selected' : ''}>${v === 'none' ? RULE_LABEL[k] + ': none' : words(v)}</option>`).join('')}</select>`).join('')}
+      <button type="button" class="hbtn" data-a="rup" aria-label="Move rule ${i + 1} up" title="Move up"${i ? '' : ' disabled'}>↑</button>
+      <button type="button" class="hbtn" data-a="rdel" aria-label="Remove rule ${i + 1}" title="Remove">✕</button></div>`
+  function paintRules() {
+    const box = bd.querySelector('.rules'); if (!box) return
+    box.innerHTML = rules.map(ruleRow).join('') || '<p class="note" style="margin:0 0 6px">No rules yet.</p>'
+    bd.querySelector('[data-a="radd"]').disabled = rules.length >= st.options.maxFloorRules
+  }
+  function saveRules(ms = 600) {
+    const ok = checkFloorRules(rules), n = bd.querySelector('[data-n="rules"]')
+    n.textContent = ok instanceof Error ? ok.message.replace(/^floorRules: /, '') : ''
+    if (!(ok instanceof Error)) save({ floorRules: ok }, ms)
+  }
   function paintFeatures() {
     const q = filter.trim().toLowerCase()
     let any = false
@@ -250,11 +374,15 @@ export default function init(api) {
     if (el.id === id('name')) { const v = el.value.trim(); if (v) save({ name: v }, 700) }
     else if (el.id === id('win')) { const v = Number(el.value); if (Number.isInteger(v) && v >= st.options.windowMin[0] && v <= st.options.windowMin[1]) save({ windowMin: v }, 700) }
     else if (el.id === id('filter')) { filter = el.value; paintFeatures() }
+    else if (el.dataset.slot && ed) { ed.colours[el.dataset.slot] = el.value; livePreview() }
+    else if (el.id === id('cname') && ed) ed.name = el.value.trim().toLowerCase()
+    else if (el.dataset.r === 'pattern') { rules[+el.closest('.rule').dataset.i].pattern = el.value; saveRules(900) }
   })
   bd.addEventListener('change', e => {
     const el = e.target, k = el.dataset.k
     if (k?.startsWith('look-')) { preview(); save({ avatar: lookNow() }) }
     else if (k === 'skin' || k === 'holiday') { paintTheme(); save({ theme: themeNow() }) }
+    else if (el.dataset.r && el.tagName === 'SELECT') { rules[+el.closest('.rule').dataset.i][el.dataset.r] = el.value; saveRules(200) }
     else if (el.id === id('upd')) save({ updateCheck: el.checked }, 0)
     else if (el.dataset.f) { if (el.checked) staged.delete(el.dataset.f); else staged.add(el.dataset.f); paintFeatures() }
     else if (el.dataset.all) {
@@ -274,7 +402,24 @@ export default function init(api) {
       return
     }
     const a = e.target.closest('[data-a]')?.dataset.a
-    if (a === 'apply') {
+    if (a === 'cnew') { const d = fromChoice(skinNow()); startEdit({ ...d, name: freeName(d.name || ('my ' + skinLabel(d.base).toLowerCase())) }, null) }
+    else if (a === 'cedit') { const d = customOf(skinNow()); if (d) startEdit({ ...d, colours: coloursOf(d) }, d.name) }
+    else if (a === 'cdup' && ed) { const d = fromChoice(bd.querySelector('#' + id('cbase')).value); ed.base = d.base; ed.colours = d.colours; paintEditor(); livePreview(); cmsg(`Colours from ${customOf(bd.querySelector('#' + id('cbase')).value)?.name || skinLabel(d.base)}.`) }
+    else if (a === 'csave' && ed) saveCustom()
+    else if (a === 'cdel' && ed?.orig) deleteCustom()
+    else if (a === 'ccancel') endEdit()
+    else if (a === 'cexport' && ed) {
+      const box = bd.querySelector('#' + id('cjson')); box.value = exportJson(); box.select()
+      try { await navigator.clipboard.writeText(box.value); cmsg('Copied — send it to a colleague to Import.') } catch { cmsg('Copy the text above to share it.') }
+    }
+    else if (a === 'cimport') importCustom()
+    else if (a === 'radd') { rules.push({ pattern: '*', ...Object.fromEntries(Object.keys(st.options.floorPresets).map(k => [k, 'none'])) }); paintRules(); bd.querySelector('.rule:last-child [data-r="pattern"]')?.focus() }
+    else if (a === 'rdel' || a === 'rup') {
+      const i = +e.target.closest('.rule').dataset.i
+      if (a === 'rdel') rules.splice(i, 1); else if (i > 0) [rules[i - 1], rules[i]] = [rules[i], rules[i - 1]]
+      paintRules(); saveRules(200)
+    }
+    else if (a === 'apply') {
       pending.disabled = [...staged]
       if (await flush()) location.reload()
     } else if (a === 'updcheck') {
@@ -294,5 +439,5 @@ export default function init(api) {
   })
 
   const at = params.get('settings')
-  if (demos.includes('settings') || at) setTimeout(() => open(at), 300)
+  if (demos.includes('settings') || at) setTimeout(async () => { await open(at === 'editor' ? 'look' : at); if (at === 'editor') bd.querySelector('[data-a="cnew"]')?.click() }, 300)
 }

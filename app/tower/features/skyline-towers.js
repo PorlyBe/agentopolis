@@ -10,6 +10,11 @@ const BUSY = new Set(['tool', 'thinking', 'delegating', 'building'])
 const INK = {
   classic: { body: '#7b8cab', side: '#6a7a98', trim: '#8d9dba', win: '#6c7c9a', lit: '#ffe39a', blink: '#fff6cf', board: '#3a3f52', face: '#d8dce6', leg: '#4a5064' },
   cyberpunk: { body: '#262444', side: '#1c1a36', trim: '#3a2f5a', win: '#2c2a4c', lit: '#7af0ff', blink: '#ff7ad8', board: '#14121e', face: '#ff3fb4', leg: '#2a2838' },
+  synthwave: { body: '#3a1a52', side: '#2a103e', trim: '#ff3fb4', win: '#4a2462', lit: '#ff9a5a', blink: '#3ae0ff', board: '#14081e', face: '#ff9af0', leg: '#2a1a3e' },
+  'space-station': { body: '#2a303c', side: '#1e222c', trim: '#5a6270', win: '#323a48', lit: '#9ad8ff', blink: '#f0c020', board: '#14161c', face: '#9ad8ff', leg: '#3a404c' },
+  underwater: { body: '#2a6a7a', side: '#1e5a6a', trim: '#3a8090', win: '#246070', lit: '#bff4ff', blink: '#ffffff', board: '#1a3a44', face: '#bff4ff', leg: '#24525c' },
+  steampunk: { body: '#8a7458', side: '#6a5a44', trim: '#c8963a', win: '#7a6650', lit: '#ffd890', blink: '#fff0c0', board: '#3a2a1a', face: '#e8c88a', leg: '#4a3020' },
+  candy: { body: '#e0b0d0', side: '#c898b8', trim: '#fff4fa', win: '#d0a0c0', lit: '#fff4fa', blink: '#ff7ab0', board: '#8a5a7a', face: '#fff4fa', leg: '#a87a9a' },
 }
 const FAKE = [['acme/rocket-docs'], ['globex/data-lake'], ['initech/pixel-kit'], ['acme/edge-proxy'], ['umbrella/notebooks'], ['acme/infra-live']]
 

@@ -67,8 +67,8 @@ under **⚙ Settings → Updates**. It only checks a git clone of this repo, so 
 
 ### Options
 
-Most options live in the **⚙ Settings** panel at the bottom of the toolbar: your name, your character, the theme, which
-features run, the update check, and how long an inactive session keeps its floor. Changes show within a couple of seconds, without a
+Most options live in the **⚙ Settings** panel at the bottom of the toolbar: your name, your character, the theme (or one
+you make in its editor, shared as a short JSON text), floor styling by session title, which features run, the update check, and how long an inactive session keeps its floor. Changes show within a couple of seconds, without a
 restart; switching features on or off reloads the page. The panel saves to `~/.agentopolis/settings.json`.
 
 The flags below set the startup defaults. A value saved in the panel wins over its flag, and resetting it in the panel
@@ -81,7 +81,7 @@ goes back to the flag's value.
 | `--demo` | off | An invented office; no real data is read |
 | `--window-min <n>` | `30` | How long a running but inactive session keeps its floor |
 | `--avatar "<look>"` | today's look | Your character, e.g. `"hair=bun,haircolour=red,suit=navy,skin=3,glasses=round,pet=cat"`: hair `short` `long` `bun` `curly` `bald` `mohawk`; haircolour `brown` `black` `blonde` `red` `grey` `white` `pink` `blue`; suit `charcoal` `navy` `burgundy` `forest` `cream`; skin `1`–`6`; glasses `none` `round` `square`; pet `none` `cat` `dog` `claudio`. `?avatar=` on the URL overrides it |
-| `--theme <name>` | `auto` | The tower's skin: `classic`, `cyberpunk`, `cottage`, `brutalist`, or a holiday (`halloween`, `christmas`, `newyear`, `valentine`, `lunar`, `hanami`, `goldenweek`, `tanabata`, `obon`, `tsukimi`), or a mix like `cyberpunk+halloween`. `auto` is classic plus whatever holiday the date brings. `?theme=` overrides it |
+| `--theme <name>` | `auto` | The tower's skin: `classic`, `cyberpunk`, `cottage`, `brutalist`, `synthwave`, `noir`, `underwater`, `space-station`, `gameboy`, `blueprint`, `steampunk`, `winter-cabin`, `candy`, a custom theme made in **⚙ Settings → Look** (`custom:<name>`), or a holiday (`halloween`, `christmas`, `newyear`, `valentine`, `lunar`, `hanami`, `goldenweek`, `tanabata`, `obon`, `tsukimi`), or a mix like `cyberpunk+halloween`. `auto` is classic plus whatever holiday the date brings. `?theme=` overrides it |
 
 `?demo=<feature>` on the URL plays any single feature (see [Demos](#demos)), and `?towerzoom=min` shows the whole
 street.
@@ -120,6 +120,13 @@ And a lot more, each driven by something real in your transcripts or on GitHub:
   being edited (a crab for Rust, a snake scarf for Python). Destructive commands shake their floor and draw on the
   lobby seismograph, a hall of records keeps your all-time bests, a blimp trails the day's headline, and at night
   the windows chart today's activity by hour.
+- **Up close:** zoom in on a desk and its monitor is a tiny live terminal showing the real command, file or diff
+  line; with ambience on you also hear that floor (keyboards, the copier, the lift, coffee, traffic, wind).
+- **Mood:** grumpy prompts ("wtf", "ugh", ALL CAPS) park a rain cloud over that floor until you say thanks; a stray
+  cat makes mischief on floors left idle; a plant in your office grows with your daily streak; and there are a few
+  secrets to find.
+- **Share your day:** the 📊 button draws a daily report card (sessions, tool calls, PRs, deploys, spend, the moment of
+  the day) as an image to paste into Slack.
 - **Infrastructure:** a server room with a rack per background job, a parking garage with one car per session's
   model, an IT technician when a tool server drops, and a security desk that stamps DENIED on blocked actions.
 - **Around the building:** weather and a day–night cycle for your time zone, the Gazette (a daily paper of the repo),
@@ -132,7 +139,8 @@ And a lot more, each driven by something real in your transcripts or on GitHub:
 Add `?demo=<name>` to see any feature without waiting for it to happen. For example: `towerlife`, `moveinout`,
 `waitline`, `myprs`, `postroom`, `rocket`, `helipad`, `firedrill`, `printerjam`, `groundhog`, `milestonecake`,
 `walkabout`, `reviewervisits`, `fridaydrinks`, `standup`, `lunchrush`, `screensaver`, `cisubway`, `seismograph`,
-`windowheatmap`, `hallofrecords`, `blimp`, `uniforms`, `wardrobe`, `themes`, `skylinetowers`, `avatar`,
+`windowheatmap`, `readablemonitors`, `floorsounds`, `stormcloud`, `catchaos`, `tamagotchiplant`, `reportcard`,
+`hallofrecords`, `blimp`, `uniforms`, `wardrobe`, `themes`, `skylinetowers`, `avatar`,
 `holidays&date=2026-12-25`.
 
 `?towerzoom=min` shows the whole street.

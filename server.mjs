@@ -44,12 +44,14 @@ const DEFAULTS = {
   disabled: [],                        // tower features that don't start (app/options.js FEATURE_GROUPS)
   windowMin: Number(flag('window-min', 30)),
   updateCheck: true,                   // ask GitHub whether main has new commits (server/update-check.mjs)
+  customThemes: [],                    // the Look tab's own themes, 'custom:<slug>' in theme (app/options.js checkCustomTheme)
+  floorRules: [],                      // title pattern → floor styling (app/tower/features/floor-decor.js)
 }
 const VALIDATE = {
   name: v => typeof v === 'string' && v.trim() && v.trim().length <= 40 && !/[\u0000-\u001f\u007f]/.test(v) ? v.trim() : Error('name: 1–40 characters'),
-  theme: v => {
+  theme: (v, next = saved) => {
     if (typeof v !== 'string' || v.length > 60) return Error('theme: a name like cyberpunk+halloween')
-    const t = OPTIONS.parseTheme(v)
+    const t = OPTIONS.parseTheme(v, (next.customThemes || []).map(c => OPTIONS.slugOf(c.name)))
     return t.bad.length ? Error(`theme: unknown ${t.bad.join(', ')}`) : t.name
   },
   avatar: v => {
@@ -69,35 +71,41 @@ const VALIDATE = {
   },
   windowMin: v => Number.isInteger(v) && v >= 5 && v <= 240 ? v : Error('windowMin: a whole number of minutes, 5–240'),
   updateCheck: v => typeof v === 'boolean' ? v : Error('updateCheck: true or false'),
+  customThemes: v => OPTIONS.checkCustomThemes(v),
+  floorRules: v => OPTIONS.checkFloorRules(v),
 }
+// a theme naming a custom theme is checked against the custom themes of the same save
+const inOrder = o => Object.entries(o).sort(([a], [b]) => (b === 'customThemes') - (a === 'customThemes'))
 let saved = {}
 if (!DEMO) {
   let file = {}
   try { file = JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf8')) || {} } catch {}
-  for (const [k, v] of Object.entries(file)) { const ok = VALIDATE[k]?.(v); if (ok !== undefined && !(ok instanceof Error)) saved[k] = ok }
+  for (const [k, v] of inOrder(file)) { const ok = VALIDATE[k]?.(v, saved); if (ok !== undefined && !(ok instanceof Error)) saved[k] = ok }
 }
 const effective = () => ({ ...DEFAULTS, ...saved })
 const settingsBody = () => ({
   effective: effective(), saved, defaults: DEFAULTS,
-  options: { skins: OPTIONS.SKINS, holidays: OPTIONS.HOLIDAY_KEYS, avatar: OPTIONS.AVATAR, features: OPTIONS.FEATURE_GROUPS, windowMin: [5, 240] },
+  options: { skins: OPTIONS.SKINS, holidays: OPTIONS.HOLIDAY_KEYS, avatar: OPTIONS.AVATAR, features: OPTIONS.FEATURE_GROUPS, windowMin: [5, 240],
+    themeSlots: OPTIONS.THEME_SLOTS, maxCustom: OPTIONS.MAX_CUSTOM, floorPresets: OPTIONS.FLOOR_PRESETS, maxFloorRules: OPTIONS.MAX_FLOOR_RULES },
   file: DEMO ? null : SETTINGS_FILE.replace(os.homedir(), '~'),
 })
 
 async function postSettings(req, res) {
   if (req.headers['sec-fetch-site'] !== 'same-origin') return send(res, 403, { error: 'same-origin only' })
   let body = ''
-  for await (const chunk of req) { body += chunk; if (body.length > 8000) return send(res, 413, { error: 'too large' }) }
+  for await (const chunk of req) { body += chunk; if (body.length > 24000) return send(res, 413, { error: 'too large' }) }
   let patch
   try { patch = JSON.parse(body) } catch { return send(res, 400, { error: 'not JSON' }) }
   if (!patch || typeof patch !== 'object' || Array.isArray(patch)) return send(res, 400, { error: 'expected an object' })
   const next = { ...saved }
-  for (const [k, v] of Object.entries(patch)) {
+  for (const [k, v] of inOrder(patch)) {
     if (!VALIDATE[k]) return send(res, 400, { error: `unknown setting ${k}` })
     if (v === null) { delete next[k]; continue }
-    const ok = VALIDATE[k](v)
+    const ok = VALIDATE[k](v, next)
     if (ok instanceof Error) return send(res, 400, { error: ok.message })
     next[k] = ok
   }
+  if (next.theme && !('theme' in patch) && VALIDATE.theme(next.theme, next) instanceof Error) delete next.theme   // its custom theme was deleted
   if (!DEMO) {
     try {
       fs.mkdirSync(path.dirname(SETTINGS_FILE), { recursive: true })
@@ -324,8 +332,8 @@ function send(res, status, obj) {
 }
 
 function snapshot() {
-  const { name: owner, theme, avatar, windowMin } = effective()
-  if (DEMO) return { ...demo.generate(Date.now()), owner, theme, avatar, update: { status: 'off', ahead: 0, commits: [], checkedAt: null, branch: null } }
+  const { name: owner, theme, avatar, windowMin, customThemes, floorRules } = effective()
+  if (DEMO) return { ...demo.generate(Date.now()), owner, theme, avatar, customThemes, floorRules, update: { status: 'off', ahead: 0, commits: [], checkedAt: null, branch: null } }
   const now = Date.now()
   const sessions = []
   const live = liveSessions()
@@ -372,7 +380,7 @@ function snapshot() {
     }
   }
   sessions.sort((a, b) => a.id.localeCompare(b.id))
-  const snap = { now, owner, theme, avatar, sessions, update: updates.state() }
+  const snap = { now, owner, theme, avatar, customThemes, floorRules, sessions, update: updates.state() }
   for (const f of features) if (typeof f.snapshot === 'function') { try { f.snapshot(snap) } catch (e) { console.error(`[${f.name}.snapshot]`, e.message) } }
   return snap
 }

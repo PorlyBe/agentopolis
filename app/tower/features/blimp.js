@@ -6,6 +6,11 @@ import { BW, SHAFT } from '../building.js'
 const R = (c, col, x, y, w, h) => { c.fillStyle = col; c.fillRect(Math.round(x), Math.round(y), w, h) }
 const BODY = { w: 72, h: 22 }, BAN = { w: 170, h: 16 }, ROPE = 12, SPEED = 6, TURN = 3.2
 const SCROLL = 34   // banner text, screen px per second
+// the envelope's colours; the steampunk skin flies a brass dirigible
+const HULL = {
+  classic: { fin: ['#c8404a', '#a8323a', '#8a2a30'], body: ['#e8ecf2', '#c8ced8', '#aab2c0', '#8a92a2'], stripe: ['#f4a24f', '#2f6fb0'] },
+  steampunk: { fin: ['#d8a84a', '#b8862e', '#8a5a32'], body: ['#e0c890', '#c8a46a', '#a8844e', '#7a5a34'], stripe: ['#6a4424', '#6a4424'] },
+}
 
 export default function init(api, tower) {
   const { Z, font } = tower, esc = api.esc
@@ -45,18 +50,19 @@ export default function init(api, tower) {
 
   function envelope(c, g, now, night) {
     const { cx, cy } = g, hw = BODY.w / 2, hh = BODY.h / 2
+    const H = HULL[api.theme?.skin] || HULL.classic
     c.save(); c.translate(Math.round(cx), Math.round(cy)); c.scale(sx || 0.001, 1)
     for (let r = 0; r < 8; r++) {   // tail fins: a vertical trailing edge, the leading edge sloping into the body
-      R(c, r ? '#a8323a' : '#c8404a', -hw + 1, -hh - 3 + r, 3 + r, 1)
-      R(c, r ? '#8a2a30' : '#a8323a', -hw + 1, hh + 2 - r, 3 + r, 1)
+      R(c, r ? H.fin[1] : H.fin[0], -hw + 1, -hh - 3 + r, 3 + r, 1)
+      R(c, r ? H.fin[2] : H.fin[1], -hw + 1, hh + 2 - r, 3 + r, 1)
     }
-    R(c, '#a8323a', -hw - 1, -1, 10, 2)
+    R(c, H.fin[1], -hw - 1, -1, 10, 2)
     for (let y = -hh; y < hh; y++) {
       const k = 1 - ((y + 0.5) / hh) ** 2, w = Math.round(hw * Math.sqrt(Math.max(0, k)) * (y < 0 ? 1 : 0.97))
-      const col = y < -hh + 3 ? '#e8ecf2' : y < -2 ? '#c8ced8' : y < 4 ? '#aab2c0' : '#8a92a2'
+      const col = H.body[y < -hh + 3 ? 0 : y < -2 ? 1 : y < 4 ? 2 : 3]
       R(c, col, -w + (y > 3 ? 2 : 0), y, w * 2 - (y > 3 ? 2 : 0), 1)
     }
-    R(c, '#f4a24f', -hw + 8, -2, BODY.w - 18, 2); R(c, '#2f6fb0', -hw + 10, 1, BODY.w - 22, 1)   // livery stripes
+    R(c, H.stripe[0], -hw + 8, -2, BODY.w - 18, 2); R(c, H.stripe[1], -hw + 10, 1, BODY.w - 22, 1)   // livery stripes
     R(c, '#f4f0e6', hw - 10, -5, 2, 2)   // nose cap
     R(c, '#4a4d56', -6, hh - 1, 1, 3); R(c, '#4a4d56', 8, hh - 1, 1, 3)
     R(c, '#3a3d46', -9, hh + 2, 22, 6); R(c, '#5a5d66', -9, hh + 2, 22, 1)   // gondola

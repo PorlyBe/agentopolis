@@ -11,6 +11,7 @@ import photo_booth from './features/photo-booth.js'
 import settings from './features/settings.js'
 import update from './features/update.js'
 import toolbar_tips from './features/toolbar-tips.js'
+import report_card from './features/report-card.js'
 import tower from './tower/tower.js'
 
 // Order matters: notify adjusts the snapshot (?demo=attention) before the tower reads it, and the navigator's
@@ -28,5 +29,6 @@ start([
   ['settings', settings],
   ['update', update],
   ['toolbar-tips', toolbar_tips],
+  ['report-card', report_card],
   ['tower', tower],
 ])
