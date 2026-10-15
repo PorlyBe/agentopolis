@@ -6,6 +6,7 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 
+const WEIGHT = { merged: 5, review: 3, comment: 1, push: 1, opened: 1, ready: 1, closed: 0 }
 const MIN = 60_000, HOUR = 60 * MIN
 const BOT = /\[bot\]$|^Copilot$/i, RABBIT = /^coderabbit/i
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..', '..')
@@ -93,12 +94,18 @@ function compose(s, now) {
   const red = ok ? st.engineers.flatMap(e => e.prs.filter(p => p.ci === 'failed').map(p => ({ n: p.n, title: p.title, author: e.login, url: p.url || prUrl(p.n) }))).slice(0, 5) : []
   const runningCi = ok ? st.engineers.reduce((a, e) => a + e.ciRunning, 0) : 0
 
+  // engineer of the day: shipping and reviewing outweigh volume — a merge 5, a review 3, anything else 1, a close 0
   const people = new Map()
-  for (const e of events) if (!e.bot && !BOT.test(e.actor) && e.actor !== st?.me) people.set(e.actor, (people.get(e.actor) || 0) + 1)
-  const topLogin = [...people].sort((a, b) => b[1] - a[1])[0]
+  for (const e of events) {
+    if (e.bot || BOT.test(e.actor) || e.actor === st?.me || !(e.type in WEIGHT)) continue
+    const p = people.get(e.actor) || { score: 0, n: 0, by: {} }
+    p.score += WEIGHT[e.type]; p.n++; p.by[e.type] = (p.by[e.type] || 0) + 1
+    people.set(e.actor, p)
+  }
+  const topLogin = [...people].sort((a, b) => b[1].score - a[1].score || b[1].n - a[1].n)[0]
   const eng = ok && (topLogin ? st.engineers.find(e => e.login === topLogin[0]) : st.engineers[0])
   const engineer = topLogin || eng ? {
-    login: topLogin?.[0] || eng.login, actions: topLogin?.[1] || 0, openPrs: eng?.prs?.length || 0,
+    login: topLogin?.[0] || eng.login, actions: topLogin?.[1].n || 0, score: topLogin?.[1].score || 0, by: topLogin?.[1].by || {}, openPrs: eng?.prs?.length || 0,
     merges: mergedList.filter(m => m.author === (topLogin?.[0] || eng.login)).length,
   } : null
 

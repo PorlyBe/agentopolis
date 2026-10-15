@@ -114,7 +114,7 @@ export default function init(api) {
     const rabbit = r ? `<p class="gz-quote">${r.kind === 'review' ? (r.review === 'changes_requested' ? 'Requested changes on' : r.review === 'approved' ? 'Approved' : 'Reviewed') : 'Commented on'} ${link(r.url, `#${r.pr}`)}${r.title ? ` “${esc(r.title)}”` : ''}${r.target ? ` by ${esc(r.target)}` : ''}.</p><p class="gz-who">${agoL(r.at)} · ${pl(r.today, 'remark')} across ${pl(r.prs, 'PR')} today</p>`
       : '<p class="gz-muted">The rabbit has been quiet today. Suspiciously quiet.</p>'
     const e = g.engineer
-    const eng = e ? `<p><b style="font-size:16px">${esc(e.login)}</b></p><p>${e.actions ? `${pl(e.actions, 'push, review or comment', 'pushes, reviews and comments')} today` : 'Busiest on the street right now'}${e.openPrs ? `, ${pl(e.openPrs, 'open PR')}` : ''}${e.merges ? `, ${pl(e.merges, 'merge')}` : ''}.</p>` : '<p class="gz-muted">The street is empty, for now.</p>'
+    const eng = e ? `<p><b style="font-size:16px">${esc(e.login)}</b></p><p>${e.score ? `${e.score} points today: ${[['merged', 'merge'], ['review', 'review'], ['comment', 'comment'], ['push', 'push', 'pushes'], ['opened', 'PR opened', 'PRs opened']].filter(([k]) => e.by?.[k]).map(([k, one, many]) => pl(e.by[k], one, many)).join(', ')}` : e.actions ? `${pl(e.actions, 'action')} today` : 'Busiest on the street right now'}${e.openPrs ? `, ${pl(e.openPrs, 'open PR')}` : ''}${e.merges ? `, ${pl(e.merges, 'merge')}` : ''}.</p>` : '<p class="gz-muted">The street is empty, for now.</p>'
     sheet.innerHTML = `<button class="gz-x" title="Close (Esc)">✕</button>
       <div class="gz-strip"><span>Vol. I · No. ${g.edition}</span><span>${esc(g.repo || 'Agentopolis')}</span><span>Price: one coffee</span></div>
       <div class="gz-mast">THE DAILY GAZETTE</div>
@@ -159,7 +159,7 @@ export default function init(api) {
       stats: { toolsToday: 4210, since: 0, toolsHour: 312, tokens: 48_200_000, commits: 9, online: { sessions: 4, active: 3, agents: 6 } },
       busiest: { now: { name: 'OFFICE VISUALIZATION', calls: 54 }, peak: { name: 'ID SERVER', calls: 88 }, leaders: [{ name: 'ID SERVER', minutes: 41 }], desks: [{ title: 'ID SERVER', state: 'tool', agents: 3 }] },
       workflows: [], ci: { failsToday: 2, failsHour: 1, red: [{ n: 1871, title: 'flaky e2e', author: 'carol-ci', url: url(1871) }], running: 2, culprits: ['carol-ci'] },
-      engineer: { login: 'alice-dev', actions: 14, openPrs: 3, merges: 1 },
+      engineer: { login: 'alice-dev', actions: 14, score: 26, by: { merged: 2, review: 3, comment: 4, push: 3, opened: 2 }, openPrs: 3, merges: 1 },
       coderabbit: { pr: 1878, title: 'login flow', target: 'alice-dev', kind: 'review', review: 'commented', at: now - 900_000, today: 6, prs: 4, url: url(1878) },
       weather: null,
     }

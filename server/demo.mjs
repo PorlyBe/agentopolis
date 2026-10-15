@@ -377,7 +377,7 @@ export function generate(now) {
       workflows: [{ name: 'release-checklist', session: mob.title, agents: 4, doneAt: now - 2 * HOUR }],
       ci: { failsToday: 3, failsHour: 1, red: st.engineers.flatMap(e => e.prs.filter(p => p.ci === 'failed').map(p => ({ n: p.n, title: p.title, author: e.login, url: p.url }))),
         running: st.engineers.reduce((a, e) => a + e.ciRunning, 0), culprits: ['bob-codes', 'frank-fixes'] },
-      engineer: { login: 'erin-reviews', actions: 14, openPrs: 1, merges: 1 }, coderabbit: null, weather: 'clear, 22°',
+      engineer: { login: 'erin-reviews', actions: 14, score: 29, by: { review: 6, comment: 5, merged: 1, push: 2 }, openPrs: 1, merges: 1 }, coderabbit: null, weather: 'clear, 22°',
     },
     street: st,
     skyline: { main: REPO, repos: [{ name: 'harbor-docs', full: 'acme/harbor-docs', sessions: [out[2].id] }, { name: 'data-lake', full: 'globex/data-lake', sessions: out.slice(3, 5).map(x => x.id) },
