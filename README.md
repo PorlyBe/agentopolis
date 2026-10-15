@@ -103,7 +103,7 @@ default 30).
 
 Character, furniture and pet sprites come from [Pixel Agents](https://github.com/pixel-agents-hq/pixel-agents)
 (MIT, © Pablo De Lucca). The characters are based on
-[JIK-A-4's Metro City](https://jik-a-4.itch.io/metrocity-free-topdown-character-pack) pack. Everything else is drawn
+[JIK-A-4's Metro City](https://jik-a-4.itch.io/metrocity-free-topdown-character-pack) pack (CC0). Everything else is drawn
 in code.
 
 Not affiliated with Anthropic. "Claude" and "Claude Code" are Anthropic's trademarks.
