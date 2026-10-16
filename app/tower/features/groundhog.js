@@ -128,11 +128,11 @@ export default function init(api, tower) {
   let t0 = 0
   tower.on('snapshot', data => {
     const now = Date.now()
-    if (!data.sessions.length) data.sessions.push({ id: '00000000-0000-4000-8000-000000000041', title: 'LEDGER', cwd: null, branch: null, worktree: null, running: true, endedAt: null, state: 'tool', tool: 'Bash', detail: null, lastActivity: now, agents: [], ext: {} })
+    if (!data.sessions.length) data.sessions.push({ id: '00000000-0000-4000-8000-000000000041', title: 'GARDEN PLANNER', cwd: null, branch: null, worktree: null, running: true, endedAt: null, state: 'tool', tool: 'Bash', detail: null, lastActivity: now, agents: [], ext: {} })
     const s = data.sessions[data.sessions.length > 1 ? 1 : 0]
     if (!t0) { t0 = now; if (!params.get('towerzoom')) setTimeout(() => { const f = tower.floorOf(s.id); if (f) tower.flyTo({ x: IX + 90, y: f.y - 30 }, Number(params.get('ghzoom')) || 3) }, 800) }
     const count = 3 + Math.floor((now - t0) / 15000) % 6
     s.running = true; s.state = 'tool'; delete s.attention
-    s.ext = { ...s.ext, groundhog: { loops: [{ who: s.id, tool: 'Bash', label: 'cargo test -p api-server --test user_flows -- register_returns_an_id', count, first: now - count * 90000, last: now - 20000 }] } }
+    s.ext = { ...s.ext, groundhog: { loops: [{ who: s.id, tool: 'Bash', label: 'pytest -q tests/test_frost.py -k alerts_by_postcode', count, first: now - count * 90000, last: now - 20000 }] } }
   })
 }

@@ -15,7 +15,7 @@ export default function init(api, tower) {
 
   tower.on('snapshot', data => {
     if (!demo) return
-    data.releases = { repo: 'acme/skyline', list: Date.now() < demoAt ? [] : [{ tag: 'desktop-v0.6.0', name: 'Desktop v0.6.0', author: 'you', publishedAt: demoAt, prerelease: false, url: 'https://github.com/acme/skyline/releases' }] }
+    data.releases = { repo: 'acme/skyline', list: Date.now() < demoAt ? [] : [{ tag: 'v0.6.0', name: 'Skyline v0.6.0', author: 'you', publishedAt: demoAt, prerelease: false, url: 'https://github.com/acme/skyline/releases' }] }
   })
   tower.on('sync', snap => {
     const now = Date.now(), list = snap.releases?.list || []

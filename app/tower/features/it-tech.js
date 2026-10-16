@@ -190,7 +190,7 @@ export default function init(api, tower) {
   tower.on('snapshot', data => {
     const now = Date.now()
     if (!t0) { t0 = now; if (!params.get('towerzoom')) setTimeout(() => { const f = tower.floorOf(data.sessions[0]?.id); if (f) tower.flyTo({ x: LX, y: f.y - 30 }, Number(params.get('itzoom')) || 3) }, 800) }
-    if (!data.sessions.length) data.sessions.push({ id: '00000000-0000-4000-8000-000000000041', title: 'WEB CI', cwd: null, branch: null, worktree: null, running: true, endedAt: null, state: 'tool', tool: 'Bash', detail: null, lastActivity: now, agents: [], ext: {} })
+    if (!data.sessions.length) data.sessions.push({ id: '00000000-0000-4000-8000-000000000041', title: 'PIXEL QUEST', cwd: null, branch: null, worktree: null, running: true, endedAt: null, state: 'tool', tool: 'Bash', detail: null, lastActivity: now, agents: [], ext: {} })
     const s = data.sessions[0], t = (now - t0) % 90000
     s.ext = { ...s.ext }
     if (t < 60000) s.ext['it-tech'] = [{ server: 'issue-tracker', tool: 'mcp__issue-tracker__get_issue', text: 'MCP server "issue-tracker" is not connected', since: t0 - 4 * 60000, at: t0 - 60000, n: 3 }]

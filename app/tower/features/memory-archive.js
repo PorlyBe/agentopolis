@@ -24,7 +24,7 @@ export default function init(api, tower) {
     snap.memoryArchive = { day: '', filings: Array.from({ length: n }, (_, i) => {
       const [kind, file, line] = SAMPLE[i % SAMPLE.length], x = s[i % Math.max(1, s.length)]
       const at = i < 17 ? d.getTime() + (8 + i * 0.5) * 3600_000 : demoT0 + (i - 16) * 7000
-      return { id: 'demo-ma-' + i, at: Math.min(at, now), file, kind, tool: i % 3 ? 'Edit' : 'Write', session: x?.id, title: x?.title || 'PAYMENTS API', agent: i % 4 === 1 ? { type: 'Explore', description: 'map the ledger' } : null, line }
+      return { id: 'demo-ma-' + i, at: Math.min(at, now), file, kind, tool: i % 3 ? 'Edit' : 'Write', session: x?.id, title: x?.title || 'PHOTO GALLERY', agent: i % 4 === 1 ? { type: 'Explore', description: 'map the search index' } : null, line }
     }).slice(-MAX) }
   })
 

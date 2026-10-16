@@ -28,7 +28,7 @@ const SPR = {
 }
 const LABEL = { rust: 'Rust', react: 'React', ts: 'TypeScript', js: 'JavaScript', swift: 'Swift', kotlin: 'Kotlin', terraform: 'Terraform', python: 'Python', go: 'Go', sql: 'SQL', css: 'CSS', docs: 'Docs', shell: 'Shell', ci: 'CI' }
 const STICKER = { rust: '#e0502e', react: '#61dafb', ts: '#3178c6', js: '#f0db4f', swift: '#f05138', kotlin: '#7f52ff', terraform: '#7b42bc', python: '#3d7bbf', go: '#7fd5ea', sql: '#8aa0b8', css: '#e2474b', docs: '#f7f3e8', shell: '#5fd17a', ci: '#9aa6b2' }
-const STACKS = Object.keys(LABEL)
+const STACKS = Object.keys(LABEL), DEMO_STACKS = STACKS.filter(k => !['rust', 'swift', 'kotlin'].includes(k))
 function sprite(c, s, x, y, swap = {}) {
   for (let j = 0; j < s.rows.length; j++) for (let i = 0; i < s.rows[j].length; i++) {
     const ch = swap[s.rows[j][i]] ?? s.rows[j][i]
@@ -163,7 +163,7 @@ export default function init(api, tower) {
     const i = idx(s.id) % 5; return [0.4, 3.2, 11.6, 47.5, 186][i] + (now - t0) / 1000 * [0.12, 0.35, 0.6, 0.9, 1.6][i]
   }
   function stacksOf(s, now) {
-    if (demoKit) { const i = idx(s.id), k = Math.floor(now / 2500); return [STACKS[(i + k) % STACKS.length], STACKS[(i + k + 5) % STACKS.length]] }
+    if (demoKit) { const i = idx(s.id), k = Math.floor(now / 2500); return [DEMO_STACKS[(i + k) % DEMO_STACKS.length], DEMO_STACKS[(i + k + 5) % DEMO_STACKS.length]] }
     const top = s.ext?.['desk-props']?.top
     if (!top?.length || !MASCOT[top[0].stack]) return []
     return [top[0].stack, top[1] && top[1].share >= 0.2 && top[1].w >= top[0].w * 0.3 && MASCOT[top[1].stack] ? top[1].stack : null]

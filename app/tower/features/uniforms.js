@@ -118,9 +118,10 @@ export default function init(api, tower) {
   list.push(wear); list.sort((a, b) => (a.layer || 0) - (b.layer || 0))
 
   if (!demo) return
+  const SHOWN = LANGS.filter(l => !['rust', 'swift', 'kotlin'].includes(l))   // the demo keeps to the screenshot stack
   tower.on('snapshot', data => {
     const now = Date.now(), k = Math.floor(now / 5000)
-    const put = (x, i) => { x.ext = x.ext || {}; x.ext.uniforms = { edit: { lang: LANGS[(k + i) % LANGS.length], at: now } } }
+    const put = (x, i) => { x.ext = x.ext || {}; x.ext.uniforms = { edit: { lang: SHOWN[(k + i) % SHOWN.length], at: now } } }
     let i = 0
     for (const s of data.sessions || []) { put(s, i++); for (const g of s.agents || []) put(g, i++) }
   })

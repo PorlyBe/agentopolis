@@ -191,7 +191,7 @@ export default function init(api, tower) {
   tower.on('snapshot', data => {
     const now = Date.now()
     if (!t0) { t0 = now; if (!params.get('towerzoom')) setTimeout(() => { const f = roof(); if (f) tower.flyTo({ x: HX - 10, y: f.y - 40 }, Number(params.get('hpzoom')) || 4) }, 800) }
-    if (!data.sessions.length) data.sessions.push({ id: '00000000-0000-4000-8000-000000000051', title: 'WEB CI', cwd: null, branch: null, worktree: null, running: true, endedAt: null, state: 'tool', tool: 'Bash', detail: null, lastActivity: now, agents: [], ext: {} })
+    if (!data.sessions.length) data.sessions.push({ id: '00000000-0000-4000-8000-000000000051', title: 'PIXEL QUEST', cwd: null, branch: null, worktree: null, running: true, endedAt: null, state: 'tool', tool: 'Bash', detail: null, lastActivity: now, agents: [], ext: {} })
     demoSid = data.sessions.find(x => x.id === demoSid)?.id || (tower.people.find(p => p.kind === 'session' && !p.steered && !p.leaving && data.sessions.some(x => x.id === p.id))?.id ?? null)
     const s = data.sessions.find(x => x.id === demoSid) || data.sessions[0], P = 150_000, n = Math.floor((now - t0) / P), c0 = t0 + n * P
     const list = [{ id: `demo-pub-${n}`, kind: 'review', label: '/code-review ultra', at: c0 + 1000, back: c0 + 3000, status: 'done' },

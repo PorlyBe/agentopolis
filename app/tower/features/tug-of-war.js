@@ -222,11 +222,11 @@ export default function init(api, tower) {
   let t0 = 0
   tower.on('snapshot', data => {
     const now = Date.now()
-    if (!data.sessions.length) data.sessions.push({ id: '00000000-0000-4000-8000-000000000051', title: 'LEDGER', cwd: null, branch: null, worktree: null, running: true, endedAt: null, state: 'tool', tool: 'Bash', detail: null, lastActivity: now, agents: [], ext: {} })
+    if (!data.sessions.length) data.sessions.push({ id: '00000000-0000-4000-8000-000000000051', title: 'GARDEN PLANNER', cwd: null, branch: null, worktree: null, running: true, endedAt: null, state: 'tool', tool: 'Bash', detail: null, lastActivity: now, agents: [], ext: {} })
     const s = data.sessions.find(s => s.running !== false) || data.sessions[0]
     if (!t0) { t0 = now; if (!params.get('towerzoom')) setTimeout(() => { const f = tower.floorOf(s.id); if (f) tower.flyTo({ x: MID, y: f.y - 30 }, Number(params.get('tugzoom')) || 3.2) }, 800) }
     const cyc = 40_000, k = Math.floor((now - t0) / cyc), into = (now - t0) % cyc, since = t0 + k * cyc
-    const c = { who: s.id, since, at: since, files: ['web-app/src/lib/api-client/openapi.json', 'web-app/src/lib/api-client/schema.d.ts'], cmd: 'git rebase origin/trunk 2>&1 | tail -20; git status --short', op: 'rebase' }
+    const c = { who: s.id, since, at: since, files: ['src/search/index.ts', 'src/search/schema.d.ts'], cmd: 'git rebase origin/main 2>&1 | tail -20; git status --short', op: 'rebase' }
     s.running = true
     s.ext = { ...s.ext, 'tug-of-war': into < 26_000 ? { open: [c], ended: [] } : { open: [], ended: [{ ...c, end: since + 26_000, how: k % 3 === 2 ? 'aborted' : 'resolved' }] } }
   })

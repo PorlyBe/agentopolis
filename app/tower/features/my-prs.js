@@ -31,9 +31,9 @@ export default function init(api, tower) {
       if (!params.get('towerzoom')) setTimeout(() => demoOwner && tower.flyTo(demoOwner), 600)
     }
     const t = Date.now() - demoT0, ci = t < 3000 ? 'running' : t < 18_000 ? 'failed' : 'passed'
-    const one = { number: 1914, title: 'settings page polish', url: null, draft: false, review: 'CHANGES_REQUESTED', ci, headRefName: 'demo/myprs-1914', updatedAt: Date.now(), demoOwner,
-      failingCheck: ci === 'failed' ? { name: 'desktop-ci / clippy', url: null } : null }
-    const two = { number: 1910, title: 'token verifier', url: null, draft: false, review: 'APPROVED', ci: 'running', headRefName: 'demo/myprs-1910', updatedAt: Date.now() - 6e5, demoOwner: demoOwner2, failingCheck: null }
+    const one = { number: 1914, title: 'game: save slots', url: null, draft: false, review: 'CHANGES_REQUESTED', ci, headRefName: 'demo/myprs-1914', updatedAt: Date.now(), demoOwner,
+      failingCheck: ci === 'failed' ? { name: 'ci / lint', url: null } : null }
+    const two = { number: 1910, title: 'gallery: lazy-load thumbnails', url: null, draft: false, review: 'APPROVED', ci: 'running', headRefName: 'demo/myprs-1910', updatedAt: Date.now() - 6e5, demoOwner: demoOwner2, failingCheck: null }
     return [one, two, ...list]
   }
   const ownedBy = (s, list) => list.filter(p => p.demoOwner ? p.demoOwner === s.id

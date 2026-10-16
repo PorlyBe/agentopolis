@@ -210,7 +210,7 @@ export default function init(api, tower) {
   // ---------- ?demo=planwhiteboard ----------
   if (!demo) return
   let t0 = 0
-  const PLAN = ['Team dashboard: scaffold + auth POC', 'Context: support needs one staff UI', 'Scaffold dashboard-web behind SSO', 'Reuse the API session cookies', 'Roles: viewer, support, admin']
+  const PLAN = ['Recipe search: scaffold + index POC', 'Context: cooks search by what is in the fridge', 'Scaffold src/search behind a flag', 'Reuse the existing tag parser', 'Filters: diet, time, servings']
   tower.on('snapshot', data => {
     const now = Date.now()
     if (!t0) { t0 = now; if (!params.get('towerzoom')) setTimeout(() => { const f = tower.floorOf(data.sessions[0]?.id); if (f) tower.flyTo({ x: STAND_X, y: f.y - 40 }, 4) }, 800) }

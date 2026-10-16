@@ -15,19 +15,19 @@ const SONNET = { model: 'claude-sonnet-4-5', family: 'Sonnet 4.5', window: 200_0
 
 // [tool, detail]; null is a thinking beat
 const SCRIPTS = {
-  payments: [['Read', 'src/refunds/webhook.rs'], ['Grep', 'idempotency_key'], null, ['Edit', 'src/refunds/webhook.rs'], ['Bash', 'Run the refunds test suite'],
-    ['Edit', 'src/ledger/entry.rs'], null, ['Bash', 'cargo clippy --all-targets'], ['TaskUpdate', 'Store the webhook delivery id'], ['Read', 'migrations/0042_refund_events.sql']],
-  data: [['Agent', 'Map the ingest jobs'], ['Read', 'pipeline/jobs/ingest.py'], null, ['Bash', 'Check the backfill progress']],
-  auth: [['AskUserQuestion', 'Rotate signing keys now or at the next deploy?']],
-  docs: [['WebSearch', 'docs site search with static export'], ['Edit', 'content/quickstart.mdx'], ['Bash', 'Build the docs site']],
-  mobile: [['Workflow', 'release-checklist']],
-  explore: [['Glob', 'pipeline/**/*.py'], ['Grep', 'def run'], ['Read', 'pipeline/jobs/export.py'], null, ['Read', 'pipeline/scheduler.py']],
-  backfill: [['Bash', 'Backfill September events'], ['Read', 'pipeline/backfill.py'], null, ['Edit', 'pipeline/backfill.py']],
-  ios: [['Edit', 'ios/App/Settings/SettingsView.swift'], ['Bash', 'Build the iOS app for the simulator'], null, ['Read', 'ios/App/Info.plist']],
-  android: [['Bash', 'Run the Android unit tests'], ['Edit', 'android/app/build.gradle.kts'], ['Read', 'android/app/src/main/AndroidManifest.xml'], null],
+  recipes: [['Read', 'src/search/index.ts'], ['Grep', 'ingredients'], null, ['Edit', 'src/search/index.ts'], ['Bash', 'Run the search tests'],
+    ['Edit', 'src/search/rank.ts'], null, ['Bash', 'npm run lint'], ['TaskUpdate', 'Match partial ingredient names'], ['Read', 'src/data/recipes.json']],
+  gallery: [['Agent', 'Map the album store'], ['Read', 'gallery/albums.go'], null, ['Bash', 'Check the thumbnail progress']],
+  map: [['AskUserQuestion', 'Cache tiles for the whole trail, or just the visible area?']],
+  garden: [['WebSearch', 'frost dates by postcode open data'], ['Edit', 'planner/frost.py'], ['Bash', 'Run the frost tests']],
+  game: [['Workflow', 'release-checklist']],
+  explore: [['Glob', 'gallery/**/*.go'], ['Grep', 'func Share'], ['Read', 'gallery/share.go'], null, ['Read', 'gallery/store.go']],
+  thumbs: [['Bash', 'Regenerate album thumbnails'], ['Read', 'gallery/thumbs.go'], null, ['Edit', 'gallery/thumbs.go']],
+  bundle: [['Edit', 'game/levels/editor.ts'], ['Bash', 'Build the game bundle'], null, ['Read', 'game/levels/index.ts']],
+  e2e: [['Bash', 'Run the e2e suite'], ['Edit', 'tests/editor.spec.ts'], ['Read', 'playwright.config.ts'], null],
   notes: [['Bash', 'git log v3.1.0..HEAD --oneline'], ['Write', 'RELEASE_NOTES.md'], null, ['Read', 'CHANGELOG.md']],
-  check: [['Bash', 'Check every store listing field'], ['Read', 'fastlane/metadata/en-US/description.txt'], null],
-  reviewer: [['Read', 'src/refunds/webhook.rs'], ['Grep', '.unwrap()'], null, ['Read', 'src/ledger/entry.rs']],
+  check: [['Bash', 'Check every screenshot in the press kit'], ['Read', 'site/press/README.md'], null],
+  reviewer: [['Read', 'src/search/index.ts'], ['Grep', ': any'], null, ['Read', 'src/search/rank.ts']],
 }
 
 const step = (key, now, ms = 4500) => {
@@ -35,7 +35,7 @@ const step = (key, now, ms = 4500) => {
   return { k, at: k * ms - off }
 }
 const pick = (key, script, k) => SCRIPTS[script][(k + hash(key)) % SCRIPTS[script].length]
-const LANG = [[/\.rs$/, 'rust'], [/\.py$/, 'python'], [/\.swift$/, 'swift'], [/\.kts?$/, 'kotlin'], [/\.sql$/, 'sql'], [/\.(md|mdx|txt)$/, 'docs'], [/\.(ts|tsx|js)$/, 'ts'], [/\.go$/, 'go'], [/\.css$/, 'css'], [/\.sh$/, 'shell']]
+const LANG = [[/\.py$/, 'python'], [/\.(md|mdx|txt)$/, 'docs'], [/\.(ts|tsx|js)$/, 'ts'], [/\.go$/, 'go'], [/\.css$/, 'css'], [/\.sh$/, 'shell']]
 // uniforms: the latest file the script edited and read, walking back from its current step
 function uniformOf(key, script, k, now, ms = 4500) {
   const out = {}
@@ -55,37 +55,37 @@ function slot(sid, key, now, { period, life, off = 0 }) {
 }
 
 const SESSIONS = [
-  { key: 'payments', title: 'PAYMENTS API', wt: 'refund-webhooks', branch: 'feat/refund-webhooks', m: OPUS, stacks: [['rust', 0.72], ['sql', 0.2]], usd: 9.4,
-    prompt: 'make the refund webhook idempotent', pr: 423 },
-  { key: 'mobile', title: 'MOBILE APP', wt: 'release-3-2', branch: 'release/3.2-checklist', m: OPUS, stacks: [['swift', 0.48], ['kotlin', 0.41]], usd: 14.2,
+  { key: 'recipes', title: 'RECIPE BOX', repo: 'recipe-box', wt: 'add-search', branch: 'add-search', m: OPUS, stacks: [['ts', 0.72], ['css', 0.2]], usd: 9.4,
+    prompt: 'add ingredient search to the recipe list', pr: 423 },
+  { key: 'game', title: 'PIXEL QUEST', repo: 'pixel-quest', wt: 'level-editor', branch: 'level-editor', m: OPUS, stacks: [['ts', 0.48], ['css', 0.41]], usd: 14.2,
     prompt: 'run the release checklist for 3.2', pr: 424 },
-  { key: 'docs', title: 'DOCS SITE', wt: 'quickstart', branch: 'docs/quickstart', m: SONNET, stacks: [['docs', 0.66], ['react', 0.3]], usd: 2.1,
-    prompt: 'rewrite the quickstart page', pr: null },
-  { key: 'data', title: 'DATA PIPELINE', wt: 'events-backfill', branch: 'data/events-backfill', m: OPUS, stacks: [['python', 0.7], ['sql', 0.25]], usd: 6.8,
-    prompt: 'backfill the events table for September', pr: null },
-  { key: 'auth', title: 'AUTH SERVICE', wt: 'key-rotation', branch: 'auth/key-rotation', m: SONNET, stacks: [['go', 0.81], ['terraform', 0.12]], usd: 3.3,
-    prompt: 'rotate the JWT signing keys on a schedule', pr: 422 },
+  { key: 'garden', title: 'GARDEN PLANNER', repo: 'garden-planner', wt: 'frost-alerts', branch: 'frost-alerts', m: SONNET, stacks: [['python', 0.66], ['docs', 0.3]], usd: 2.1,
+    prompt: 'add frost alerts by postcode', pr: null },
+  { key: 'gallery', title: 'PHOTO GALLERY', repo: 'photo-gallery', wt: 'album-sharing', branch: 'album-sharing', m: OPUS, stacks: [['go', 0.7], ['ts', 0.25]], usd: 6.8,
+    prompt: 'let people share an album by link', pr: null },
+  { key: 'map', title: 'TRAIL MAP', repo: 'trail-map', wt: 'offline-tiles', branch: 'offline-tiles', m: SONNET, stacks: [['ts', 0.81], ['css', 0.12]], usd: 3.3,
+    prompt: 'make the trail map work offline', pr: 422 },
 ].map(s => ({ ...s, id: [hex(s.key, 8), hex(s.key + 1, 4), '4' + hex(s.key + 2, 3), 'a' + hex(s.key + 3, 3), hex(s.key + 4, 12)].join('-') }))
 
-const ENGINEERS = ['alice-dev', 'bob-codes', 'carol-ci', 'dave-ships', 'erin-reviews', 'frank-fixes']
+const ENGINEERS = ['alice-dev', 'bob-builds', 'carol-ci', 'dave-ships', 'erin-docs', 'frank-fixes']
 const PRS = [
-  { n: 412, author: 'alice-dev', title: 'api: paginate the invoices endpoint', review: 'APPROVED', size: [182, 40], labels: ['api'] },
-  { n: 418, author: 'alice-dev', title: 'web: dark mode for the billing page', draft: true, size: [410, 96], labels: ['web'] },
-  { n: 415, author: 'bob-codes', title: 'ios: cache avatars on disk', red: true, size: [96, 12], labels: ['ios'] },
-  { n: 409, author: 'carol-ci', title: 'ci: split the test matrix by service', review: 'APPROVED', size: [64, 58], labels: ['ci'] },
-  { n: 420, author: 'carol-ci', title: 'ci: cache the cargo registry between jobs', size: [22, 4], labels: ['ci'], forMe: true },
-  { n: 421, author: 'dave-ships', title: 'deploy: blue-green rollout for the worker fleet', size: [530, 210], labels: ['infra'], conflict: true },
-  { n: 417, author: 'erin-reviews', title: 'docs: explain retry semantics', review: 'CHANGES_REQUESTED', size: [48, 6], labels: ['docs'] },
-  { n: 419, author: 'frank-fixes', title: 'fix: race in the session refresh', flaky: true, size: [31, 18], labels: ['bug'] },
-  { n: 423, author: ME, title: 'payments: refund webhooks are idempotent', size: [264, 71], labels: ['payments'], branch: 'feat/refund-webhooks' },
-  { n: 424, author: ME, title: 'mobile: release checklist for 3.2', draft: true, size: [1240, 860], labels: ['mobile'], branch: 'release/3.2-checklist' },
-  { n: 422, author: ME, title: 'auth: rotate signing keys on a schedule', review: 'APPROVED', size: [140, 22], labels: ['auth'], branch: 'auth/key-rotation' },
+  { n: 412, author: 'alice-dev', title: 'site: dark mode', review: 'APPROVED', size: [182, 40], labels: ['site'] },
+  { n: 418, author: 'alice-dev', title: 'gallery: lazy-load thumbnails', draft: true, size: [410, 96], labels: ['web'] },
+  { n: 415, author: 'bob-builds', title: 'game: tile collision fix', red: true, size: [96, 12], labels: ['game'] },
+  { n: 409, author: 'carol-ci', title: 'ci: split the test matrix by package', review: 'APPROVED', size: [64, 58], labels: ['ci'] },
+  { n: 420, author: 'carol-ci', title: 'ci: cache node_modules', size: [22, 4], labels: ['ci'], forMe: true },
+  { n: 421, author: 'dave-ships', title: 'deploy: a preview site for every PR', size: [530, 210], labels: ['infra'], conflict: true },
+  { n: 417, author: 'erin-docs', title: 'docs: fix typos in the guide', review: 'CHANGES_REQUESTED', size: [48, 6], labels: ['docs'] },
+  { n: 419, author: 'frank-fixes', title: 'fix: flicker when the map zooms', flaky: true, size: [31, 18], labels: ['bug'] },
+  { n: 423, author: ME, title: 'recipes: search by ingredient', size: [264, 71], labels: ['recipes'], branch: 'add-search' },
+  { n: 424, author: ME, title: 'game: a level editor for 3.2', draft: true, size: [1240, 860], labels: ['game'], branch: 'level-editor' },
+  { n: 422, author: ME, title: 'map: cache tiles for offline use', review: 'APPROVED', size: [140, 22], labels: ['map'], branch: 'offline-tiles' },
 ]
-const LABELS = { api: '1d76db', web: '3594a7', ios: 'f05138', ci: '9aa6b2', infra: '7b42bc', docs: 'f7f3e8', bug: 'd73a4a', payments: '0e8a16', mobile: '6e5494', auth: 'fbca04' }
+const LABELS = { site: '1d76db', web: '3594a7', game: 'f05138', ci: '9aa6b2', infra: '7b42bc', docs: 'f7f3e8', bug: 'd73a4a', recipes: '0e8a16', map: 'fbca04' }
 const MERGED = [
-  [408, 'alice-dev', 'api: return 409 on duplicate charges'], [407, ME, 'payments: ledger entries carry a currency'], [406, 'carol-ci', 'ci: run clippy on every crate'],
-  [405, 'dave-ships', 'infra: bump the worker memory limit'], [404, 'frank-fixes', 'fix: retry the email job on timeout'], [403, ME, 'auth: shorter refresh token lifetime'],
-  [402, 'erin-reviews', 'docs: a page for webhooks'], [401, 'bob-codes', 'android: edge-to-edge on the home screen'],
+  [408, 'alice-dev', 'recipes: a print view for every recipe'], [407, ME, 'recipes: tags on every recipe'], [406, 'carol-ci', 'ci: run the linter on every package'],
+  [405, 'dave-ships', 'infra: bump the preview build memory'], [404, 'frank-fixes', 'fix: retry the thumbnail job on timeout'], [403, ME, 'map: elevation profile'],
+  [402, 'erin-docs', 'docs: a page for the level editor'], [401, 'bob-builds', 'game: save slots'],
 ]
 const SAID = ['Looks good, one nit on naming.', 'Can we add a test for the empty case?', 'Nice catch on the retry loop!', 'LGTM once CI is green.',
   'Should this live behind a flag?', 'Rebased on main, ready for another look.', 'Shipping it 🚀', 'Thanks, updated.']
@@ -99,13 +99,13 @@ function ci(p, now) {
 }
 
 function sessionCore(s, now) {
-  const base = { id: s.id, title: s.title, cwd: `/home/${ME}/code/skyline/.claude/worktrees/${s.wt}`, branch: s.branch, worktree: s.wt,
+  const base = { id: s.id, title: s.title, cwd: `/home/${ME}/code/${s.repo}/.claude/worktrees/${s.wt}`, branch: s.branch, worktree: s.wt,
     running: true, endedAt: null, lastActivity: now - (hash(s.key + Math.floor(now / 7000)) % 4000) }
   const { k } = step(s.key, now), x = pick(s.key, s.key, k)
   let state = x ? 'tool' : 'thinking'
-  if (s.key === 'mobile' || s.key === 'data') state = 'delegating'
-  if (s.key === 'docs') state = 'waiting'
-  if (s.key === 'auth') state = 'attention'
+  if (s.key === 'game' || s.key === 'gallery') state = 'delegating'
+  if (s.key === 'garden') state = 'waiting'
+  if (s.key === 'map') state = 'attention'
   return { ...base, state, tool: state === 'waiting' ? null : x?.[0] ?? null, detail: state === 'waiting' ? null : x?.[1] ?? null }
 }
 
@@ -121,18 +121,18 @@ function agentsOf(s, now) {
         uniforms: uniformOf(sl.id, script, k, now, 3800), ...(key === 'explore' && { wardrobe: { model: 'claude-haiku-4-5', big: false } }) },
     }
   }
-  if (s.key === 'payments') return [mk('rev', 'reviewer', 'code-reviewer', 'Review the refund changes', slot(s.id, 'rev', now, { period: 4 * MIN, life: 100 * SEC }))].filter(Boolean)
-  if (s.key === 'data') return [
-    mk('explore', 'explore', 'Explore', 'Map the ingest jobs', slot(s.id, 'explore', now, { period: 5 * MIN, life: 4 * MIN })),
-    mk('backfill', 'backfill', 'general-purpose', 'Backfill September events', slot(s.id, 'backfill', now, { period: 9 * MIN, life: 8 * MIN, off: 2 * MIN })),
+  if (s.key === 'recipes') return [mk('rev', 'reviewer', 'code-reviewer', 'Review the ingredient search', slot(s.id, 'rev', now, { period: 4 * MIN, life: 100 * SEC }))].filter(Boolean)
+  if (s.key === 'gallery') return [
+    mk('explore', 'explore', 'Explore', 'Map the album store', slot(s.id, 'explore', now, { period: 5 * MIN, life: 4 * MIN })),
+    mk('thumbs', 'thumbs', 'general-purpose', 'Regenerate album thumbnails', slot(s.id, 'thumbs', now, { period: 9 * MIN, life: 8 * MIN, off: 2 * MIN })),
   ].filter(Boolean)
-  if (s.key === 'mobile') {
+  if (s.key === 'game') {
     const run = 'wf_' + hex('release' + Math.floor(now / (12 * MIN)), 12), wf = { workflow: 'release-checklist', workflowRun: run }
     return [
-      mk('ios', 'ios', 'workflow-subagent', 'build iOS 3.2', slot(s.id, 'ios', now, { period: 6 * MIN, life: 5 * MIN }), { ...wf, phase: 'Build' }),
-      mk('android', 'android', 'workflow-subagent', 'build Android 3.2', slot(s.id, 'android', now, { period: 7 * MIN, life: 6 * MIN, off: MIN }), { ...wf, phase: 'Build' }),
-      mk('notes', 'notes', 'workflow-subagent', 'write the release notes', slot(s.id, 'notes', now, { period: 5 * MIN, life: 3 * MIN, off: 2 * MIN }), { ...wf, phase: 'Build' }),
-      mk('check', 'check', 'workflow-subagent', 'check the store listings', slot(s.id, 'check', now, { period: 8 * MIN, life: 4 * MIN, off: 3 * MIN }), { ...wf, phase: 'Check' }),
+      mk('bundle', 'bundle', 'workflow-subagent', 'Build the game bundle', slot(s.id, 'bundle', now, { period: 6 * MIN, life: 5 * MIN }), { ...wf, phase: 'Build' }),
+      mk('e2e', 'e2e', 'workflow-subagent', 'Write the level editor tests', slot(s.id, 'e2e', now, { period: 7 * MIN, life: 6 * MIN, off: MIN }), { ...wf, phase: 'Build' }),
+      mk('notes', 'notes', 'workflow-subagent', 'Draft the release notes', slot(s.id, 'notes', now, { period: 5 * MIN, life: 3 * MIN, off: 2 * MIN }), { ...wf, phase: 'Build' }),
+      mk('check', 'check', 'workflow-subagent', 'Check the press kit', slot(s.id, 'check', now, { period: 8 * MIN, life: 4 * MIN, off: 3 * MIN }), { ...wf, phase: 'Check' }),
     ].filter(Boolean)
   }
   return []
@@ -151,7 +151,7 @@ function sessionExt(s, x, now) {
     'cost-jar': { usdToday: usd, tokensToday: tokens, byModel: { [s.m.model]: { family: s.m.family, usd, tokens, messages: Math.round(tokens / 4500) } } },
     'desk-props': { top: s.stacks.map(([stack, share]) => ({ stack, w: Math.round(share * 300), share })), files: 40 + hash(s.key) % 300 },
     'time-clock': { in: clockIn, hours: [...new Set(hours)] },
-    'ivy-wear': { start: now - ({ payments: 9 * 24, mobile: 2 * 24 + 5, docs: 0.4, data: 5, auth: 31 * 24 }[s.key] ?? 3) * HOUR },
+    'ivy-wear': { start: now - ({ recipes: 9 * 24, game: 2 * 24 + 5, garden: 0.4, gallery: 5, map: 31 * 24 }[s.key] ?? 3) * HOUR },
     walkabout: { at: now - 6 * MIN - hash(s.key) % (20 * MIN), text: s.prompt },
     'milestone-cake': { today: 300 + Math.round(into * 60) + hash(s.key) % 200, milestone: 500, at: now - 25 * MIN },
   }
@@ -160,52 +160,52 @@ function sessionExt(s, x, now) {
     ? { pr: { n: mine.n, url: `${GH}/pull/${mine.n}`, repo: REPO, title: mine.title, at: now - 70 * MIN }, prCount: 2 + hash(s.key) % 4, commits: 3 + hash(s.key) % 9, lastCommitAt: now - 12 * MIN }
     : { pr: null, prCount: 0, commits: 2, lastCommitAt: now - 30 * MIN }
 
-  if (s.key === 'payments') {
+  if (s.key === 'recipes') {
     const c = (now % (3 * MIN)) / (3 * MIN)
-    ext['task-board'] = { total: 5, done: 2, current: 'Storing the webhook delivery id', items: [
-      { s: 'Read the current webhook handler', st: 'completed' }, { s: 'Add a refund_events table', st: 'completed' },
-      { s: 'Store the webhook delivery id', st: 'in_progress' }, { s: 'Reject a replayed delivery', st: 'pending' }, { s: 'Open the PR', st: 'pending' }] }
+    ext['task-board'] = { total: 5, done: 2, current: 'Matching partial ingredient names', items: [
+      { s: 'Read the current search code', st: 'completed' }, { s: 'Add an ingredients index', st: 'completed' },
+      { s: 'Match partial ingredient names', st: 'in_progress' }, { s: 'Rank exact matches first', st: 'pending' }, { s: 'Open the PR', st: 'pending' }] }
     ext['test-lab'] = { flasks: [
-      { service: 'payments-api', suite: 'cargo test', result: 'pass', at: now - Math.round(c * 3 * MIN), summary: '214 passed', runningSince: c < 0.3 ? now - Math.round(c * 3 * MIN) : null },
-      { service: 'payments-api', suite: 'cargo clippy', result: 'pass', at: now - 7 * MIN, summary: 'exit 0', runningSince: null }] }
-    ext['window-cleaner'] = { runs: [{ at: now - (now % (2 * MIN)), cmd: 'cargo fmt' }] }
+      { service: 'recipe-box', suite: 'npm test', result: 'pass', at: now - Math.round(c * 3 * MIN), summary: '214 passed', runningSince: c < 0.3 ? now - Math.round(c * 3 * MIN) : null },
+      { service: 'recipe-box', suite: 'npm run lint', result: 'pass', at: now - 7 * MIN, summary: 'exit 0', runningSince: null }] }
+    ext['window-cleaner'] = { runs: [{ at: now - (now % (2 * MIN)), cmd: 'npx prettier --write .' }] }
     ext.bugs = { errs: [now - 9 * MIN, now - 4 * MIN] }
     const hp = now % (8 * MIN), hAt = now - hp
     ext.helipad = [{ id: 'toolu_' + hex('heli' + hAt, 20), kind: 'review', label: '/code-review ultra', at: hAt, back: hp > 4 * MIN ? hAt + 4 * MIN : null, ...(hp > 4 * MIN ? { status: 'completed' } : {}) }]
     const tp = now % (9 * MIN)
     if (tp < 100 * SEC) {
-      const since = now - tp, c0 = { who: s.id, since, at: since + 2 * SEC, files: ['src/ledger/entry.rs'], cmd: 'git rebase origin/main', op: 'rebase' }
+      const since = now - tp, c0 = { who: s.id, since, at: since + 2 * SEC, files: ['src/search/index.ts'], cmd: 'git rebase origin/main', op: 'rebase' }
       ext['tug-of-war'] = tp < 80 * SEC ? { open: [c0], ended: [] } : { open: [], ended: [{ ...c0, end: since + 80 * SEC, how: 'resolved' }] }
     }
   }
-  if (s.key === 'mobile') {
+  if (s.key === 'game') {
     const a = x.agents, ph = name => { const l = a.filter(g => g.phase === name); return { done: l.filter(g => g.state === 'done').length, total: Math.max(1, l.length) } }
     const b = ph('Build'), c = ph('Check')
     ext['workflow-phases'] = [{ run: a[0]?.workflowRun || 'wf_' + hex('release', 12), name: 'release-checklist', status: 'running', last: now,
       phases: [{ title: 'Build', state: 'active', ...b }, { title: 'Check', state: c.done ? 'active' : 'pending', ...c }, { title: 'Ship', state: 'pending', done: 0, total: 1 }] }]
-    ext.library = { skills: [{ name: 'release-notes', at: now - 20 * MIN }, { name: 'store-listing', at: now - 9 * MIN }], web: { kind: 'search', q: 'app store screenshot sizes 2026', at: now - 5 * MIN } }
+    ext.library = { skills: [{ name: 'release-notes', at: now - 20 * MIN }, { name: 'press-kit', at: now - 9 * MIN }], web: { kind: 'search', q: 'press kit screenshot sizes 2026', at: now - 5 * MIN } }
   }
-  if (s.key === 'docs') {
-    ext['waiting-line'] = { text: 'The new quickstart is live on the preview. Want me to add the API reference next?', kind: 'reply' }
+  if (s.key === 'garden') {
+    ext['waiting-line'] = { text: 'Frost alerts are live on the preview. Want me to add the planting calendar next?', kind: 'reply' }
     ext.meeting = { asking: true }
     ext['phone-booth'] = { at: now - 70 * SEC, host: 'localhost:3000', tool: 'navigate' }
-    ext.library = { skills: [{ name: 'docs-style', at: now - 30 * MIN }], web: { kind: 'fetch', q: 'nextjs.org', at: now - 12 * MIN } }
+    ext.library = { skills: [{ name: 'python-style', at: now - 30 * MIN }], web: { kind: 'fetch', q: 'open-meteo.com', at: now - 12 * MIN } }
   }
-  if (s.key === 'data') {
-    ext['test-lab'] = { flasks: [{ service: 'pipeline', suite: 'pytest', result: 'fail', at: now - 3 * MIN, summary: '2 failed, 118 passed', runningSince: null }] }
+  if (s.key === 'gallery') {
+    ext['test-lab'] = { flasks: [{ service: 'photo-gallery', suite: 'go test ./...', result: 'fail', at: now - 3 * MIN, summary: '2 failed, 118 passed', runningSince: null }] }
     ext['desk-props'].files = 88
     ext['storm-cloud'] = { level: 2, score: 3.1, word: 'still failing', at: now - 3 * MIN, since: now - 8 * MIN }
   }
-  if (s.key === 'auth') {
-    ext['waiting-line'] = { text: 'Rotate the signing keys now, or at the next deploy?', kind: 'question', more: 0 }
-    ext['plan-whiteboard'] = { state: 'approved', lines: ['Add a key-rotation job', 'Keep the old key for 24 hours', 'Publish both keys in JWKS', 'Alert when a rotation fails'], since: now - 50 * MIN }
+  if (s.key === 'map') {
+    ext['waiting-line'] = { text: 'Cache tiles for the whole trail, or just the visible area?', kind: 'question', more: 0 }
+    ext['plan-whiteboard'] = { state: 'approved', lines: ['Add a tile cache in IndexedDB', 'Keep tiles for 30 days', 'Prefetch the tiles along the trail', 'Show a badge when offline'], since: now - 50 * MIN }
   }
   return ext
 }
 
 function background(s, now) {
-  if (s.key === 'data') return [{ label: 'Backfill events 2026-09', kind: 'shell', since: now - 14 * MIN }]
-  if (s.key === 'payments' && now % (5 * MIN) < 3 * MIN) return [{ label: 'Load-test the refunds endpoint', kind: 'shell', since: now - (now % (5 * MIN)) }]
+  if (s.key === 'gallery') return [{ label: 'Regenerate thumbnails 2026-09', kind: 'shell', since: now - 14 * MIN }]
+  if (s.key === 'recipes' && now % (5 * MIN) < 3 * MIN) return [{ label: 'Profile search on 10k recipes', kind: 'shell', since: now - (now % (5 * MIN)) }]
   return []
 }
 
@@ -286,14 +286,14 @@ const CATALOGUE = {
 }
 
 // readable-monitors: what each desk's tiny terminal prints for the current step
-const SHELL = { 'Run the refunds test suite': 'cargo test -p refunds -- --nocapture', 'Check the backfill progress': 'psql -c "select count(*) from events_sept"',
-  'Build the docs site': 'npm run build --workspace docs', 'Backfill September events': 'python -m pipeline.backfill --month 2026-09',
-  'Build the iOS app for the simulator': 'xcodebuild -scheme App -sdk iphonesimulator', 'Run the Android unit tests': './gradlew :app:testDebugUnitTest',
-  'Check every store listing field': 'fastlane run validate_listing' }
-const DIFF = { 'src/refunds/webhook.rs': ['-if seen(&id) { return Ok(()) }', '+if store.seen(&delivery_id).await? { return Ok(Ack) }'],
-  'src/ledger/entry.rs': ['-pub amount: i64,', '+pub amount: Money,'], 'content/quickstart.mdx': ['-## Install', '+## Install in one minute'],
-  'pipeline/backfill.py': ['-for day in days:', '+for day in tqdm(days, desc="sept"):'], 'ios/App/Settings/SettingsView.swift': ['-Toggle("Beta", isOn: $beta)', '+Toggle("Beta features", isOn: $beta)'],
-  'android/app/build.gradle.kts': ['-versionCode = 311', '+versionCode = 320'], 'RELEASE_NOTES.md': ['+## 3.2 - faster sign-in'] }
+const SHELL = { 'Run the search tests': 'npm test -- src/search', 'Check the thumbnail progress': 'ls thumbs/2026-09 | wc -l',
+  'Run the frost tests': 'pytest -q planner/test_frost.py', 'Regenerate album thumbnails': 'go run ./cmd/thumbs --month 2026-09',
+  'Build the game bundle': 'npm run build', 'Run the e2e suite': 'npx playwright test',
+  'Check every screenshot in the press kit': 'npm run check:press-kit' }
+const DIFF = { 'src/search/index.ts': ['-return recipes.filter(r => r.title.includes(q))', '+return recipes.filter(r => matches(r, q))'],
+  'src/search/rank.ts': ['-score += 1', '+score += exact ? 3 : 1'], 'planner/frost.py': ['-if temp < 0:', '+if forecast.min_temp <= 0.5:'],
+  'gallery/thumbs.go': ['-for _, p := range photos {', '+for i, p := range photos { bar.Set(i)'], 'game/levels/editor.ts': ['-grid.set(x, y, tile)', '+grid.set(x, y, snap(tile))'],
+  'tests/editor.spec.ts': ['-test.skip("places a tile")', '+test("places a tile", async ({ page }) => {'], 'RELEASE_NOTES.md': ['+## 3.2 - a level editor'] }
 function monitorOf(o) {
   const t = o.tool, d = o.detail; if (!t || !d) return undefined
   const lines = t === 'Bash' ? ['$ ' + (SHELL[d] || d)] : t === 'Edit' ? ['vi ' + d, ...(DIFF[d] || [])] : t === 'Write' ? ['vi ' + d, ...(DIFF[d] || [])]
@@ -309,11 +309,11 @@ export function generate(now) {
     x.ext = sessionExt(s, x, now)
     for (const o of [x, ...agents]) { const m = monitorOf(o); if (m) o.ext['readable-monitors'] = m }
     const bg = background(s, now); if (bg.length) x.background = bg
-    if (s.key === 'auth') x.attention = { kind: 'question', label: 'question for you', since: now - 4 * MIN }
-    if (s.key === 'data') {
-      const b = agents.find(a => a.key === 'backfill'), jp = now % (7 * MIN)
-      if (b && b.state !== 'done' && jp < 2 * MIN) b.ext['printer-jam'] = { id: 'toolu_' + hex('jam' + (now - jp), 20), tool: 'Bash', text: 'python -m pipeline.backfill --month 2026-09',
-        description: 'Backfill September events', at: now - jp - 3.5 * MIN, mtime: now - jp - 3.5 * MIN }
+    if (s.key === 'map') x.attention = { kind: 'question', label: 'question for you', since: now - 4 * MIN }
+    if (s.key === 'gallery') {
+      const b = agents.find(a => a.key === 'thumbs'), jp = now % (7 * MIN)
+      if (b && b.state !== 'done' && jp < 2 * MIN) b.ext['printer-jam'] = { id: 'toolu_' + hex('jam' + (now - jp), 20), tool: 'Bash', text: 'go run ./cmd/thumbs --month 2026-09',
+        description: 'Regenerate album thumbnails', at: now - jp - 3.5 * MIN, mtime: now - jp - 3.5 * MIN }
     }
     return { x, s }
   })
@@ -323,7 +323,7 @@ export function generate(now) {
   for (const { x, s } of sessions) {
     const actors = [{ key: s.key, script: s.key, agent: null, who: s.title, ms: 4500 }, ...x.agents.filter(a => a.state !== 'done').map(a => ({ key: a.id, script: a.script, agent: a.id, who: a.description, ms: 3800 }))]
     for (const a of actors) {
-      if (a.agent === null && (s.key === 'docs' || s.key === 'auth')) continue
+      if (a.agent === null && (s.key === 'garden' || s.key === 'map')) continue
       const { k } = step(a.key, now, a.ms)
       for (let b = 0; b < 8; b++) {
         const e = pick(a.key, a.script, k - b); if (!e) continue
@@ -359,7 +359,7 @@ export function generate(now) {
     now,
     sessions: out,
     achievements: { day: new Date(now).toISOString().slice(0, 10), list: earned, catalogue: CATALOGUE },
-    commits: { [pay.id]: [{ id: 'toolu_' + hex('cm' + Math.floor(now / (6 * MIN)), 20), t: now - (now % (6 * MIN)), k: 'c', agent: null, branch: pay.branch, sha: null, subject: 'payments: store the webhook delivery id' }] },
+    commits: { [pay.id]: [{ id: 'toolu_' + hex('cm' + Math.floor(now / (6 * MIN)), 20), t: now - (now % (6 * MIN)), k: 'c', agent: null, branch: pay.branch, sha: null, subject: 'recipes: match partial ingredient names' }] },
     cost: { usdToday, bySession: byS, estimate: true },
     deploys: dep,
     fireDrill: { status: 'ok', repo: REPO, branch: 'main', fetchedAt: now, red: [] },
@@ -371,24 +371,23 @@ export function generate(now) {
       merged: mergedG, mergedCount: mergedG.length,
       opened: PRS.slice(-3).map(p => ({ n: p.n, title: p.title, author: p.author, at: now - (1 + hash(p.n) % 5) * HOUR, url: `${GH}/pull/${p.n}` })), openedCount: 3,
       stats: { toolsToday: toolsHour * 5, since: 0, toolsHour, tokens: tokensToday, commits: 31, online },
-      busiest: { now: { name: 'build iOS 3.2', calls: 64, agent: true }, peak: { name: 'build iOS 3.2', calls: 88, agent: true, at: now - HOUR },
-        leaders: [{ name: 'build iOS 3.2', minutes: 41 }, { name: 'PAYMENTS API', minutes: 33 }, { name: 'Map the ingest jobs', minutes: 17 }],
+      busiest: { now: { name: 'Build the game bundle', calls: 64, agent: true }, peak: { name: 'Build the game bundle', calls: 88, agent: true, at: now - HOUR },
+        leaders: [{ name: 'Build the game bundle', minutes: 41 }, { name: 'RECIPE BOX', minutes: 33 }, { name: 'Map the album store', minutes: 17 }],
         desks: out.map(x => ({ title: x.title, state: x.state, agents: x.agents.filter(a => a.state !== 'done').length })).sort((a, b) => b.agents - a.agents) },
       workflows: [{ name: 'release-checklist', session: mob.title, agents: 4, doneAt: now - 2 * HOUR }],
       ci: { failsToday: 3, failsHour: 1, red: st.engineers.flatMap(e => e.prs.filter(p => p.ci === 'failed').map(p => ({ n: p.n, title: p.title, author: e.login, url: p.url }))),
-        running: st.engineers.reduce((a, e) => a + e.ciRunning, 0), culprits: ['bob-codes', 'frank-fixes'] },
-      engineer: { login: 'erin-reviews', actions: 14, score: 29, by: { review: 6, comment: 5, merged: 1, push: 2 }, openPrs: 1, merges: 1 }, coderabbit: null, weather: 'clear, 22°',
+        running: st.engineers.reduce((a, e) => a + e.ciRunning, 0), culprits: ['bob-builds', 'frank-fixes'] },
+      engineer: { login: 'erin-docs', actions: 14, score: 29, by: { review: 6, comment: 5, merged: 1, push: 2 }, openPrs: 1, merges: 1 }, coderabbit: null, weather: 'clear, 22°',
     },
     street: st,
-    skyline: { main: REPO, repos: [{ name: 'harbor-docs', full: 'acme/harbor-docs', sessions: [out[2].id] }, { name: 'data-lake', full: 'globex/data-lake', sessions: out.slice(3, 5).map(x => x.id) },
-      { name: 'pixel-kit', full: 'pixel-kit', sessions: [out[1].id] }] },
+    skyline: { main: REPO, repos: SESSIONS.map((s, i) => ({ name: s.repo, full: 'acme/' + s.repo, sessions: [out[i].id] })) },
     lostFound: { at: now, prsAt: now, prsKnown: true, repo: REPO, total: 0, inUse: 0, crates: [] },
     branchMetro: branchMetro(now),
     priceBillboard: { ok: true, at: now - (now % MIN), list: [['BTC', 'Bitcoin', 98_000, 1.8], ['ETH', 'Ethereum', 3480, -0.8], ['USDT', 'Tether', 1, 0.01], ['XRP', 'XRP', 2.31, 4.2],
       ['BNB', 'BNB', 712, 1.1], ['SOL', 'Solana', 182, -3.6], ['USDC', 'USDC', 1, 0], ['DOGE', 'Dogecoin', 0.231, 6.4], ['ADA', 'Cardano', 0.78, -1.9], ['BCH', 'Bitcoin Cash', 410, -0.9]]
       .map(([sym, name, usd, ch], i) => ({ id: sym.toLowerCase(), sym, name, rank: i + 1, usd: usd * (1 + 0.004 * Math.sin(priceT / 30 + i)), ch24: ch + Math.sin(priceT / 40 + i) * 0.3,
         spark: Array.from({ length: 24 }, (_, j) => usd * (1 + ch / 100 * (j - 23) / 23 + 0.008 * Math.sin((priceT - 24 + j) / 5 + i))) })) },
-    cranes: [{ sessionId: mob.id, add: 1240, del: 860, pr: 424, title: 'mobile: release checklist for 3.2', url: `${GH}/pull/424`, src: 'pr' }],
+    cranes: [{ sessionId: mob.id, add: 1240, del: 860, pr: 424, title: 'game: a level editor for 3.2', url: `${GH}/pull/424`, src: 'pr' }],
     securityDesk: { day, ready: true, stops: [
       { id: 'toolu_' + hex('sd1', 20), t: now - 55 * MIN, kind: 'hook', tool: 'Bash', what: 'Push to main', reason: 'Blocked: pushes to main go through a PR', session: pay.id, agent: null, sessionTitle: pay.title, agentName: null },
       { id: 'toolu_' + hex('sd2', 20), t: now - 18 * MIN, kind: 'hook', tool: 'Bash', what: 'Wait for the build', reason: 'Blocked: use a background job instead of sleep', session: mob.id, agent: null, sessionTitle: mob.title, agentName: null }] },
@@ -396,9 +395,9 @@ export function generate(now) {
     mail: mob.agents.filter(a => a.state === 'done').map(a => ({ id: 'slip:' + a.id, t: now - 10 * SEC, kind: 'slip', from: { agent: a.id, name: null, session: mob.id }, to: { session: mob.id }, text: `${a.description}: done`, status: 'completed' })),
     records: { day: new Date(now).toISOString().slice(0, 10), streak: 9, list: [
       ['longest-session', 'Longest-running session', 'ms', 31 * HOUR + 12 * MIN, 9, mob.title], ['tools-day', 'Most tool calls in a day', 'n', 1987, 12, `busiest: ${pay.title}`],
-      ['agents-once', 'Most subagents at once', 'n', 14, 3, `9 for ${mob.title}`], ['biggest-pr', 'Biggest merged PR', 'lines', 2100, 6, '#424 mobile: release checklist for 3.2 (+1240 −860)'],
+      ['agents-once', 'Most subagents at once', 'n', 14, 3, `9 for ${mob.title}`], ['biggest-pr', 'Biggest merged PR', 'lines', 2100, 6, '#424 game: a level editor for 3.2 (+1240 −860)'],
       ['priciest-day', 'Priciest day', 'usd', 182.4, 20, `top desk: ${mob.title}`], ['commits-day', 'Most commits in a day', 'n', 23, 2, `most in ${pay.title}`],
-      ['green-streak', 'Longest green CI streak', 'n', 17, 15, 'tests on payments-webhook']]
+      ['green-streak', 'Longest green CI streak', 'n', 17, 15, 'tests on recipe-box']]
       .map(([key, label, unit, value, days, what]) => ({ key, label, unit, value, at: day - days * 24 * HOUR + 15 * HOUR, what, prev: null, fresh: false })) },
     ticker: ticker.slice(0, 40),
     heatmap: { day, hours: Array.from({ length: 24 }, (_, h) => { const at = day + h * HOUR; if (at > now) return 0
@@ -407,7 +406,7 @@ export function generate(now) {
     tamagotchiPlant: { streak: 12, best: 23, today: true, yesterday: true, last: 12, ready: true },
     seismograph: { day, events: [
       [9.6, 0, 'git reset --hard origin/main', 'reset --hard', 1], [11.2, 1, 'git push --force-with-lease origin release/3.2', 'force push', 3],
-      [13.9, 2, 'rm -rf build/ dist/', 'rm -rf', 3], [15.4, 0, 'git branch -D spike/old-ledger', 'branch -D', 2], [16.8, 3, 'docker system prune -af', 'docker prune', 2]]
+      [13.9, 2, 'rm -rf build/ dist/', 'rm -rf', 3], [15.4, 0, 'git branch -D spike/old-renderer', 'branch -D', 2], [16.8, 3, 'docker system prune -af', 'docker prune', 2]]
       .map(([h, i, cmd, kind, size]) => ({ id: 'toolu_' + hex('sg' + h, 20), at: day + h * HOUR, session: out[i % out.length].id, who: out[i % out.length].id, cmd, kind, size }))
       .concat([0, 1].map(k => { const t = now - (now % (6 * MIN)) - k * 6 * MIN, n = Math.floor(t / (6 * MIN)), x = out[n % out.length], c = [['git push --force origin feature/dark-mode', 'force push', 3], ['git reset --hard HEAD~2', 'reset --hard', 1], ['git clean -fdx', 'clean -fd', 2]][n % 3]
         return { id: 'toolu_' + hex('sgl' + n, 20), at: t, session: x.id, who: x.id, cmd: c[0], kind: c[1], size: c[2] } }))
@@ -416,38 +415,38 @@ export function generate(now) {
       ...st.mine.map(p => ({ n: p.number, repo: REPO, at: p.updatedAt, state: 'OPEN', mergedAt: 0, title: p.title, checked: true })),
       ...MERGED.filter(m => m[1] === ME).map(([n, , title], i) => ({ n, repo: REPO, at: now - (3 + i) * HOUR, state: 'MERGED', mergedAt: now - (1 + i * 2) * HOUR, title, checked: true }))] },
     tv: { ready: true, spark, toolsHour, tokensToday, outToday: Math.round(tokensToday / 11), cacheReadToday: tokensToday * 23, prsWeek: 23, mergedWeek: 17,
-      busiest: { name: 'build iOS 3.2', calls: 64, agent: true }, online, commits: tvCommits },
+      busiest: { name: 'Build the game bundle', calls: 64, agent: true }, online, commits: tvCommits },
     weather,
     ivyWear: { repoBorn: now - Math.round(2.4 * 365 * 24 * HOUR) },
     memoryArchive: { day: new Date(now).toISOString().slice(0, 10), filings: [
-      [8.9, 0, null, 'claude', 'Edit', 'CLAUDE.md', 'Run the webhook suite before every PR'], [9.7, 2, null, 'memory', 'Write', '~/…/memory/docs-build-needs-node-22.md', 'The docs build needs Node 22'],
-      [10.4, 1, 'Explore', 'rules', 'Write', '.claude/rules/migrations.md', 'Migrations are append-only'], [11.1, 3, null, 'memory', 'Edit', '~/…/memory/MEMORY.md', 'Backfills run off-peak'],
-      [12.6, 0, 'general-purpose', 'skill', 'Write', '.claude/skills/release-notes/SKILL.md', 'Release notes'], [13.2, 4, null, 'agents', 'Edit', 'AGENTS.md', 'Token rotation is staged, never in place'],
-      [14.5, 1, null, 'claude', 'MultiEdit', 'apps/mobile/CLAUDE.md', 'Build iOS from the release branch only'], [15.3, 2, null, 'memory', 'Write', '~/…/memory/search-index-rebuilds-nightly.md', 'The search index rebuilds nightly'],
-      [16.1, 3, 'workflow', 'claude', 'Edit', 'CLAUDE.local.md', 'Local ports: 5173 web, 8080 api']]
+      [8.9, 0, null, 'claude', 'Edit', 'CLAUDE.md', 'Run the search tests before every PR'], [9.7, 2, null, 'memory', 'Write', '~/…/memory/docs-build-needs-node-22.md', 'The docs build needs Node 22'],
+      [10.4, 1, 'Explore', 'rules', 'Write', '.claude/rules/levels.md', 'Level files are JSON, never YAML'], [11.1, 3, null, 'memory', 'Edit', '~/…/memory/MEMORY.md', 'Thumbnail jobs run off-peak'],
+      [12.6, 0, 'general-purpose', 'skill', 'Write', '.claude/skills/release-notes/SKILL.md', 'Release notes'], [13.2, 4, null, 'agents', 'Edit', 'AGENTS.md', 'Tile caches expire after 30 days'],
+      [14.5, 1, null, 'claude', 'MultiEdit', 'game/CLAUDE.md', 'Build the game from the release branch only'], [15.3, 2, null, 'memory', 'Write', '~/…/memory/search-index-rebuilds-nightly.md', 'The search index rebuilds nightly'],
+      [16.1, 3, 'workflow', 'claude', 'Edit', 'CLAUDE.local.md', 'Local ports: 5173 web, 8080 server']]
       .map(([h, i, agent, kind, tool, file, line]) => ({ id: 'toolu_' + hex('ma' + h, 20), at: day + h * HOUR, file, kind, tool, session: out[i % out.length].id, title: out[i % out.length].title,
-        agent: agent ? { id: hex('maa' + h, 17), type: agent, description: ['map the ledger', 'draft notes', 'tidy rules'][Math.floor(h) % 3] } : null, line }))
-      .concat([0, 1, 2].map(k => { const t = now - (now % (3 * MIN)) - k * 3 * MIN, n = Math.floor(t / (3 * MIN)), x = out[n % out.length], m = [['memory', '~/…/memory/flaky-e2e-needs-a-warm-cache.md', 'Flaky e2e needs a warm cache'], ['claude', 'services/payments/CLAUDE.md', 'Refunds settle through the ledger'], ['rules', '.claude/rules/tests.md', 'Name a test after the behaviour']][n % 3]
+        agent: agent ? { id: hex('maa' + h, 17), type: agent, description: ['map the tile cache', 'draft notes', 'tidy rules'][Math.floor(h) % 3] } : null, line }))
+      .concat([0, 1, 2].map(k => { const t = now - (now % (3 * MIN)) - k * 3 * MIN, n = Math.floor(t / (3 * MIN)), x = out[n % out.length], m = [['memory', '~/…/memory/flaky-e2e-needs-a-warm-cache.md', 'Flaky e2e needs a warm cache'], ['claude', 'gallery/CLAUDE.md', 'Shared albums are read-only'], ['rules', '.claude/rules/tests.md', 'Name a test after the behaviour']][n % 3]
         return { id: 'toolu_' + hex('mal' + n, 20), at: t, file: m[1], kind: m[0], tool: n % 2 ? 'Edit' : 'Write', session: x.id, title: x.title, agent: null, line: m[2] } }))
       .filter(f => f.at <= now && f.at >= day).sort((a, b) => a.at - b.at).slice(-40) },
     agentXp: (() => { const lv = Math.floor(now / (4 * MIN)) % 8, types = [['workflow', 412], ['general-purpose', 231], ['Explore', 220 + lv], ['code-reviewer', 64], ['Plan', 38], ['claude-code-guide', 17], ['fork', 9]]
       .map(([type, xp]) => { const level = Math.floor(Math.sqrt(xp)); return { type, xp, level, next: (level + 1) ** 2 } })
       return { types, recent: [['Explore', 2], ['workflow', 5], ['general-purpose', 9], ['Plan', 26]].map(([type, m]) => ({ type, at: now - m * MIN, description: '' })), total: types.reduce((a, t) => a + t.xp, 0), since: now - 90 * 24 * HOUR } })(),
-    ghostAnnex: { day: new Date(now).toISOString().slice(0, 10), ghosts: [['BILLING EXPORT', 'feat/csv-export', 'Bash', 'idle', 412, 50, 140], ['ONBOARDING COPY', 'docs/onboarding', 'Edit', 'waiting', 96, 95, 40],
+    ghostAnnex: { day: new Date(now).toISOString().slice(0, 10), ghosts: [['SHOPPING LIST', 'feat/shopping-list', 'Bash', 'idle', 412, 50, 140], ['ONBOARDING COPY', 'docs/onboarding', 'Edit', 'waiting', 96, 95, 40],
       ['FLAKY E2E HUNT', 'fix/e2e-timeouts', 'Bash', 'tool', 733, 170, 205], ['SEARCH INDEX', 'feat/search-reindex', 'Read', 'thinking', 208, 260, 75]]
       .map(([title, branch, last, state, calls, ago, long], i) => ({ id: 'ghost-' + hex(title, 12), title, branch, worktree: null, opened: now - (ago + long) * MIN, closed: now - ago * MIN, calls, last, state, agents: i % 3 }))
       .filter(g => g.opened >= day) },
     reportCard: (() => { const tools = out.reduce((a, x) => a + (x.ext['milestone-cake']?.today || 0), 0)
       return { ready: true, day, sessions: 7, agents: 23, tools, top: [['Bash', Math.round(tools * 0.31)], ['Read', Math.round(tools * 0.24)], ['Edit', Math.round(tools * 0.17)]],
-        longest: { id: mob.id, ms: Math.min(now - day, 9 * HOUR + 14 * MIN) }, retried: { cmd: 'npm test -- payments/webhooks', n: 14 } } })(),
+        longest: { id: mob.id, ms: Math.min(now - day, 9 * HOUR + 14 * MIN) }, retried: { cmd: 'npm test -- src/search', n: 14 } } })(),
   }
 }
 
 // courtroom: a review on trial every five minutes, found guilty on three counts
 function courtroom(now) {
   const cyc = 5 * MIN, t0 = now - (now % cyc), end = t0 + 90 * SEC
-  return { id: 'trial-' + t0, kind: 'skill', name: 'code-review', start: t0, end: now >= end ? end : null, jurors: ['Review the refund webhook'],
-    ...(now >= end ? { verdict: 'guilty', count: 3, nits: 0, charges: ['unwrap on user input in parse_amount', 'the retry loop never backs off', 'a test asserts on a log line'] } : {}) }
+  return { id: 'trial-' + t0, kind: 'skill', name: 'code-review', start: t0, end: now >= end ? end : null, jurors: ['Review the ingredient search'],
+    ...(now >= end ? { verdict: 'guilty', count: 3, nits: 0, charges: ['an empty query returns every recipe', 'the index rebuilds on every keystroke', 'a test asserts on a log line'] } : {}) }
 }
 
 // branch-metro: two weeks of main and the branches around it
@@ -457,12 +456,12 @@ function branchMetro(now) {
   const b = (name, fork, last, ahead, behind, merged, subject, mergedSubject) => ({ name, fork: t(fork), last: t(last), ahead, behind, merged: merged == null ? null : t(merged), subject, mergedSubject: mergedSubject || null, local: true, remote: true })
   return { at: now, since: now - 14 * 24 * HOUR, repo: REPO, trunk: 'main', commits, branches: [
     b('feature/dark-mode', 40, 8, 9, 14, 7, 'theme: the dark palette for charts', 'web: dark mode for every page (#212)'),
-    b('fix/flaky-login', 6, 1.5, 2, 3, 1.2, 'auth: wait for the session cookie', 'auth: the login test waits for its cookie (#218)'),
-    b('bob-codes/invoice-pdf', 20, 2.4, 5, 9, 0.5, 'billing: embed the logo in the PDF', 'billing: invoices download as PDF (#220)'),
-    b('carol-ships/onboarding-copy', 30, 26, 3, 18, 25, 'copy: shorter welcome screen', 'onboarding: shorter copy (#209)'),
+    b('fix/flaky-upload', 6, 1.5, 2, 3, 1.2, 'upload: wait for the progress bar', 'upload: the test waits for its progress bar (#218)'),
+    b('bob-builds/recipe-pdf', 20, 2.4, 5, 9, 0.5, 'print: embed the logo in the PDF', 'print: recipes download as PDF (#220)'),
+    b('carol-ci/onboarding-copy', 30, 26, 3, 18, 25, 'copy: shorter welcome screen', 'onboarding: shorter copy (#209)'),
     b('alice-dev/search-v2', 60, 3, 14, 40, null, 'search: rank exact matches first'),
-    b('feature/offline-cache', 12, 0.3, 6, 5, null, 'app: cache the last sync on disk'),
+    b('feature/offline-cache', 12, 0.3, 6, 5, null, 'site: cache the last page on disk'),
     b('fix/tz-drift', 2, 0.2, 2, 1, null, 'time: store UTC, render local'),
-    b('spike/ledger-rewrite', 80, 36, 21, 60, null, 'ledger: try an append-only table'),
+    b('spike/renderer-rewrite', 80, 36, 21, 60, null, 'game: try a canvas renderer'),
   ] }
 }

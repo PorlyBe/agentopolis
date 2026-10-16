@@ -150,11 +150,11 @@ export default function init(api, tower) {
       if (ss[1]) demoPrs.set(9002, ss[1].id)
       if (!params.get('towerzoom')) setTimeout(() => tower.flyTo({ x: -60, y: -40 }, 2.2), 400)
     }
-    const t = Date.now() - demoT0, b = tower.street.buildings || [], who = i => b[i]?.e.login || ['bob-codes', 'alice-dev', 'erin-reviews'][i]
+    const t = Date.now() - demoT0, b = tower.street.buildings || [], who = i => b[i]?.e.login || ['bob-builds', 'alice-dev', 'erin-docs'][i]
     const plan = [[1500, 0, 9001, 'review', 'approved', 'LGTM, ship it'], [7000, 1, 9002, 'review', 'changes_requested', 'Can we split the migration out?'], [12000, 2, 9003, 'comment', null, 'nit: rename this']]
     while (demoN < plan.length && t > plan[demoN][0]) {
       const [, i, pr, type, review, said] = plan[demoN++], at = Date.now()
-      const n = { key: `${who(i)}|${pr}`, who: who(i), pr, kind: kindOf({ type, review }), at, posted: false, said, title: ['search every asset', 'export to CSV', 'token verifier'][pr - 9001], demo: true }
+      const n = { key: `${who(i)}|${pr}`, who: who(i), pr, kind: kindOf({ type, review }), at, posted: false, said, title: ['recipes: search by ingredient', 'recipes: export csv', 'map: elevation profile'][pr - 9001], demo: true }
       notes.set(n.key, n); queue.push(n)
       if (demoN === 2 && !params.get('towerzoom')) setTimeout(() => tower.flyTo(floorFor(9001), 3), 9000)
     }

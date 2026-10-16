@@ -162,15 +162,15 @@ export default function init(api, tower) {
     const b = (name, fork, last, ahead, behind, merged, subject, mergedSubject) => ({ name, fork: t(fork), last: t(last), ahead, behind, merged: merged == null ? null : t(merged), subject, mergedSubject, local: true, remote: true })
     const hr = new Date(now).getHours() + new Date(now).getMinutes() / 60, today = h => Math.min(h, Math.max(0.2, hr - 0.3))
     return { at: now, since: now - 14 * DAY, repo: 'acme/skyline', trunk: 'main', commits, branches: [
-      b('feature/sky-41-dark-mode', 30, 7, 9, 14, 6, 'theme: the dark palette for charts', 'web: dark mode for every page (#212) [SKY-41]'),
-      b('fix/sky-57-flaky-login', today(5), today(1.4), 2, 3, today(1.1), 'auth: wait for the session cookie', 'auth: the login test waits for its cookie (#218) [SKY-57]'),
+      b('feature/sky-41-dark-mode', 30, 7, 9, 14, 6, 'theme: the dark palette for charts', 'site: dark mode (#212) [SKY-41]'),
+      b('fix/sky-57-tile-collision', today(5), today(1.4), 2, 3, today(1.1), 'game: wait a frame before the hit test', 'game: tile collision fix (#218) [SKY-57]'),
       b('alice-dev/search-v2', 52, 3, 14, 40, null, 'search: rank exact matches first'),
-      b('bob/sky-63-invoice-pdf', 20, today(2.2), 5, 9, today(0.4), 'billing: embed the logo in the PDF', 'billing: invoices download as PDF (#220) [SKY-63]'),
+      b('bob/sky-63-save-slots', 20, today(2.2), 5, 9, today(0.4), 'game: name each save slot', 'game: save slots (#220) [SKY-63]'),
       b('chore/deps-bump', 9, 8, 1, 6, 8.5, 'deps: bump the lockfile', 'deps: bump every minor (#215)'),
-      b('feature/sky-70-offline-cache', 11, 0.3, 6, 5, null, 'app: cache the last sync on disk'),
+      b('feature/sky-70-offline-cache', 11, 0.3, 6, 5, null, 'map: cache the last tiles on disk'),
       b('carol/sky-72-onboarding-copy', 26, 22, 3, 18, 21, 'copy: shorter welcome screen', 'onboarding: shorter copy (#209) [SKY-72]'),
       b('fix/sky-74-tz-drift', today(1.5), 0.15, 2, 1, null, 'time: store UTC, render local'),
-      b('spike/ledger-rewrite', 70, 34, 21, 60, null, 'ledger: try an append-only table'),
+      b('spike/gallery-rewrite', 70, 34, 21, 60, null, 'gallery: try a masonry grid'),
     ] }
   }
 }

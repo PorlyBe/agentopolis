@@ -269,7 +269,7 @@ export default function init(api, tower) {
   api.on('sync', () => {
     if (!demos.includes('building')) return
     const s = sessions().filter(s => s.state !== 'attention').at(-1); if (!s) return
-    s.state = 'building'; s.background = [{ label: 'cargo test --workspace', kind: 'shell', since: buildSince }]
+    s.state = 'building'; s.background = [{ label: 'npm test', kind: 'shell', since: buildSince }]
   })
 
   // ---------- bug-squash: each critter by id, and a way to squash one (it stays gone; a new error brings a new one) ----------

@@ -21,7 +21,7 @@ export default function init(api, tower) {
 
   if (demo) tower.on('snapshot', data => {
     const now = Date.now(), M = 60_000
-    const T = [['BILLING EXPORT', 'feat/csv-export', 'Bash', 'idle', 412], ['ONBOARDING COPY', 'docs/onboarding', 'Edit', 'waiting', 96], ['FLAKY E2E HUNT', 'fix/e2e-timeouts', 'Bash', 'tool', 733],
+    const T = [['RECIPE EXPORT', 'feat/csv-export', 'Bash', 'idle', 412], ['ONBOARDING COPY', 'docs/onboarding', 'Edit', 'waiting', 96], ['FLAKY E2E HUNT', 'fix/e2e-timeouts', 'Bash', 'tool', 733],
       ['SEARCH INDEX', 'feat/search-reindex', 'Read', 'thinking', 208], ['DEPENDABOT SWEEP', 'chore/deps', 'Bash', 'idle', 57], ['RATE LIMITER', 'feat/rate-limit', 'Edit', 'idle', 351],
       ['LOGO TWEAKS', 'design/logo', 'Write', 'waiting', 31], ['CACHE WARMUP', 'perf/cache-warm', 'Bash', 'idle', 164], ['MORNING TRIAGE', 'main', 'Grep', 'idle', 88], ['SPIKE: GRAPHQL', 'spike/graphql', 'WebSearch', 'idle', 40]]
     data.ghostAnnex = { day: 'demo', ghosts: T.map(([title, branch, last, state, calls], i) => {

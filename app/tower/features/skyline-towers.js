@@ -16,7 +16,7 @@ const INK = {
   steampunk: { body: '#8a7458', side: '#6a5a44', trim: '#c8963a', win: '#7a6650', lit: '#ffd890', blink: '#fff0c0', board: '#3a2a1a', face: '#e8c88a', leg: '#4a3020' },
   candy: { body: '#e0b0d0', side: '#c898b8', trim: '#fff4fa', win: '#d0a0c0', lit: '#fff4fa', blink: '#ff7ab0', board: '#8a5a7a', face: '#fff4fa', leg: '#a87a9a' },
 }
-const FAKE = [['acme/rocket-docs'], ['globex/data-lake'], ['initech/pixel-kit'], ['acme/edge-proxy'], ['umbrella/notebooks'], ['acme/infra-live']]
+const FAKE = [['acme/recipe-box'], ['acme/pixel-quest'], ['acme/garden-planner'], ['acme/photo-gallery'], ['acme/trail-map'], ['acme/blog']]
 
 export default function init(api, tower) {
   const { font, fitText } = tower

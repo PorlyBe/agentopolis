@@ -528,11 +528,11 @@ export default function init(api, tower) {
       const t = Date.now()
       demoState = {
         fame: demoFame.slice(0, 5).map(([id, title, icon, tier], i) => ({ key: id + '|demo', id, title, icon, tier, holder: data.sessions[i % Math.max(1, data.sessions.length)]?.title || 'office', earnedAt: t - (i + 1) * 4e5 })),
-        mail: [{ id: 'demo:req1', kind: 'request', who: 'alice-dev', bot: false, pr: 1878, title: 'login flow', at: t - 3e5 }],
+        mail: [{ id: 'demo:req1', kind: 'request', who: 'alice-dev', bot: false, pr: 1878, title: 'recipes: search by ingredient', at: t - 3e5 }],
       }
-      setTimeout(() => { const [id, title, icon, tier] = demoFame[5]; const a = { key: id + '|demo', id, title, icon, tier, holder: 'ID SERVER', earnedAt: Date.now() }; evFame.set(a.key, a); latestAt = performance.now(); takeovers.push(a) }, 6000)
+      setTimeout(() => { const [id, title, icon, tier] = demoFame[5]; const a = { key: id + '|demo', id, title, icon, tier, holder: 'RECIPE BOX', earnedAt: Date.now() }; evFame.set(a.key, a); latestAt = performance.now(); takeovers.push(a) }, 6000)
       setTimeout(() => { if (tower.slots) tower.flyTo('ceo') }, 400)
-      setTimeout(() => { demoState.mail.unshift({ id: 'demo:req2', kind: 'request', who: 'bob-codes', bot: false, pr: 1880, title: 'app: a demo PR', at: Date.now() }) }, 2500)
+      setTimeout(() => { demoState.mail.unshift({ id: 'demo:req2', kind: 'request', who: 'bob-builds', bot: false, pr: 1880, title: 'app: a demo PR', at: Date.now() }) }, 2500)
     }
     const items = Array.from({ length: 14 }, (_, i) => ({ n: 1900 - i, repo: 'demo/office', at: Date.now() - i * 3e6, state: i % 3 === 1 ? 'OPEN' : 'MERGED', mergedAt: i === 0 ? Date.now() : 0, title: `demo PR ${i + 1}` }))
     return {
@@ -541,7 +541,7 @@ export default function init(api, tower) {
       trophies: { merged: items.filter(i => i.state === 'MERGED').length, open: items.filter(i => i.state === 'OPEN').length, gh: true, items },
       street: { ...(data.street || {}), status: 'ok', repo: data.street?.repo || 'demo/office', me: data.street?.me || 'you', forMe: demoState.mail },
       cost: data.cost || { usdToday: 123.45, bySession: {} },
-      gazette: data.gazette || { at: Date.now(), date: Date.now(), edition: 1, repo: 'demo/office', street: 'ok', headline: { kind: 'merge', kicker: 'MERGE DAY', title: '3 PRs land on trunk', deck: 'A demo edition.' }, merged: [], mergedCount: 0, opened: [], openedCount: 0, stats: { toolsToday: 4210, toolsHour: 312, tokens: 48e6, commits: 9, online: { sessions: 4, agents: 6 } }, busiest: { leaders: [], desks: [] }, workflows: [], ci: { failsToday: 0, failsHour: 0, red: [], running: 0, culprits: [] } },
+      gazette: data.gazette || { at: Date.now(), date: Date.now(), edition: 1, repo: 'demo/office', street: 'ok', headline: { kind: 'merge', kicker: 'MERGE DAY', title: '3 PRs land on main', deck: 'A demo edition.' }, merged: [], mergedCount: 0, opened: [], openedCount: 0, stats: { toolsToday: 4210, toolsHour: 312, tokens: 48e6, commits: 9, online: { sessions: 4, agents: 6 } }, busiest: { leaders: [], desks: [] }, workflows: [], ci: { failsToday: 0, failsHour: 0, red: [], running: 0, culprits: [] } },
     }
   }
   if (demo) window.ceoOffice = { tower, hitAt, couriers, envelopes }   // for scripted checks
@@ -549,6 +549,6 @@ export default function init(api, tower) {
     const fakeCommit = n => ({ id: 'demo-print-' + n, t: Date.now(), msg: ['tower: the CEO office gets its wall of fame', 'printer: pin every commit to the lobby board', 'gazette: a front page for the repo'][n % 3], branch: 'tower-port', who: 'demo' })
     setTimeout(() => { queue.push(fakeCommit(0)); if (!demo) tower.flyTo('lobby') }, demo ? 9000 : 1500)
     setTimeout(() => queue.push(fakeCommit(1)), demo ? 12000 : 3000)
-    for (let i = 0; i < 3; i++) printed.push({ ...fakeCommit(i + 2), id: 'demo-old-' + i, t: Date.now() - (i + 1) * 6e5, msg: ['ui: field placeholders', 'identity: verify tokens offline', 'desktop: settings page'][i] })
+    for (let i = 0; i < 3; i++) printed.push({ ...fakeCommit(i + 2), id: 'demo-old-' + i, t: Date.now() - (i + 1) * 6e5, msg: ['ui: field placeholders', 'map: elevation profile', 'site: dark mode'][i] })
   }
 }

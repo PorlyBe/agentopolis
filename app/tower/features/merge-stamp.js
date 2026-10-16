@@ -111,7 +111,7 @@ export default function init(api, tower) {
 
   // ---------- ?demo=mergestamp ----------
   if (demo) {
-    const FAKE = Array.from({ length: 10 }, (_, i) => ({ n: 3100 + i, title: `demo: parcel ${i + 1}`, author: i % 3 ? 'demo-ana' : 'you', mine: !(i % 3), bot: false, draft: i < 2, review: i % 2 ? 'APPROVED' : null, ci: 'passed', size: 60 + i * 140, conflict: false, forMe: false, labels: [], url: null, createdAt: Date.now() - 2 * 864e5, updatedAt: Date.now() }))
+    const FAKE = Array.from({ length: 10 }, (_, i) => ({ n: 3100 + i, title: `demo: parcel ${i + 1}`, author: i % 3 ? 'alice-dev' : 'you', mine: !(i % 3), bot: false, draft: i < 2, review: i % 2 ? 'APPROVED' : null, ci: 'passed', size: 60 + i * 140, conflict: false, forMe: false, labels: [], url: null, createdAt: Date.now() - 2 * 864e5, updatedAt: Date.now() }))
     let T0 = 0, flown = false
     const merged = [], gone = new Set()
     tower.on('snapshot', data => {

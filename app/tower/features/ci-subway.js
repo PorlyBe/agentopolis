@@ -258,8 +258,8 @@ export default function init(api, tower) {
   tower.on('mode', on => { if (on && demo) setTimeout(() => tower.flyTo({ x: -110, y: 50 }, 3.4), 600) })
 
   // ---------- demo: a queue that builds past the DELAYS mark and drains, on a 100 s cycle ----------
-  const WF = ['CI', 'web-ci', 'desktop', 'auth', 'reports-ci', 'lint']
-  const BR = ['search-slot', 'browser', 'trunk', 'price-billboard', 'standup', 'settings']
+  const WF = ['ci', 'lint', 'e2e', 'deploy-preview', 'build docs', 'build site']
+  const BR = ['add-search', 'level-editor', 'main', 'frost-alerts', 'album-sharing', 'offline-tiles']
   function fakeRuns(now) {
     const cyc = 100_000, t0 = Math.floor(now / cyc) * cyc, out = []
     for (const base of [t0 - cyc, t0]) for (let i = 0; i < 16; i++) {

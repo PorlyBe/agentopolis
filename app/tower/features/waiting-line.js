@@ -172,14 +172,14 @@ export default function init(api, tower) {
   // ---------- ?demo=waitingline ----------
   if (!demo) return
   const SAYS = [
-    ['Once the extension in Edge is signed in with this session\'s account, should I rerun the connection test?', 'reply'],
-    ['When 1920 is applied, tell me and I\'ll check that the apply shows the bucket and the replaced task definition.', 'reply'],
+    ['Once the dev server is back up on port 5173, should I rerun the e2e suite?', 'reply'],
+    ['When #1920 is merged, tell me and I\'ll check that the preview shows the new map tiles.', 'reply'],
     null,
-    ['Which screen should the app open first after sign-in: the dashboard or the welcome tour?', 'question'],
+    ['Which screen should the game open first: the title screen or the level select?', 'question'],
     ['Draft PR #1912 is up. Should I run a code review before you look?', 'reply'],
-    ['All suites are green from inside api-server. Should I run /verify-api?', 'reply'],
+    ['All suites are green from inside recipe-box. Should I run /verify-site?', 'reply'],
   ]
-  const NAMES = ['DESIGN', 'ID SERVER', 'WEB CI', 'ONBOARDING', 'BILLING', 'LEDGER']
+  const NAMES = ['DESIGN', 'RECIPE BOX', 'PIXEL QUEST', 'GARDEN PLANNER', 'PHOTO GALLERY', 'TRAIL MAP']
   let t0 = 0
   tower.on('snapshot', data => {
     const now = Date.now()
@@ -191,7 +191,7 @@ export default function init(api, tower) {
       s.running = true; s.agents = []; delete s.attention
       if (order === 0 && t > 45000) { s.state = 'thinking'; return }
       s.lastActivity = since
-      if (!SAYS[i]) { s.state = 'attention'; s.attention = { kind: 'permission', label: 'allow Bash?', detail: 'pnpm --filter web test -- --run', since }; return }
+      if (!SAYS[i]) { s.state = 'attention'; s.attention = { kind: 'permission', label: 'allow Bash?', detail: 'npm test -- --run', since }; return }
       s.state = SAYS[i][1] === 'question' ? 'attention' : 'waiting'
       if (s.state === 'attention') s.attention = { kind: 'question', label: 'question for you', since }
       s.ext = { ...s.ext, 'waiting-line': { text: SAYS[i][0], kind: SAYS[i][1] } }

@@ -150,7 +150,7 @@ export default function init(api, tower) {
   // ---------- ?demo=vending ----------
   if (!demo) return
   let t0 = 0
-  const NAMES = ['DESIGN', 'ID SERVER', 'WEB CI']
+  const NAMES = ['DESIGN', 'RECIPE BOX', 'PIXEL QUEST']
   tower.on('snapshot', data => {
     const now = Date.now()
     if (!t0) { t0 = now; if (!params.get('towerzoom')) setTimeout(() => tower.flyTo('cafe', 3), 800) }

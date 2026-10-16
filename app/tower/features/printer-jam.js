@@ -190,11 +190,11 @@ export default function init(api, tower) {
   tower.on('snapshot', data => {
     const now = Date.now()
     if (!t0) { t0 = now; if (!params.get('towerzoom')) setTimeout(() => { const f = tower.floorOf(data.sessions[0]?.id); if (f) tower.flyTo({ x: CX - 20, y: f.y - 30 }, Number(params.get('pjzoom')) || 3) }, 800) }
-    if (!data.sessions.length) data.sessions.push({ id: '00000000-0000-4000-8000-000000000031', title: 'WEB CI', cwd: null, branch: null, worktree: null, running: true, endedAt: null, state: 'tool', tool: 'Bash', detail: null, lastActivity: now, agents: [], ext: {} })
+    if (!data.sessions.length) data.sessions.push({ id: '00000000-0000-4000-8000-000000000031', title: 'PIXEL QUEST', cwd: null, branch: null, worktree: null, running: true, endedAt: null, state: 'tool', tool: 'Bash', detail: null, lastActivity: now, agents: [], ext: {} })
     const s = data.sessions[0], t = (now - t0) % 40000
     s.running = true; s.agents = []; delete s.attention
     s.ext = { ...s.ext }
-    if (t < 30000) { s.state = 'tool'; s.ext['printer-jam'] = { id: 'toolu_demo', tool: 'Bash', text: 'cd api-server && cargo build --release --features e2e 2>&1 | tail -40', description: 'Build the release binary with e2e features', at: t0 - 6 * 60000, mtime: t0 - 6 * 60000 } }
+    if (t < 30000) { s.state = 'tool'; s.ext['printer-jam'] = { id: 'toolu_demo', tool: 'Bash', text: 'cd pixel-quest && npm run build -- --mode e2e 2>&1 | tail -40', description: 'Build the game bundle in e2e mode', at: t0 - 6 * 60000, mtime: t0 - 6 * 60000 } }
     else { s.state = 'thinking'; delete s.ext['printer-jam'] }
   })
 }

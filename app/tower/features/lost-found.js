@@ -19,15 +19,15 @@ export default function init(api, tower) {
     const mk = (name, branch, days, pr, dirty = 0) => ({ name, branch, path: `/skyline/.claude/worktrees/${name}`, mtime: now - days * d, dirty, pr, safe: pr?.state === 'MERGED' && !dirty })
     const pr = (n, state, title) => ({ number: n, state, title, url: null, mergedAt: state === 'MERGED' ? now - 3 * d : null })
     return { demo: true, total: 11, inUse: 2, prsKnown: true, crates: [
-      mk('desktop-v020', 'chore/desktop-bump-to-020', 21, pr(1415, 'MERGED', 'desktop: bump to 0.2.0')),
-      mk('desktop-release', 'fix/ci-desktop-release', 18, pr(1437, 'MERGED', 'ci: desktop release authenticates git')),
-      mk('notification-frames', 'feat/notification-frames', 12, pr(1494, 'OPEN', 'api: notification frames'), 3),
-      mk('verify-api-keep-flag', 'chore/keep-flag', 9, pr(1510, 'MERGED', 'verify-api keeps --keep')),
-      mk('feed-publisher', 'feature/feed-publisher', 8, null, 1),
-      mk('web-en-only-catalogue', 'feature/en-only', 4, pr(1515, 'MERGED', 'web: en-only catalogue')),
-      mk('onboarding-poc', 'poc/onboarding', 3, pr(1762, 'CLOSED', 'poc: web to desktop onboarding')),
-      mk('tx-details', 'feat/tx-details', 2, pr(1786, 'MERGED', 'web: transaction details')),
-      mk('desktop-settings-page', 'feat/settings', 1, pr(1865, 'OPEN', 'desktop: settings as a page')),
+      mk('site-v020', 'chore/site-bump-to-020', 21, pr(1415, 'MERGED', 'site: bump to 0.2.0')),
+      mk('ci-node-cache', 'fix/ci-node-cache', 18, pr(1437, 'MERGED', 'ci: cache node_modules')),
+      mk('save-slots', 'feat/save-slots', 12, pr(1494, 'OPEN', 'game: save slots'), 3),
+      mk('docs-typos', 'docs/typos', 9, pr(1510, 'MERGED', 'docs: fix typos in the guide')),
+      mk('elevation-profile', 'feature/elevation-profile', 8, null, 1),
+      mk('site-dark-mode', 'feature/dark-mode', 4, pr(1515, 'MERGED', 'site: dark mode')),
+      mk('frost-alerts-poc', 'poc/frost-alerts', 3, pr(1762, 'CLOSED', 'garden: frost alerts by postcode')),
+      mk('lazy-thumbnails', 'feat/lazy-thumbnails', 2, pr(1786, 'MERGED', 'gallery: lazy-load thumbnails')),
+      mk('ingredient-search', 'feat/ingredient-search', 1, pr(1865, 'OPEN', 'recipes: search by ingredient')),
     ] }
   }
   tower.on('sync', snap => {

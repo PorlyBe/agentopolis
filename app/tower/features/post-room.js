@@ -364,32 +364,32 @@ export default function init(api, tower) {
 
   // ---------- ?demo=postroom ----------
   if (demo) {
-    const LAB = { web: '3594a7', desktop: '6e5494', feature: '0e8a16', fix: 'd93f0b', infra: '5d6d7e', ci: '34495e', identity: 'c5def5', mobile: 'fbca04', docs: '0075ca', deps: '0366d6' }
+    const LAB = { site: '3594a7', game: '6e5494', feature: '0e8a16', fix: 'd93f0b', infra: '5d6d7e', ci: '34495e', garden: 'c5def5', gallery: 'fbca04', docs: '0075ca', deps: '0366d6' }
     const mk = ([n, title, author, draft, review, ci, size, conflict, forMe, days, labels]) => ({
       n, title, author, mine: author === 'you', bot: /\[bot\]$/.test(author), draft, review, ci, size, conflict, forMe, url: null,
       labels: labels.map(name => ({ name, color: LAB[name] })), createdAt: Date.now() - (days + 2) * DAY, updatedAt: Date.now() - days * DAY,
     })
     const FAKE = [
-      [1901, 'web: onboarding copy pass', 'demo-ana', true, null, 'failed', 120, false, false, 0.2, ['web']],
-      [1902, 'desktop: tray icon states', 'you', true, null, 'running', 640, false, false, 0.1, ['desktop', 'feature']],
-      [1903, 'auth: refresh token rotation', 'demo-ben', true, null, null, 2900, true, false, 1, ['auth']],
-      [1904, 'billing: webhook retries', 'demo-cai', true, null, 'passed', 80, false, false, 12, ['fix']],
-      [1905, 'infra: aurora snapshot policy', 'demo-dee', true, null, null, 30, false, false, 9, ['infra']],
-      [1906, 'mobile: android biometrics', 'demo-eli', true, null, 'passed', 1500, false, false, 2, ['mobile']],
-      [1907, 'web: dark mode tokens', 'you', true, null, 'passed', 260, false, false, 0.5, ['web']],
-      [1910, 'web: receive sheet networks', 'demo-ana', false, null, 'passed', 210, false, true, 0.3, ['web']],
-      [1911, 'api: balance cache ttl', 'demo-ben', false, null, 'running', 95, false, true, 0.5, ['fix']],
-      [1912, 'desktop: settings page layout', 'you', false, null, 'passed', 420, false, false, 0.2, ['desktop']],
-      [1913, 'prices: feed backoff', 'demo-dee', false, 'APPROVED', 'passed', 60, false, false, 0.4, ['fix']],
-      [1914, 'web: activity detail pane', 'demo-cai', false, 'APPROVED', 'passed', 880, false, false, 1, ['web', 'feature']],
-      [1915, 'auth: jwks cache', 'you', false, 'APPROVED', 'passed', 300, false, false, 0.6, ['auth']],
-      [1916, 'reports: export csv', 'demo-eli', false, 'CHANGES_REQUESTED', 'passed', 180, false, false, 1.5, ['feature']],
-      [1917, 'ci: cache cargo registry', 'demo-dee', false, 'CHANGES_REQUESTED', 'failed', 40, false, false, 3, ['ci']],
-      [1918, 'web: checkout flow', 'demo-ana', false, null, 'failed', 1300, false, false, 0.8, ['web']],
-      [1919, 'api: settle fee rounding', 'demo-ben', false, null, 'passed', 150, true, false, 4, ['fix']],
-      [1920, 'docs: staging runbook', 'demo-eli', false, null, null, 25, false, false, 15, ['docs']],
+      [1901, 'site: dark mode', 'alice-dev', true, null, 'failed', 120, false, false, 0.2, ['site']],
+      [1902, 'game: save slots', 'you', true, null, 'running', 640, false, false, 0.1, ['game', 'feature']],
+      [1903, 'garden: frost alerts by postcode', 'bob-builds', true, null, null, 2900, true, false, 1, ['garden']],
+      [1904, 'game: tile collision fix', 'carol-ci', true, null, 'passed', 80, false, false, 12, ['fix']],
+      [1905, 'infra: preview environments', 'dave-ships', true, null, null, 30, false, false, 9, ['infra']],
+      [1906, 'gallery: lazy-load thumbnails', 'erin-docs', true, null, 'passed', 1500, false, false, 2, ['gallery']],
+      [1907, 'site: theme colours', 'you', true, null, 'passed', 260, false, false, 0.5, ['site']],
+      [1910, 'recipes: search by ingredient', 'alice-dev', false, null, 'passed', 210, false, true, 0.3, ['site']],
+      [1911, 'map: tile cache ttl', 'bob-builds', false, null, 'running', 95, false, true, 0.5, ['fix']],
+      [1912, 'game: level editor layout', 'you', false, null, 'passed', 420, false, false, 0.2, ['game']],
+      [1913, 'garden: weather feed backoff', 'dave-ships', false, 'APPROVED', 'passed', 60, false, false, 0.4, ['fix']],
+      [1914, 'gallery: album detail pane', 'carol-ci', false, 'APPROVED', 'passed', 880, false, false, 1, ['gallery', 'feature']],
+      [1915, 'map: elevation profile', 'you', false, 'APPROVED', 'passed', 300, false, false, 0.6, ['feature']],
+      [1916, 'recipes: export csv', 'erin-docs', false, 'CHANGES_REQUESTED', 'passed', 180, false, false, 1.5, ['feature']],
+      [1917, 'ci: cache node_modules', 'dave-ships', false, 'CHANGES_REQUESTED', 'failed', 40, false, false, 3, ['ci']],
+      [1918, 'site: new landing page', 'alice-dev', false, null, 'failed', 1300, false, false, 0.8, ['site']],
+      [1919, 'recipes: unit conversion rounding', 'bob-builds', false, null, 'passed', 150, true, false, 4, ['fix']],
+      [1920, 'docs: fix typos in the guide', 'erin-docs', false, null, null, 25, false, false, 15, ['docs']],
       [1921, 'chore(deps): bump vite', 'dependabot[bot]', false, null, 'passed', 12, false, false, 0.1, ['deps']],
-      [1922, 'mobile: ios widget', 'demo-cai', false, null, 'running', 3400, false, false, 0.2, ['mobile', 'feature']],
+      [1922, 'map: offline tiles', 'carol-ci', false, null, 'running', 3400, false, false, 0.2, ['feature']],
     ]
     let T0 = 0, posts = [], merged = [], arrived = 0, sent = 0
     tower.on('snapshot', data => {
@@ -397,7 +397,7 @@ export default function init(api, tower) {
       const e = Date.now() - T0
       while (arrived < Math.floor((e - 4000) / 20000) + 1) {
         arrived++
-        posts.push(mk([2000 + arrived, arrived % 2 ? 'web: new arrival from the street' : 'desktop: freshly opened', 'demo-ana', arrived % 2 === 0, arrived % 2 ? 'APPROVED' : null, 'running', 90 + arrived * 170, false, false, 0, ['web']]))
+        posts.push(mk([2000 + arrived, arrived % 2 ? 'site: new arrival from the street' : 'game: freshly opened', 'alice-dev', arrived % 2 === 0, arrived % 2 ? 'APPROVED' : null, 'running', 90 + arrived * 170, false, false, 0, ['site']]))
       }
       while (sent < Math.floor((e - 12000) / 20000) + 1) {
         sent++

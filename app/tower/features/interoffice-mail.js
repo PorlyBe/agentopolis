@@ -81,7 +81,7 @@ export default function init(api, tower) {
       { kind: 'letter', from: { session: a.id }, to: bg ? { agent: bg.id, session: b.id } : { session: b.id }, text: 'Re-review the PR at its new head' },
       { kind: 'letter', from: { session: a.id }, to: ag ? { agent: ag.id, session: a.id } : { session: a.id }, text: 'Fix the three findings on the same branch' },
       { kind: 'slip', from: ag ? { agent: ag.id, session: a.id } : { agent: 'a0demo' }, to: { session: a.id }, text: 'Agent "pre-PR checks" finished', status: 'completed' },
-      { kind: 'letter', from: bg ? { agent: bg.id, session: b.id } : { session: b.id }, to: { name: 'UPDATER' }, text: 'Bump the SDK pin' },
+      { kind: 'letter', from: bg ? { agent: bg.id, session: b.id } : { session: b.id }, to: { name: 'UPDATER' }, text: 'Bump the vite pin' },
       { kind: 'slip', from: { agent: 'a1demo' }, to: { session: b.id }, text: 'Agent "docs grounding" failed', status: 'failed' },
     ]
     const k = kinds[demoN % kinds.length]

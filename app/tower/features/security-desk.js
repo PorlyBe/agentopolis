@@ -25,9 +25,9 @@ export default function init(api, tower) {
 
   // ---------- data ----------
   const DEMO = [
-    { kind: 'classifier', tool: 'Bash', what: 'Write the Slack token into Secrets Manager', reason: 'Secret-Store Writes', agentName: null },
-    { kind: 'rejected', tool: 'Edit', what: 'api-server/src/routes/send.rs', reason: 'prompt rejected', agentName: null },
-    { kind: 'hook', tool: 'Bash', what: 'Wait for build output', reason: 'Blocked: sleep 60 followed by: tail -5 build.log', agentName: 'vm:#1918' },
+    { kind: 'classifier', tool: 'Bash', what: 'Push straight to main', reason: 'Git Push to Default Branch', agentName: null },
+    { kind: 'rejected', tool: 'Edit', what: 'gallery/albums.go', reason: 'prompt rejected', agentName: null },
+    { kind: 'hook', tool: 'Bash', what: 'Wait for build output', reason: 'Blocked: sleep 60 followed by: tail -5 build.log', agentName: 'e2e:#1918' },
     { kind: 'classifier', tool: 'Bash', what: 'terraform apply staging', reason: 'Production Deploy', agentName: 'deploy check' },
   ]
   function fake(data) {

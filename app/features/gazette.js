@@ -153,14 +153,14 @@ export default function init(api) {
     const now = Date.now(), url = n => `https://github.com/demo/office/pull/${n}`
     return {
       at: now, date: now, edition: 1, repo: 'demo/office', street: 'ok',
-      headline: { kind: 'merge', kicker: 'MERGE DAY', title: '3 PRs land on trunk', deck: 'Latest: #1878 login flow by alice-dev.', at: now - 600_000 },
-      merged: [1878, 1877, 1865].map((n, i) => ({ n, title: ['login flow', 'settings page', 'dark mode'][i], author: ['alice-dev', 'bob-codes', 'octo-ana'][i], at: now - i * 3600_000, url: url(n) })),
+      headline: { kind: 'merge', kicker: 'MERGE DAY', title: '3 PRs land on main', deck: 'Latest: #1878 recipes: search by ingredient by alice-dev.', at: now - 600_000 },
+      merged: [1878, 1877, 1865].map((n, i) => ({ n, title: ['recipes: search by ingredient', 'game: save slots', 'site: dark mode'][i], author: ['alice-dev', 'bob-builds', 'erin-docs'][i], at: now - i * 3600_000, url: url(n) })),
       mergedCount: 3, opened: [{ n: 1880, title: 'a demo PR', author: 'dave-ships', at: now, url: url(1880) }], openedCount: 1,
       stats: { toolsToday: 4210, since: 0, toolsHour: 312, tokens: 48_200_000, commits: 9, online: { sessions: 4, active: 3, agents: 6 } },
-      busiest: { now: { name: 'OFFICE VISUALIZATION', calls: 54 }, peak: { name: 'ID SERVER', calls: 88 }, leaders: [{ name: 'ID SERVER', minutes: 41 }], desks: [{ title: 'ID SERVER', state: 'tool', agents: 3 }] },
+      busiest: { now: { name: 'TRAIL MAP', calls: 54 }, peak: { name: 'RECIPE BOX', calls: 88 }, leaders: [{ name: 'RECIPE BOX', minutes: 41 }], desks: [{ title: 'RECIPE BOX', state: 'tool', agents: 3 }] },
       workflows: [], ci: { failsToday: 2, failsHour: 1, red: [{ n: 1871, title: 'flaky e2e', author: 'carol-ci', url: url(1871) }], running: 2, culprits: ['carol-ci'] },
       engineer: { login: 'alice-dev', actions: 14, score: 26, by: { merged: 2, review: 3, comment: 4, push: 3, opened: 2 }, openPrs: 3, merges: 1 },
-      coderabbit: { pr: 1878, title: 'login flow', target: 'alice-dev', kind: 'review', review: 'commented', at: now - 900_000, today: 6, prs: 4, url: url(1878) },
+      coderabbit: { pr: 1878, title: 'recipes: search by ingredient', target: 'alice-dev', kind: 'review', review: 'commented', at: now - 900_000, today: 6, prs: 4, url: url(1878) },
       weather: null,
     }
   }

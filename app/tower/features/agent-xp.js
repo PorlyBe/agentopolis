@@ -24,7 +24,7 @@ export default function init(api, tower) {
     if (!demoT0) { demoT0 = now; if (!params.get('towerzoom')) setTimeout(() => { const b = board(); b && tower.flyTo({ x: b.x + b.w / 2, y: b.y + 30 }, 5) }, 600) }
     const k = Math.floor((now - demoT0) / 9000), xp = [['workflow', 412], ['general-purpose', 231], ['Explore', 223 + k * 2], ['code-reviewer', 64], ['Plan', 38], ['claude-code-guide', 17]]
     snap.agentXp = { types: xp.map(([type, xp]) => { const level = Math.floor(Math.sqrt(xp)); return { type, xp, level, next: (level + 1) ** 2 } }).sort((a, b) => b.xp - a.xp),
-      recent: [{ type: 'Explore', at: now - 9000 * (k ? 1 : 0) - 4000, description: 'map the ledger' }], total: 0 }
+      recent: [{ type: 'Explore', at: now - 9000 * (k ? 1 : 0) - 4000, description: 'map the search index' }], total: 0 }
   })
 
   tower.on('sync', snap => {

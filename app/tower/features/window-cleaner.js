@@ -152,7 +152,7 @@ export default function init(api, tower) {
     const base = t0 + Math.floor((now - t0) / 90_000) * 90_000
     data.sessions.slice(0, 2).forEach((s, i) => {
       const at = base + 1500 + i * 4000
-      s.ext = { ...s.ext, 'window-cleaner': { runs: at <= now ? [{ at, cmd: i ? 'pnpm format' : 'cargo fmt' }] : [] } }
+      s.ext = { ...s.ext, 'window-cleaner': { runs: at <= now ? [{ at, cmd: i ? 'npx prettier --write .' : 'gofmt -w .' }] : [] } }
     })
   })
 }

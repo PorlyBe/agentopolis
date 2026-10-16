@@ -24,7 +24,7 @@ export default function init(api, tower) {
     const now = Date.now()
     if (!demoT0) { demoT0 = now; if (!params.get('towerzoom')) setTimeout(() => tower.flyTo({ x: -60, y: -30 }, 3.2), 700) }
     const cycle = Math.floor((now - demoT0) / 100_000), t = (now - demoT0) % 100_000
-    return t > 2000 && t < 75_000 ? [{ id: 'demo-' + cycle, workflow: 'ci', title: 'web: the settings page keeps its scroll on back (#1931)', sha: 'a1b2c3d', failedAt: demoT0 + cycle * 100_000 + 2000, url: null }] : []
+    return t > 2000 && t < 75_000 ? [{ id: 'demo-' + cycle, workflow: 'ci', title: 'site: the gallery page keeps its scroll on back (#1931)', sha: 'a1b2c3d', failedAt: demoT0 + cycle * 100_000 + 2000, url: null }] : []
   }
   tower.on('sync', data => {
     const d = data.fireDrill

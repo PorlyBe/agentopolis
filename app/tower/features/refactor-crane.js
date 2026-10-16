@@ -16,8 +16,8 @@ export default function init(api, tower) {
     if (!demo) return
     const ss = data.sessions.filter(s => s.running !== false)
     data.cranes = [
-      ss[0] && { sessionId: ss[0].id, add: 1240, del: 268, pr: 1937, title: 'search every asset', url: null, src: 'pr' },
-      ss[1] && { sessionId: ss[1].id, add: 12_410, del: 3_920, pr: 1918, title: 'export: CSV, JSON and PDF', url: null, src: 'pr' },
+      ss[0] && { sessionId: ss[0].id, add: 1240, del: 268, pr: 1937, title: 'recipes: search by ingredient', url: null, src: 'pr' },
+      ss[1] && { sessionId: ss[1].id, add: 12_410, del: 3_920, pr: 1918, title: 'gallery: album sharing', url: null, src: 'pr' },
     ].filter(Boolean)
   })
   tower.on('sync', data => {

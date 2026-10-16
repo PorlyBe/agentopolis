@@ -30,7 +30,7 @@ export default function init(api, tower) {
     s.ext.courtroom = { id: 'demo-' + k, kind: 'skill', name: guilty ? 'code-review' : 'security-review', start: t0, end: now >= end ? end : null,
       jurors: ['Review the diff', 'Check the tests'],
       ...(now >= end ? guilty
-        ? { verdict: 'guilty', count: 3, nits: 0, charges: ['unwrap on user input in parse_amount', 'the retry loop never backs off', 'a test asserts on a log line'] }
+        ? { verdict: 'guilty', count: 3, nits: 0, charges: ['no null check on the query in parseSearch', 'the retry loop never backs off', 'a test asserts on a log line'] }
         : adjourned ? { verdict: 'adjourned', count: 0, nits: 0, charges: [] }
         : { verdict: 'acquitted', count: 0, nits: 1, charges: ['a comment restates the code'] } : {}) }
   })

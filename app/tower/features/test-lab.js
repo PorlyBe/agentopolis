@@ -127,13 +127,13 @@ export default function init(api, tower) {
     const t = (now - t0) % 30000, ago = ms => now - ms
     const q = (service, suite, result, summary, at, run) => ({ service, suite, result, summary, at, runningSince: run ? ago(run) : null })
     data.sessions[0].ext = { ...data.sessions[0].ext, 'test-lab': { flasks: [
-      q('api-server', 'cargo clippy', 'pass', 'ok', ago(6e5)),
-      t < 8000 ? q('api-server', 'cargo test', 'fail', 'test result: FAILED. 211 passed; 1 failed', ago(9e5), t) : q('api-server', 'cargo test', 'pass', '212 passed', ago(t - 8000)),
-      q('api-server', 'cargo mutants', 'unknown', 'output went to a log', ago(36e5)),
-      t > 4000 && t < 14000 ? q('web-app', 'pnpm lint', 'pass', 'ok', ago(12e5), t - 4000) : q('web-app', 'pnpm lint', t >= 14000 ? 'fail' : 'pass', t >= 14000 ? 'ELIFECYCLE Command failed with exit code 1.' : 'ok', ago(t >= 14000 ? t - 14000 : 12e5)),
-      q('web-app', 'pnpm test', 'pass', '318 passed', ago(3e5)),
-      q('web-app', 'pnpm typecheck', 'fail', 'ELIFECYCLE Command failed with exit code 2.', ago(2e5)),
+      q('garden-planner', 'ruff check', 'pass', 'ok', ago(6e5)),
+      t < 8000 ? q('garden-planner', 'pytest -q', 'fail', '1 failed, 211 passed', ago(9e5), t) : q('garden-planner', 'pytest -q', 'pass', '212 passed', ago(t - 8000)),
+      q('garden-planner', 'mutmut run', 'unknown', 'output went to a log', ago(36e5)),
+      t > 4000 && t < 14000 ? q('recipe-box', 'npm run lint', 'pass', 'ok', ago(12e5), t - 4000) : q('recipe-box', 'npm run lint', t >= 14000 ? 'fail' : 'pass', t >= 14000 ? 'ELIFECYCLE Command failed with exit code 1.' : 'ok', ago(t >= 14000 ? t - 14000 : 12e5)),
+      q('recipe-box', 'npm test', 'pass', '318 passed', ago(3e5)),
+      q('recipe-box', 'npx tsc --noEmit', 'fail', 'ELIFECYCLE Command failed with exit code 2.', ago(2e5)),
     ] } }
-    if (data.sessions[1]) data.sessions[1].ext = { ...data.sessions[1].ext, 'test-lab': { flasks: [q('auth-server', 'cargo test', null, '', 0, 2000), q('auth-server', 'cargo clippy', 'pass', 'ok', ago(5e4))] } }
+    if (data.sessions[1]) data.sessions[1].ext = { ...data.sessions[1].ext, 'test-lab': { flasks: [q('photo-gallery', 'go test ./...', null, '', 0, 2000), q('photo-gallery', 'go vet ./...', 'pass', 'ok', ago(5e4))] } }
   })
 }

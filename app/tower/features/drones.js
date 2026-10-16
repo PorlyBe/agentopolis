@@ -213,13 +213,13 @@ export default function init(api, tower) {
   let t0 = 0
   tower.on('snapshot', data => {
     const now = Date.now()
-    if (!data.sessions.length) data.sessions.push({ id: '00000000-0000-4000-8000-000000000061', title: 'LEDGER', cwd: null, branch: null, worktree: null, running: true, endedAt: null, state: 'tool', tool: 'Bash', detail: null, lastActivity: now, agents: [], ext: {} })
+    if (!data.sessions.length) data.sessions.push({ id: '00000000-0000-4000-8000-000000000061', title: 'GARDEN PLANNER', cwd: null, branch: null, worktree: null, running: true, endedAt: null, state: 'tool', tool: 'Bash', detail: null, lastActivity: now, agents: [], ext: {} })
     const ss = data.sessions.filter(s => s.running !== false).slice(0, 2)
     if (!t0) { t0 = now; if (!params.get('towerzoom') && ss[0]) setTimeout(() => { const f = tower.floorOf(ss[0].id); if (f) tower.flyTo({ x: LX + 10, y: f.y - 50 }, Number(params.get('dronezoom')) || 3.4) }, 800) }
     const cyc = 30_000, k = Math.floor((now - t0) / cyc), at = t0 + k * cyc + 4000
     const sets = [
       { kind: 'pnpm', count: 9, pkgs: ['react', 'zod', '@tanstack/react-router', 'vite', 'vitest', 'happy-dom'], cmd: 'pnpm install' },
-      { kind: 'cargo', count: 23, pkgs: ['tokio', 'serde', 'hyper-util', 'reqwest', 'thiserror', 'axum'], cmd: 'cargo build -p api-server' },
+      { kind: 'npm', count: 23, pkgs: ['express', 'typescript', 'eslint', 'prettier', '@playwright/test', 'date-fns'], cmd: 'npm ci' },
       { kind: 'pip', count: 2, pkgs: ['requests', 'idna'], cmd: 'pip install requests' },
     ]
     ss.forEach((s, i) => {

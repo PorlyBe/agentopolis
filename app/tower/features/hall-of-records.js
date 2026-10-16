@@ -21,7 +21,7 @@ export default function init(api, tower) {
   if (demo) tower.on('snapshot', snap => {
     const now = Date.now(), D = 86400_000
     if (!demoT0) { demoT0 = now; if (!params.get('towerzoom')) setTimeout(() => { const b = box(); b && tower.flyTo({ x: b.x + b.w / 2, y: b.y + 4 }, 6) }, 600) }
-    const t = snap.sessions || [], ti = i => t[i % Math.max(1, t.length)]?.title || 'PAYMENTS API'
+    const t = snap.sessions || [], ti = i => t[i % Math.max(1, t.length)]?.title || 'PHOTO GALLERY'
     const beat = now - demoT0 > 4000
     const rec = (key, label, unit, value, ago, what, prev) => ({ key, label, unit, value, at: now - ago, what, prev, fresh: !!prev && ago < D })
     snap.records = { day: new Date(now).toISOString().slice(0, 10), streak: 9, list: [
@@ -29,10 +29,10 @@ export default function init(api, tower) {
       beat ? rec('tools-day', 'Most tool calls in a day', 'n', 2214, 60_000, `busiest: ${ti(0)}`, { value: 1987, at: now - 12 * D, what: `busiest: ${ti(2)}` })
         : rec('tools-day', 'Most tool calls in a day', 'n', 1987, 12 * D, `busiest: ${ti(2)}`, null),
       rec('agents-once', 'Most subagents at once', 'n', 14, 3 * D, `9 for ${ti(1)}`, null),
-      rec('biggest-pr', 'Biggest merged PR', 'lines', 2100, 6 * D, '#424 mobile: release checklist for 3.2 (+1240 −860)', null),
+      rec('biggest-pr', 'Biggest merged PR', 'lines', 2100, 6 * D, '#424 game: level editor for 3.2 (+1240 −860)', null),
       rec('priciest-day', 'Priciest day', 'usd', 182.4, 20 * D, `top desk: ${ti(1)}`, null),
       rec('commits-day', 'Most commits in a day', 'n', 23, 2 * D, `most in ${ti(0)}`, null),
-      rec('green-streak', 'Longest green CI streak', 'n', 17, 15 * D, 'tests on payments-webhook', null),
+      rec('green-streak', 'Longest green CI streak', 'n', 17, 15 * D, 'tests on trail-map', null),
     ] }
   })
 

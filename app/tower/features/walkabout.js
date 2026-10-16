@@ -103,7 +103,7 @@ export default function init(api, tower) {
 
   // ---------- ?demo=walkabout ----------
   if (!demo) return
-  const TEXTS = ['can you also check the desktop build?', 'ship it! open the PR as a draft', 'what does the elevator do at night?']
+  const TEXTS = ['can you also check the game build?', 'ship it! open the PR as a draft', 'what does the elevator do at night?']
   let t0 = 0
   tower.on('snapshot', data => {
     const now = Date.now(); if (!t0) t0 = now
