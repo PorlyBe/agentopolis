@@ -165,7 +165,7 @@ export default function init(api, tower) {
   // ---------- ?demo=library ----------
   if (!demo) return
   let t0 = 0
-  const SKILLS = ['verify-api', 'devils-advocate-rust-review', 'linear']
+  const SKILLS = ['verify-api', 'code-review', 'release-notes']
   tower.on('snapshot', data => {
     const now = Date.now()
     if (!t0) { t0 = now; if (!params.get('towerzoom')) setTimeout(() => tower.flyTo(data.sessions[0]?.id || 'lobby', 3), 800) }
@@ -173,7 +173,7 @@ export default function init(api, tower) {
     data.sessions.slice(0, 2).forEach((s, i) => {
       const at = ms => base + ms + i * 3000
       const skills = SKILLS.slice(0, i ? 1 : 3).map((n, j) => ({ name: n, at: at(2000 + j * 13000) })).filter(x => x.at <= now)
-      const web = i === 0 ? { kind: 'search', q: 'tauri 2 window inner size macOS', at: at(44000) } : { kind: 'fetch', q: 'docs.rs', at: at(20000) }
+      const web = i === 0 ? { kind: 'search', q: 'canvas imageSmoothingEnabled pixel art', at: at(44000) } : { kind: 'fetch', q: 'docs.rs', at: at(20000) }
       const searching = now >= web.at && now - web.at < 24000
       s.ext = { ...s.ext, library: { skills, web: now >= web.at ? web : null } }
       s.state = t > 62000 ? 'waiting' : 'tool'; s.tool = searching ? (web.kind === 'search' ? 'WebSearch' : 'WebFetch') : 'Skill'; s.detail = web.q

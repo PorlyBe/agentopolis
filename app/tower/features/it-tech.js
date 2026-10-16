@@ -193,7 +193,7 @@ export default function init(api, tower) {
     if (!data.sessions.length) data.sessions.push({ id: '00000000-0000-4000-8000-000000000041', title: 'WEB CI', cwd: null, branch: null, worktree: null, running: true, endedAt: null, state: 'tool', tool: 'Bash', detail: null, lastActivity: now, agents: [], ext: {} })
     const s = data.sessions[0], t = (now - t0) % 90000
     s.ext = { ...s.ext }
-    if (t < 60000) s.ext['it-tech'] = [{ server: 'claude_ai_Linear', tool: 'mcp__claude_ai_Linear__get_issue', text: 'MCP server "claude.ai Linear" is not connected', since: t0 - 4 * 60000, at: t0 - 60000, n: 3 }]
+    if (t < 60000) s.ext['it-tech'] = [{ server: 'issue-tracker', tool: 'mcp__issue-tracker__get_issue', text: 'MCP server "issue-tracker" is not connected', since: t0 - 4 * 60000, at: t0 - 60000, n: 3 }]
     else delete s.ext['it-tech']
   })
 }

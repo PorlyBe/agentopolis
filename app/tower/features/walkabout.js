@@ -43,7 +43,7 @@ export default function init(api, tower) {
   function goTo(sid, text) {
     if (!tower.floor(sid) || !tower.slots) return
     if (!trip || trip.npc.gone) {
-      const npc = tower.spawn({ id: 'paul-walkabout', floor: 'ceo', x: tower.slots.seat, draw: drawWalker, face: 'left', z: Z.WALK })
+      const npc = tower.spawn({ id: 'owner-walkabout', floor: 'ceo', x: tower.slots.seat, draw: drawWalker, face: 'left', z: Z.WALK })
       trip = { npc, t0: performance.now() }
     }
     Object.assign(trip, { sid, text, phase: 'out', standT: 0 })

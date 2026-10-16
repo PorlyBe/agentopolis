@@ -154,7 +154,7 @@ export default function init(api, tower) {
     const plan = [[1500, 0, 9001, 'review', 'approved', 'LGTM, ship it'], [7000, 1, 9002, 'review', 'changes_requested', 'Can we split the migration out?'], [12000, 2, 9003, 'comment', null, 'nit: rename this']]
     while (demoN < plan.length && t > plan[demoN][0]) {
       const [, i, pr, type, review, said] = plan[demoN++], at = Date.now()
-      const n = { key: `${who(i)}|${pr}`, who: who(i), pr, kind: kindOf({ type, review }), at, posted: false, said, title: ['search every asset', 'cloud backup restore', 'identity-verify'][pr - 9001], demo: true }
+      const n = { key: `${who(i)}|${pr}`, who: who(i), pr, kind: kindOf({ type, review }), at, posted: false, said, title: ['search every asset', 'export to CSV', 'token verifier'][pr - 9001], demo: true }
       notes.set(n.key, n); queue.push(n)
       if (demoN === 2 && !params.get('towerzoom')) setTimeout(() => tower.flyTo(floorFor(9001), 3), 9000)
     }

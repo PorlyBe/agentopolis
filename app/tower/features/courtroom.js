@@ -27,7 +27,7 @@ export default function init(api, tower) {
     const end = t0 + 16_000
     for (const o of snap.sessions) { if (o.tool === 'AskUserQuestion') o.tool = null; if (o.ext?.meeting) o.ext.meeting = null; for (const g of o.agents || []) if (g.phase && SOCIAL_REVIEW.test(g.phase)) g.phase = 'build' }
     s.ext ??= {}
-    s.ext.courtroom = { id: 'demo-' + k, kind: 'skill', name: guilty ? 'devils-advocate-review' : 'security-review', start: t0, end: now >= end ? end : null,
+    s.ext.courtroom = { id: 'demo-' + k, kind: 'skill', name: guilty ? 'code-review' : 'security-review', start: t0, end: now >= end ? end : null,
       jurors: ['Review the diff', 'Check the tests'],
       ...(now >= end ? guilty
         ? { verdict: 'guilty', count: 3, nits: 0, charges: ['unwrap on user input in parse_amount', 'the retry loop never backs off', 'a test asserts on a log line'] }

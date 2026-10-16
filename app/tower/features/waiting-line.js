@@ -175,8 +175,8 @@ export default function init(api, tower) {
     ['Once the extension in Edge is signed in with this session\'s account, should I rerun the connection test?', 'reply'],
     ['When 1920 is applied, tell me and I\'ll check that the apply shows the bucket and the replaced task definition.', 'reply'],
     null,
-    ['Which screen should the desktop open first after sign-in: the passkey prompt or the email link?', 'question'],
-    ['Draft PR #1912 is up. Should I run devils-advocate-rust-review before you look?', 'reply'],
+    ['Which screen should the app open first after sign-in: the dashboard or the welcome tour?', 'question'],
+    ['Draft PR #1912 is up. Should I run a code review before you look?', 'reply'],
     ['All suites are green from inside api-server. Should I run /verify-api?', 'reply'],
   ]
   const NAMES = ['DESIGN', 'ID SERVER', 'WEB CI', 'ONBOARDING', 'BILLING', 'LEDGER']

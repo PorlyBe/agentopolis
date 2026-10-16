@@ -10,7 +10,7 @@ import { readSync, tailState } from '../lib/tail.mjs'
 import { filesOf, sweep } from '../lib/transcripts.mjs'
 
 const FIRST_READ = 2 * 1024 * 1024, STALE_MS = 3 * 3600_000, KEEP_MS = 10 * 60_000, MAX_CHARGES = 5
-const SKILL = /review|devils-advocate|code-review|security-review/i, DESC = /review/i, NOT_A_REVIEW = /^\W*(fix|apply|address|rebase|merge|build|implement)\b/i
+const SKILL = /review|code-review|security-review/i, DESC = /review/i, NOT_A_REVIEW = /^\W*(fix|apply|address|rebase|merge|build|implement)\b/i
 const scans = new Map()
 
 const blocks = e => Array.isArray(e.message?.content) ? e.message.content : [{ type: 'text', text: String(e.message?.content ?? '') }]

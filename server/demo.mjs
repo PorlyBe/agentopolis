@@ -446,7 +446,7 @@ export function generate(now) {
 // courtroom: a review on trial every five minutes, found guilty on three counts
 function courtroom(now) {
   const cyc = 5 * MIN, t0 = now - (now % cyc), end = t0 + 90 * SEC
-  return { id: 'trial-' + t0, kind: 'skill', name: 'devils-advocate-review', start: t0, end: now >= end ? end : null, jurors: ['Review the refund webhook'],
+  return { id: 'trial-' + t0, kind: 'skill', name: 'code-review', start: t0, end: now >= end ? end : null, jurors: ['Review the refund webhook'],
     ...(now >= end ? { verdict: 'guilty', count: 3, nits: 0, charges: ['unwrap on user input in parse_amount', 'the retry loop never backs off', 'a test asserts on a log line'] } : {}) }
 }
 

@@ -1,5 +1,5 @@
 // holidays: the tower's calendar, a date table read by ambience.js too (Halloween, Valentine's, Lunar New Year and
-// Christmas keep their decor there; this file draws the rest). the user is in Tokyo, so the Japanese year is in it: New Year
+// Christmas keep their decor there; this file draws the rest). The Japanese year is in it too: New Year
 // (kadomatsu at the door, fireworks over the roof around midnight), hanami (petals down the facade), Golden Week (carp
 // streamers on the sidewalk), Tanabata (a wish bamboo in the lobby, streamers off the awning), Obon (paper lanterns),
 // Tsukimi (the harvest moon, dango and pampas grass). ?date=YYYY-MM-DD previews a day; ?demo=holidays cycles through them.

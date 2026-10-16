@@ -21,7 +21,7 @@ export default function init(api, tower) {
   const tally = () => {
     const t = tower.snapshot?.fridayDrinks
     if (t?.ready || !demo) return t
-    return { ready: true, merged: 7, commits: 212, workflows: 31, cheapest: { title: 'typo fix', usd: 0.18 }, priciest: { title: 'CLOUD BACKUP', usd: 41.3 } }
+    return { ready: true, merged: 7, commits: 212, workflows: 31, cheapest: { title: 'typo fix', usd: 0.18 }, priciest: { title: 'CSV EXPORT', usd: 41.3 } }
   }
   const lines = t => !t ? ['THIS WEEK', '…'] : [
     'THIS WEEK', `PRs merged ${t.gh === false ? '?' : t.merged}`, `commits ${t.commits}`, `workflows ${t.workflows}`,

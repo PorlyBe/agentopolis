@@ -1,6 +1,6 @@
 // post-room: the basement between the lobby and the server room, one parcel per open PR in the repo (snap.street.post,
 // the whole team's). Drafts wait in a locked cage, ready PRs on the sorting rack; review requested from the user goes in the
-// FOR PAUL pigeonholes and approved ones are stamped onto the OUTBOUND cart. A parcel's size follows its diff (additions +
+// FOR YOU pigeonholes and approved ones are stamped onto the OUTBOUND cart. A parcel's size follows its diff (additions +
 // deletions); the user's are wrapped in his burgundy and gold, labels are stickers in their GitHub colour, changes requested
 // is a RETURN TO SENDER stamp, red CI smokes (never on a draft: the user's call), a merge conflict crushes the box and a week
 // without an update gathers dust and cobwebs. A new PR is carried in from the street by a courier; a merged one is taken
@@ -12,12 +12,12 @@ import { R, inR } from '../draw.js'
 const DAY = 864e5, STALE = 7 * DAY, TOP = 52, TIERS = [3, 19, 35]
 const CAGE = { x0: IX + 6, x1: IX + 176 }, RACK = { x0: IX + 190, x1: IX + 380 }, HOLE = { x: IX + 393, y: 52, cols: 4, rows: 2 }, CART = { x: IX + 394, w: 52 }
 const VAN_X = -178, VAN_W = 44
-const WRAP = { kraft: ['#b48a58', '#8e6a40', '#e0c890'], paul: ['#7a2a2e', '#561c20', '#d8b45a'], bot: ['#9aa3ad', '#6f7884', '#d8dee6'] }
-const AREA = { drafts: ['DRAFTS', '#8a6a2a'], ready: ['READY FOR REVIEW', '#2f5a8a'], paul: ['FOR YOU', '#7a2a2e'], outbound: ['OUTBOUND', '#2f6a3a'] }
+const WRAP = { kraft: ['#b48a58', '#8e6a40', '#e0c890'], mine: ['#7a2a2e', '#561c20', '#d8b45a'], bot: ['#9aa3ad', '#6f7884', '#d8dee6'] }
+const AREA = { drafts: ['DRAFTS', '#8a6a2a'], ready: ['READY FOR REVIEW', '#2f5a8a'], mine: ['FOR YOU', '#7a2a2e'], outbound: ['OUTBOUND', '#2f6a3a'] }
 const SPOTS = [[IX + 60, 'up', 'read'], [IX + 130, 'up', 'type'], [IX + 236, 'up', 'type'], [IX + 330, 'up', 'read'], [IX + 420, 'up', 'read'], [IX + 462, 'left', null]]
 const dims = n => n < 50 ? [6, 4] : n < 200 ? [8, 5] : n < 800 ? [9, 7] : n < 2500 ? [11, 8] : [13, 9]
-const where = p => p.draft ? 'drafts' : p.review === 'APPROVED' ? 'outbound' : p.forMe ? 'paul' : 'ready'
-const dropX = a => ({ drafts: IX + 110, ready: IX + 285, paul: IX + 420, outbound: IX + 420 })[a]
+const where = p => p.draft ? 'drafts' : p.review === 'APPROVED' ? 'outbound' : p.forMe ? 'mine' : 'ready'
+const dropX = a => ({ drafts: IX + 110, ready: IX + 285, mine: IX + 420, outbound: IX + 420 })[a]
 const stale = p => p.updatedAt && Date.now() - p.updatedAt > STALE
 const smokes = p => p.ci === 'failed' && !p.draft
 
@@ -58,8 +58,8 @@ export default function init(api, tower) {
 
   // ---------- layout: each area packs left to right, bottom tier first, then a second layer on top ----------
   function layout(f) {
-    placed = []; over = { drafts: 0, ready: 0, paul: 0, outbound: 0 }
-    const by = { drafts: [], ready: [], paul: [], outbound: [] }
+    placed = []; over = { drafts: 0, ready: 0, mine: 0, outbound: 0 }
+    const by = { drafts: [], ready: [], mine: [], outbound: [] }
     for (const p of [...shelved()].sort((a, b) => a.n - b.n)) by[where(p)].push(p)
     const pack = (ps, x0, x1, floors, layers, area) => {
       const T = floors.length, rows = floors.map(() => []), per = Math.ceil(ps.length / T)
@@ -87,10 +87,10 @@ export default function init(api, tower) {
     pack(by.drafts, CAGE.x0 + 4, CAGE.x1 - 4, TIERS.map(t => f.y - t), 2, 'drafts')
     pack(by.ready, RACK.x0 + 4, RACK.x1 - 4, TIERS.map(t => f.y - t), 2, 'ready')
     pack(by.outbound, CART.x + 4, CART.x + CART.w - 6, [f.y - 7], 2, 'outbound')
-    by.paul.forEach((p, i) => {
-      if (i >= HOLE.cols * HOLE.rows) return void over.paul++
+    by.mine.forEach((p, i) => {
+      if (i >= HOLE.cols * HOLE.rows) return void over.mine++
       const [w, h] = dims(p.size), cw = Math.min(w, 10), ch = Math.min(h, 7), r = hole(f, i)
-      placed.push({ p, x: r.x + (r.w - cw >> 1), y: r.y + r.h - ch, w: cw, h: ch, area: 'paul' })
+      placed.push({ p, x: r.x + (r.w - cw >> 1), y: r.y + r.h - ch, w: cw, h: ch, area: 'mine' })
     })
     return by
   }
@@ -98,10 +98,10 @@ export default function init(api, tower) {
   const signs = f => ({
     drafts: { x: CAGE.x0 + 30, y: f.top + 12, w: CAGE.x1 - CAGE.x0 - 60, h: 9 },
     ready: { x: RACK.x0 + 16, y: f.top + 12, w: RACK.x1 - RACK.x0 - 32, h: 9 },
-    paul: { x: HOLE.x, y: f.top + 12, w: 54, h: 9 },
+    mine: { x: HOLE.x, y: f.top + 12, w: 54, h: 9 },
     outbound: { x: CART.x + 3, y: f.y - 27, w: CART.w - 8, h: 7 },
   })
-  const count = (by, a) => a === 'ready' ? by.ready.length + by.paul.length + by.outbound.length : by[a].length
+  const count = (by, a) => a === 'ready' ? by.ready.length + by.mine.length + by.outbound.length : by[a].length
 
   // ---------- the people: two postal workers, couriers bringing new PRs, the merge run to the van ----------
   function sprite(c, p, now, palette, hue, anim, cap) {
@@ -198,7 +198,7 @@ export default function init(api, tower) {
 
   // ---------- drawing ----------
   function parcel(c, q, now) {
-    const p = q.p, [body, shade, tape] = p.mine ? WRAP.paul : p.bot ? WRAP.bot : WRAP.kraft
+    const p = q.p, [body, shade, tape] = p.mine ? WRAP.mine : p.bot ? WRAP.bot : WRAP.kraft
     let { x, y, w, h } = q
     for (const o of each(hooks.jolt, p, now)) if (o) { x += o.x || 0; y += o.y || 0 }
     if (p.conflict) {   // crushed: the lid caved in, the sides bulge
@@ -235,7 +235,7 @@ export default function init(api, tower) {
     R(c, 'rgba(40,60,90,.10)', RACK.x0, y - TOP, RACK.x1 - RACK.x0, TOP)
     for (const x of [RACK.x0, RACK.x0 + 63, RACK.x0 + 126, RACK.x1 - 3]) { R(c, '#3e5470', x, y - TOP, 3, TOP); R(c, '#5a7290', x, y - TOP, 1, TOP) }
     for (const t of [...TIERS, TOP]) { R(c, '#8a6a44', RACK.x0, y - t, RACK.x1 - RACK.x0, 2); R(c, '#a8845a', RACK.x0, y - t, RACK.x1 - RACK.x0, 1) }
-    // FOR PAUL: a wooden pigeonhole board on the wall; the OUTBOUND cart under it
+    // FOR YOU: a wooden pigeonhole board on the wall; the OUTBOUND cart under it
     const hy = y - HOLE.y
     R(c, '#5a3a22', HOLE.x, hy, 54, 25); R(c, '#c9a25a', HOLE.x, hy, 54, 1)
     for (let i = 0; i < HOLE.cols * HOLE.rows; i++) { const r = hole(f, i); R(c, '#2e1e12', r.x, r.y, r.w, r.h) }
@@ -274,7 +274,7 @@ export default function init(api, tower) {
     R(c, '#f2d24a', x, b - 11, 1, 2); R(c, '#d83a3a', x + VAN_W - 1, b - 11, 1, 2)
     if (van.door) { R(c, '#1a1a20', x + VAN_W - 1, b - 19, 1, 14); R(c, '#d0ccc4', x + VAN_W, b - 19, Math.round(5 * van.door), 14) }
     for (const wx of [x + 5, x + VAN_W - 11]) { R(c, '#16161a', wx, y - 5, 6, 5); R(c, '#9a9aa2', wx + 2, y - 3, 2, 2) }
-    van.load.slice(-3).forEach((p, i) => { if (van.door > 0.5) { const [w, h] = dims(p.size); R(c, p.mine ? WRAP.paul[0] : WRAP.kraft[0], x + VAN_W - 4 - w - i * 2, b - 6 - h - i, w, h) } })
+    van.load.slice(-3).forEach((p, i) => { if (van.door > 0.5) { const [w, h] = dims(p.size); R(c, p.mine ? WRAP.mine[0] : WRAP.kraft[0], x + VAN_W - 4 - w - i * 2, b - 6 - h - i, w, h) } })
   }
 
   tower.on('items', (out, now) => {
@@ -283,7 +283,7 @@ export default function init(api, tower) {
     out.push({ z: Z.WALL + 4, draw: c => {
       furniture(c, f)
       for (const q of placed) if (!q.layer || q.area !== 'outbound') parcel(c, q, now)
-      for (const a of ['drafts', 'ready', 'paul']) sign(c, s[a], AREA[a][1])
+      for (const a of ['drafts', 'ready', 'mine']) sign(c, s[a], AREA[a][1])
       sign(c, s.outbound, AREA.outbound[1], false)
     } })
     out.push({ z: Z.FLOOR + 4, draw: c => {
@@ -308,7 +308,7 @@ export default function init(api, tower) {
       const r = s[a], h = r.h * k, w = r.w * k; if (h < 9) continue
       const p = tower.worldToScreen(r.x, r.y), n = count(by, a), more = over[a] ? ` +${over[a]}` : ''
       if (p.x > tower.canvas.clientWidth || p.x + w < 0 || p.y > tower.canvas.clientHeight || p.y + h < 0) continue
-      v.font = font(Math.min(13, h * 0.62), 700); v.fillStyle = a === 'paul' ? '#f2d488' : '#f4ecd8'
+      v.font = font(Math.min(13, h * 0.62), 700); v.fillStyle = a === 'mine' ? '#f2d488' : '#f4ecd8'
       v.fillText(tower.fitText(`${AREA[a][0]} · ${n}${more}`, w - 4, v.font), p.x + w / 2, p.y + h / 2 + 0.5)
     }
     v.restore()
@@ -325,7 +325,7 @@ export default function init(api, tower) {
     const q = [...placed].reverse().find(q => inR(w, q, 1)); if (q) return { q }
     const s = signs(f); for (const a of Object.keys(AREA)) if (inR(w, s[a], 1)) return { area: a }
     if (inR(w, { x: CART.x, y: f.y - 27, w: CART.w, h: 27 })) return { area: 'outbound' }
-    if (inR(w, { x: HOLE.x, y: f.y - HOLE.y, w: 54, h: 25 })) return { area: 'paul' }
+    if (inR(w, { x: HOLE.x, y: f.y - HOLE.y, w: 54, h: 25 })) return { area: 'mine' }
     if (w.x >= CAGE.x0 && w.x <= CAGE.x1 && w.y >= f.y - TOP) return { area: 'drafts' }
     if (w.x >= RACK.x0 && w.x <= RACK.x1 && w.y >= f.y - TOP) return { area: 'ready' }
     return { room: true }
@@ -345,8 +345,8 @@ export default function init(api, tower) {
         + `<div class="m">${sizeName(p.size)} · ${p.size} lines changed · ${ci(p)}</div>${marks ? `<div class="m">${marks}</div>` : ''}${lab ? `<div class="m">${lab}</div>` : ''}<div class="m">↗ click to open the PR</div>`
     }
     if (h.area) {
-      const items = h.area === 'ready' ? [...by.ready, ...by.paul, ...by.outbound] : by[h.area]
-      const what = { drafts: 'not ready yet — locked in the cage', ready: 'on the sorting rack, the pigeonholes and the cart', paul: 'review requested from you', outbound: 'approved — stamped and on the cart' }[h.area]
+      const items = h.area === 'ready' ? [...by.ready, ...by.mine, ...by.outbound] : by[h.area]
+      const what = { drafts: 'not ready yet — locked in the cage', ready: 'on the sorting rack, the pigeonholes and the cart', mine: 'review requested from you', outbound: 'approved — stamped and on the cart' }[h.area]
       return `<div class="t">${AREA[h.area][0]} · ${items.length}</div><div class="m">${what}</div>${items.slice(0, 12).map(line).join('')}${items.length > 12 ? `<div class="m">… and ${items.length - 12} more</div>` : ''}`
     }
     const all = shelved(), n = fn => all.filter(fn).length
@@ -385,7 +385,7 @@ export default function init(api, tower) {
       [1915, 'auth: jwks cache', 'you', false, 'APPROVED', 'passed', 300, false, false, 0.6, ['auth']],
       [1916, 'reports: export csv', 'demo-eli', false, 'CHANGES_REQUESTED', 'passed', 180, false, false, 1.5, ['feature']],
       [1917, 'ci: cache cargo registry', 'demo-dee', false, 'CHANGES_REQUESTED', 'failed', 40, false, false, 3, ['ci']],
-      [1918, 'web: wallet send flow', 'demo-ana', false, null, 'failed', 1300, false, false, 0.8, ['web']],
+      [1918, 'web: checkout flow', 'demo-ana', false, null, 'failed', 1300, false, false, 0.8, ['web']],
       [1919, 'api: settle fee rounding', 'demo-ben', false, null, 'passed', 150, true, false, 4, ['fix']],
       [1920, 'docs: staging runbook', 'demo-eli', false, null, null, 25, false, false, 15, ['docs']],
       [1921, 'chore(deps): bump vite', 'dependabot[bot]', false, null, 'passed', 12, false, false, 0.1, ['deps']],

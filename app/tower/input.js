@@ -23,7 +23,7 @@ export function createInput(st, camera, ceo, overlay) {
       const inR = (r, pad = 2) => w.x >= r.x - pad && w.x <= r.x + r.w + pad && w.y >= r.y - pad && w.y <= r.y + r.h + pad
       if (inR(slots.phone, 3)) return { ceo: 'phone' }
       if (inR(slots.note, 3)) return { ceo: 'note' }
-      if (w.x > slots.seat - 8 && w.x < slots.seat + 8 && w.y > slots.floor.y - 48 && w.y < slots.desk.y) return { ceo: 'paul' }
+      if (w.x > slots.seat - 8 && w.x < slots.seat + 8 && w.y > slots.floor.y - 48 && w.y < slots.desk.y) return { ceo: 'owner' }
     }
     for (const f of st.floors) if (f.kind === 'session' && !squeezed(f)) { const b = plaqueBox(f); if (w.x >= b.x && w.x <= b.x + b.w && w.y >= b.y && w.y <= b.y + b.h) return { sign: f } }
     const base = st.floors[0]
