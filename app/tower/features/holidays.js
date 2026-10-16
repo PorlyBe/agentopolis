@@ -43,9 +43,11 @@ export function today() {
   return new Date(y, m - 1, d, hh, mm, now.getSeconds())
 }
 export function holidayOf(d = today()) {
-  if (pinned === 'none' && !fixed && !DEMO) return null
+  if (noDecor()) return null
   return calendarOf(d)
 }
+// the theme says no holiday (a skin picked without one): no holiday decor, and no seasonal decor either (ambience.js)
+export const noDecor = () => pinned === 'none' && !fixed && !DEMO
 // the calendar's holiday on d, whatever themes.js pinned
 export function calendarOf(d) {
   const y = d.getFullYear(), md = (d.getMonth() + 1) * 100 + d.getDate()

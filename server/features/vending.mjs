@@ -41,4 +41,4 @@ function snapshot(snap) {
   snap.vending = { kind: lead.kind, text: lead.text, resetsAt: lead.resetsAt, limit: lead.limit, at: lead.at, office: recent.size >= 2, hits }
 }
 
-export default { session: stalled, agent: stalled, snapshot }
+export default { serves: ['vending'], session: stalled, agent: stalled, snapshot }

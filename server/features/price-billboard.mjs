@@ -28,4 +28,4 @@ function snapshot(snap) {
   snap.priceBillboard = state.list && Date.now() - state.at < STALE ? { ok: true, at: state.at, list: state.list } : { ok: false, at: state.at || null }
 }
 
-export default { snapshot }
+export default { serves: ['price-billboard'], snapshot }   // off: no CoinGecko call at all

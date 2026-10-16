@@ -1,6 +1,6 @@
 // floor-sounds: zoomed in on a floor you hear it — keyboards while its tools run, the copier whirring (crunching while
 // printer-jam has it jammed), the elevator ding when the car stops there, coffee pouring in the café, street traffic at
-// the lobby, wind on the roof. All synthesized; plays through soundscape.js's AudioContext and follows its off/low/high
+// the lobby, wind on the roof. All synthesized; plays into soundscape.js's shared bus, dipping the tower ambience under it, and follows its off/low/high
 // button (nothing starts before a gesture). Volume and pan follow the camera; silent once zoomed out to the tower.
 // ?demo=floorsounds flies onto the busiest floor and shows a "click for sound" hint.
 import { IX } from '../building.js'
@@ -18,7 +18,7 @@ export default function init(api, tower) {
 
   function graph() {
     if (master) return
-    master = ctx.createGain(); master.gain.value = 0.0001; master.connect(ctx.destination)
+    master = ctx.createGain(); master.gain.value = 0.0001; master.connect(api.soundscape.out || ctx.destination)
     noise = ctx.createBuffer(1, ctx.sampleRate * 3, ctx.sampleRate)
     const d = noise.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1
     const brown = ctx.createBuffer(1, ctx.sampleRate * 5, ctx.sampleRate), b = brown.getChannelData(0)
@@ -110,12 +110,13 @@ export default function init(api, tower) {
     ctx = api.soundscape?.ctx
     if (!ctx || !tower.floors.length) return
     const g = level()
-    if (!g || !tower.active) { if (master) master.gain.setTargetAtTime(0.0001, ctx.currentTime, 0.15); return }
+    if (!g || !tower.active) { api.soundscape.duck = 0; if (master) master.gain.setTargetAtTime(0.0001, ctx.currentTime, 0.15); return }
     graph()
     if (ctx.state !== 'running') return
     master.gain.setTargetAtTime(g, ctx.currentTime, 0.3)
     const now = performance.now(), horizon = now + TICK * 2, at = ms => ctx.currentTime + Math.max(0, ms - now) / 1000
     const W = weights(), live = new Set(), wall = Date.now()
+    api.soundscape.duck = Math.max(0, ...W.values())                // the tower ambience dips under the floor in view
     let street = 0, wind = 0, hiss = 0
     for (const f of tower.floors) {
       const w = W.get(f.id); if (!w) continue
@@ -151,7 +152,7 @@ export default function init(api, tower) {
     beds.wind.flt.frequency.setTargetAtTime(420 + 260 * (0.5 + 0.5 * Math.sin(now / 2300)), ctx.currentTime, 0.4)
     beds.hiss.g.gain.setTargetAtTime(hiss * 0.012, ctx.currentTime, 0.5)
     for (const k of timers.keys()) if (!live.has(k)) timers.delete(k)
-    counts.wind = Math.round(wind * 100); counts.street = Math.round(street * 100)
+    counts.wind = Math.round(wind * 100); counts.street = Math.round(street * 100); counts.duck = Math.round(api.soundscape.duck * 100)
     if (hint) hint.dataset.counts = JSON.stringify(counts)
     const b = api.soundscape?.button; if (b) b.dataset.floorSounds = JSON.stringify(counts)
   }

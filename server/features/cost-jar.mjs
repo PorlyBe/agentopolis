@@ -2,6 +2,7 @@
 // From the shared crawl of every transcript touched today (server/lib/crawler.mjs: a file first seen mid-day is entered
 // at local midnight, then only its appended bytes are read). Each message counts once (message id, else requestId).
 // Attaches session.ext['cost-jar'] = { usdToday, tokensToday, byModel } and snap.cost (the TV shows the total).
+// usd prices cache reads; tokensToday / byModel.tokens leave them out (re-reading the cached context is not new work).
 import * as crawler from '../lib/crawler.mjs'
 import { own, tsOf } from '../lib/tail.mjs'
 
@@ -35,7 +36,7 @@ function costOf(model, u) {
   const prompt = inp + read + (u.cache_creation_input_tokens || 0)
   const r = long && prompt > long.above ? long.rates : base
   const usd = (inp * r[0] + out * r[1] + w5 * r[2] + w1 * r[3] + read * r[4]) / 1e6 * (u.speed === 'fast' ? FAST : 1)
-  return { label, usd, tokens: prompt + out }
+  return { label, usd, tokens: prompt - read + out }   // tokens leave out cache reads, like tv.mjs's tokensToday
 }
 
 const msgs = new Map()    // message id -> { session, model, usd, tokens }

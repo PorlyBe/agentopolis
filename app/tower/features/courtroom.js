@@ -23,7 +23,7 @@ export default function init(api, tower) {
     if (!demo) return
     const now = Date.now(); demoT0 ||= now
     const s = [...(snap.sessions || [])].sort((a, b) => (b.agents?.length || 0) - (a.agents?.length || 0))[0]; if (!s) return
-    const CYC = 60_000, k = Math.floor((now - demoT0) / CYC), t0 = demoT0 + k * CYC, guilty = k % 2 === 0
+    const CYC = 60_000, k = Math.floor((now - demoT0) / CYC), t0 = demoT0 + k * CYC, guilty = k % 3 === 0, adjourned = k % 3 === 2
     const end = t0 + 16_000
     for (const o of snap.sessions) { if (o.tool === 'AskUserQuestion') o.tool = null; if (o.ext?.meeting) o.ext.meeting = null; for (const g of o.agents || []) if (g.phase && SOCIAL_REVIEW.test(g.phase)) g.phase = 'build' }
     s.ext ??= {}
@@ -31,6 +31,7 @@ export default function init(api, tower) {
       jurors: ['Review the diff', 'Check the tests'],
       ...(now >= end ? guilty
         ? { verdict: 'guilty', count: 3, nits: 0, charges: ['unwrap on user input in parse_amount', 'the retry loop never backs off', 'a test asserts on a log line'] }
+        : adjourned ? { verdict: 'adjourned', count: 0, nits: 0, charges: [] }
         : { verdict: 'acquitted', count: 0, nits: 1, charges: ['a comment restates the code'] } : {}) }
   })
   const sessions = () => tower.snapshot?.sessions || []
@@ -78,12 +79,11 @@ export default function init(api, tower) {
     const agents = (court.s.agents || []).filter(g => g.state !== 'done').sort((a, b) => (/review|check|audit/i.test(b.description) ? 1 : 0) - (/review|check|audit/i.test(a.description) ? 1 : 0))
     agents.slice(0, SEATS.length).forEach((g, i) => { const p = tower.person(g.id); if (p && !p.leaving) want.set(p.id, { x: SEATS[i], face: 'left', pose: 'sit', seatH: SEAT_H.dining, role: 'jury' }) })
     for (const id of [...sent.keys()]) if (!want.has(id)) { tower.release(id); sent.delete(id) }
-    const car = tower.crowd?.car, load = fl => (car?.riders.length || 0) + (car?.queue.get(fl)?.length || 0)
     let budget = 2
     for (const [id, w] of want) {
       const p = tower.person(id)
       if (sent.get(id) === w.x && p?.steered) continue
-      if (p && p.floor && p.floor !== 'meeting' && (budget <= 0 || load(p.floor) > 3)) continue
+      if (p && p.floor && p.floor !== 'meeting' && (budget <= 0 || tower.liftLoad(p.floor) > 3)) continue
       budget--
       if (tower.sendTo(id, 'meeting', w.x, { face: w.face, pose: w.pose, seatH: w.seatH, activity: 'court:' + w.role })) sent.set(id, w.x)
     }
@@ -205,7 +205,7 @@ export default function init(api, tower) {
       if (i >= list.length) return null
       return { who: 'clerk', text: `${t.verdict === 'guilty' ? 'Count' : 'Note'} ${i + 1}: ${list[i]}` }
     }
-    if (p === 'verdict' && now - court.verdictAt < 4000) return { who: 'judge', text: t.verdict === 'guilty' ? `Guilty on ${t.count} count${t.count === 1 ? '' : 's'}!` : 'Acquitted. Court is adjourned.' }
+    if (p === 'verdict' && now - court.verdictAt < 4000) return { who: 'judge', text: t.verdict === 'guilty' ? `Guilty on ${t.count} count${t.count === 1 ? '' : 's'}!` : t.verdict === 'adjourned' ? 'Court adjourned — no ruling.' : 'Acquitted. Court is adjourned.' }
     return null
   }
   tower.on('overlay', (c, now) => {
@@ -220,8 +220,9 @@ export default function init(api, tower) {
     if (phase(now) !== 'verdict') return
     const t = court.t, guilty = t.verdict === 'guilty', age = now - court.verdictAt
     const o = tower.worldToScreen(IX + 200, f.top + 38), s = Math.max(0.5, k / 3) * (1 + Math.max(0, 1 - age / 260) * 0.8)
-    const main = guilty ? `GUILTY — ${t.count} COUNT${t.count === 1 ? '' : 'S'}` : 'ACQUITTED', sub = !guilty && t.nits ? `with ${t.nits} nit${t.nits === 1 ? '' : 's'}` : ''
-    const col = guilty ? '#c8352f' : '#2f9a4a'
+    const adj = t.verdict === 'adjourned'
+    const main = guilty ? `GUILTY — ${t.count} COUNT${t.count === 1 ? '' : 'S'}` : adj ? 'ADJOURNED' : 'ACQUITTED', sub = !guilty && !adj && t.nits ? `with ${t.nits} nit${t.nits === 1 ? '' : 's'}` : ''
+    const col = guilty ? '#c8352f' : adj ? '#7a7f88' : '#2f9a4a'
     c.save(); c.translate(o.x, o.y); c.rotate(-0.11); c.scale(s, s)
     c.globalAlpha = Math.min(1, age / 160) * Math.min(1, (HOLD_MS - age) / 800)
     c.font = tower.font(26, 900); const w = c.measureText(main).width + 28, h = sub ? 50 : 38
@@ -239,7 +240,7 @@ export default function init(api, tower) {
     const on = (x, wd, top) => w.x >= x && w.x <= x + wd && w.y >= top && w.y <= f.y
     if (!person && !on(BENCH.x, BENCH.w, f.y - BENCH.h - 20) && !on(DOCK.x, DOCK.w, f.y - DOCK.h - 6) && !on(JURY.x, JURY.w, f.y - JURY.h) && !on(CLERK.x, CLERK.w, f.y - CLERK.h - 16)) return null
     const t = court.t, s = sessionOf(court.s.id) || court.s, mins = ms => Math.max(0, Math.round(ms / 60000)) + 'm'
-    const st = t.end ? (t.verdict === 'guilty' ? `<b style="color:#ef5a5a">guilty — ${t.count} count${t.count === 1 ? '' : 's'}</b>` : `<b style="color:#5fd17a">acquitted</b>${t.nits ? ` · ${t.nits} nit${t.nits === 1 ? '' : 's'}` : ''}`) : `<b style="color:#f2a43a">in session</b> · ${mins(Date.now() - t.start)}`
+    const st = t.end ? (t.verdict === 'guilty' ? `<b style="color:#ef5a5a">guilty — ${t.count} count${t.count === 1 ? '' : 's'}</b>` : t.verdict === 'adjourned' ? '<b style="color:#9aa0a8">adjourned</b> · no ruling' : `<b style="color:#5fd17a">acquitted</b>${t.nits ? ` · ${t.nits} nit${t.nits === 1 ? '' : 's'}` : ''}`) : `<b style="color:#f2a43a">in session</b> · ${mins(Date.now() - t.start)}`
     const counts = (t.charges || []).map((x, i) => `<div class="m">${i + 1}. ${esc(x)}</div>`).join('')
     const jury = t.jurors?.length ? `<div class="m">jury: ${t.jurors.map(esc).join(' · ')}</div>` : ''
     return `<div class="t">⚖️ ${esc(s.title || '')} v. ${esc(t.name)}</div><div class="m">${st}</div>${jury}${counts}`

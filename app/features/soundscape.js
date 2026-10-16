@@ -1,6 +1,8 @@
 // soundscape: the ambience button in the toolbar (off / low / high, default off) and the AudioContext it plays
 // through, started inside a user gesture as browsers require. The tower's ambience (tower/features/ambience.js) makes the
-// sounds: api.soundscape = { level() 0..1, ctx (null until a gesture while it is on) }.
+// sounds: api.soundscape = { level() 0..1, ctx (null until a gesture while it is on), out, duck }. Every voice plays into
+// `out`, one bus with a compressor on it, so the layers (tower ambience, a floor's close-up sounds, one-off effects) never
+// sum past a cap; `duck` (0..1) is how far floor-sounds.js has the camera on one floor, and the tower ambience dips under it.
 const KEY = 'agent-office.soundscape'
 const MODES = [
   { id: 'off', icon: '🔇', label: 'off', gain: 0 },
@@ -9,7 +11,7 @@ const MODES = [
 ]
 
 export default function init(api) {
-  let mode = 'off', ctx = null
+  let mode = 'off', ctx = null, bus = null
   try { const m = localStorage.getItem(KEY); if (MODES.some(x => x.id === m)) mode = m } catch {}
   const cur = () => MODES.find(x => x.id === mode)
   function wake() {
@@ -31,5 +33,14 @@ export default function init(api) {
     api.toast(`Office ambience: ${cur().label}`)
   }
   document.getElementById('tbAlerts').append(btn)
-  api.soundscape = { level: () => document.hidden ? 0 : cur().gain, get ctx() { return ctx }, button: btn }
+  function out() {
+    if (!ctx) return null
+    if (bus?.context !== ctx) {
+      const comp = ctx.createDynamicsCompressor()
+      comp.threshold.value = -20; comp.knee.value = 10; comp.ratio.value = 8; comp.attack.value = 0.004; comp.release.value = 0.3
+      bus = ctx.createGain(); bus.gain.value = 0.9; bus.connect(comp).connect(ctx.destination)
+    }
+    return bus
+  }
+  api.soundscape = { level: () => document.hidden ? 0 : cur().gain, get ctx() { return ctx }, get out() { return out() }, duck: 0, button: btn }
 }

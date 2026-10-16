@@ -109,13 +109,12 @@ function meetings(api, tower, demo) {
       }
     }
     for (const [id] of sent) if (!roster.has(id)) { tower.release(id); sent.delete(id) }
-    // a few at a time: a full car with someone still queued on its floor reopens its doors forever (people.js)
-    const car = tower.crowd?.car, load = f => (car?.riders.length || 0) + (car?.queue.get(f)?.length || 0)
+    // a few at a time, so the lift is not swamped
     let budget = 2
     for (const [id, r] of roster) {
       if (sent.get(id) === r.seat && live(id)?.steered) continue
       const p = live(id)
-      if (p && p.floor !== 'meeting' && (budget <= 0 || load(p.floor) > 3)) continue
+      if (p && p.floor !== 'meeting' && (budget <= 0 || tower.liftLoad(p.floor) > 3)) continue
       budget--
       if (tower.sendTo(id, 'meeting', r.x, { face: r.face, pose: r.pose || 'stand', seatH: r.seatH, anim: r.anim, activity: r.activity })) sent.set(id, r.seat)
     }

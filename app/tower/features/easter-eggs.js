@@ -35,7 +35,7 @@ export default function init(api, tower) {
   }
   const on = now => disco && now - disco < DISCO_MS
   function beat(ctx, vol) {
-    const out = ctx.createGain(); out.gain.value = 0.22 * vol; out.connect(ctx.destination)
+    const out = ctx.createGain(); out.gain.value = 0.22 * vol; out.connect(api.soundscape.out || ctx.destination)
     const t0 = ctx.currentTime + 0.05, spb = 0.5, bars = Math.floor(DISCO_MS / 1000 / spb)
     const BASS = [55, 55, 82.4, 73.4]
     for (let i = 0; i < bars; i++) {
@@ -130,7 +130,7 @@ export default function init(api, tower) {
   let patched = false
   function chime(freqs, step) {
     const s = sound(); if (!s) return
-    const ctx = s.ctx, out = ctx.createGain(); out.gain.value = 0.12 * s.level(); out.connect(ctx.destination)
+    const ctx = s.ctx, out = ctx.createGain(); out.gain.value = 0.12 * s.level(); out.connect(s.out || ctx.destination)
     freqs.forEach((f, i) => {
       if (!f) return
       const t = ctx.currentTime + 0.05 + i * step, o = ctx.createOscillator(), g = ctx.createGain()

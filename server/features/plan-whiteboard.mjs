@@ -25,6 +25,7 @@ function plan({ entries }) {
 
 const kept = new Map() // session id -> last approved plan, outliving the transcript tail
 export default {
+  serves: ['plan-whiteboard'],
   session: plan,
   snapshot(snap) {
     for (const s of snap.sessions) {

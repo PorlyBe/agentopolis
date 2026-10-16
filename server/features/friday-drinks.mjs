@@ -38,6 +38,7 @@ async function stamp() {
 }
 
 export default {
+  serves: ['friday-drinks'],
   after: ['tv', 'trophies', 'cost-jar'],
   snapshot(snap) {
     crawler.week.poke(snap.now)

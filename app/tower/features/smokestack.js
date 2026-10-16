@@ -4,7 +4,7 @@
 // (snap.weather wind/windDir). A dial on the stack shows tokens/min; at night the plume is lit orange from below.
 // ?demo=smokestack cycles quiet → busy → workflow every 10 s.
 import { R } from '../draw.js'
-const MAX = 200, WIN = 3 * 60_000, LO = 3e5, HI = 3e7
+const MAX = 200, WIN = 3 * 60_000, LO = 1e4, HI = 1e6
 const fmt = n => n >= 1e9 ? (n / 1e9).toFixed(n >= 1e10 ? 0 : 1) + 'B' : n >= 1e6 ? (n / 1e6).toFixed(n >= 1e7 ? 0 : 1) + 'M' : n >= 1e3 ? Math.round(n / 1e3) + 'k' : String(Math.round(n))
 
 export default function init(api, tower) {
@@ -18,7 +18,7 @@ export default function init(api, tower) {
     const x = tower.interior.x0 + 457, base = f.y - 3
     return { x, w: 14, base, top: base - 62, mouth: { x: x + 7, y: base - 64 } }
   }
-  const DEMO = [4e5, 5e6, 3.2e7]
+  const DEMO = [2e4, 2.5e5, 1.6e6]
   const demoRate = () => DEMO[Math.floor(Date.now() / 10_000) % 3]
   const level = () => {
     const r = demo ? demoRate() : shown

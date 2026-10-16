@@ -1,10 +1,10 @@
-// ambience: the tower's atmosphere. Seasonal decor, dated by holidays.js's calendar (?season=halloween|christmas|winter|spring|
+// ambience: the tower's atmosphere. Seasonal decor, dated by holidays.js's calendar and off when the theme names no holiday (?season=halloween|christmas|winter|spring|
 // summer|autumn|lunar|valentine|none forces one; ?date=YYYY-MM-DD moves the day), the soundscape heard from the tower's people (soundscape.js keeps the button and setting), an LED ticker over the lobby's reception (snap.ticker) and the street's GitHub life (snap.street): bot couriers to
 // the engineers' doors, emotes over their roofs, mail for the user in the lobby mailbox, the Gazette stand on a new headline.
 // Demos: ?demo=street (traffic + mail every 24 s), ?demo=gazette-stand, ?demo=ghost (the shaft ghost every 12 s),
 // ?demo=towersound (fills the café's games for a minute, to hear them).
 import { BW, SHAFT } from '../building.js'
-import { holidayOf, today } from './holidays.js'
+import { holidayOf, today, noDecor } from './holidays.js'
 import { R } from '../draw.js'
 
 const SEASONS = ['halloween', 'christmas', 'winter', 'spring', 'summer', 'autumn', 'lunar', 'valentine', 'none']
@@ -23,7 +23,7 @@ const inR = (w, r, pad = 2) => w && w.x >= r.x - pad && w.x <= r.x + r.w + pad &
 export default function init(api, tower) {
   const { Z } = tower
   const demos = api.params.getAll('demo')
-  const forced = api.params.get('season'), season = () => SEASONS.includes(forced) ? forced : seasonOf()
+  const forced = api.params.get('season'), season = () => SEASONS.includes(forced) ? forced : noDecor() ? 'none' : seasonOf()
   let night = 0
   const lit = () => night > 0.25
   const hooks = { items: [], glow: [], step: [], sync: [], overlay: [], hover: [], click: [] }
@@ -495,7 +495,7 @@ function sound(api, tower) {
   const counts = { keys: 0, clink: 0, thock: 0, clack: 0, ding: 0, bleep: 0, lift: 0 }
   function graph() {
     if (master || !ctx) return
-    master = ctx.createGain(); master.gain.value = 0.0001; master.connect(ctx.destination)
+    master = ctx.createGain(); master.gain.value = 0.0001; master.connect(api.soundscape.out || ctx.destination)
     noise = ctx.createBuffer(1, ctx.sampleRate * 4, ctx.sampleRate)
     const d = noise.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1
     const brown = ctx.createBuffer(1, ctx.sampleRate * 6, ctx.sampleRate), b = brown.getChannelData(0)
@@ -543,7 +543,7 @@ function sound(api, tower) {
     if (!g) { if (master) master.gain.setTargetAtTime(0.0001, ctx.currentTime, 0.1); return }
     graph()
     if (ctx.state !== 'running') return
-    master.gain.setTargetAtTime(g, ctx.currentTime, 0.4)
+    master.gain.setTargetAtTime(g * (1 - 0.75 * (api.soundscape.duck || 0)), ctx.currentTime, 0.4)   // dips while a floor's own sounds play
     const now = performance.now(), horizon = now + 150, at = ms => ctx.currentTime + Math.max(0, ms - now) / 1000
     const people = tower.people, live = new Set()
     for (const p of people.filter(p => p.atDesk && !p.leaving && p.state === 'tool' && !READING.test(p.data?.tool || '')).slice(0, 6)) {
@@ -562,7 +562,7 @@ function sound(api, tower) {
     play('cafe:pinball0', 1, 'pinball', () => 400 + Math.random() * 1600, ding)
     play('cafe:arcade0', 1, 'arcade', () => 1500 + Math.random() * 3500, bleep)
     const car = tower.car
-    if (carWas === 'moving' && car.state !== 'moving') lift(at(now), panAt(car.x), volAt(car.x, car.y) * 0.8)
+    if (carWas === 'moving' && car.state !== 'moving' && !(api.soundscape.duck > 0.5)) lift(at(now), panAt(car.x), volAt(car.x, car.y) * 0.8)
     carWas = car.state
     const b = api.soundscape?.button; if (b) b.dataset.towerSounds = JSON.stringify(counts)
   }, 60)

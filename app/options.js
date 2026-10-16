@@ -21,7 +21,7 @@ export function parseTheme(name, customs = null) {
   return { skin: skin || 'classic', holiday: holiday || 'none', name: [skin, holiday].filter(Boolean).join('+'), bad }
 }
 
-// custom themes (settings.customThemes): a base skin for decor and filter, and a colour per slot; themes.js derives the rest
+// custom themes (settings.customThemes): a base skin for decor, and a colour per slot; themes.js derives the rest
 export const THEME_SLOTS = ['sky', 'horizon', 'night', 'skyline', 'facade', 'floor', 'slab', 'street', 'accent']
 export const MAX_CUSTOM = 12
 const SLUG = /^[a-z0-9-]{1,24}$/

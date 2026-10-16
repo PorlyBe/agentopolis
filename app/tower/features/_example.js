@@ -14,7 +14,7 @@ const NOTE = { dx: 214, w: 14, h: 12 }   // where on the floor: x is IX + dx, pi
 export default function init(api, tower) {
   const { Z, font } = tower
   const params = api.params
-  const demo = params.getAll('demo').includes(DEMO)
+  const demo = api.demo(DEMO)
   const notes = new Map()   // session id -> { calls, title, bump }
   let flown = false
 

@@ -2,7 +2,7 @@
 // its own decor) plus a holiday from holidays.js's calendar, whose decor holidays.js and ambience.js keep drawing.
 // The ⚙ settings panel or --theme <name> on the server (snap.theme); ?theme=<name> overrides both; ?demo=themes cycles them every 8 s.
 // Names: auto (classic + the date's holiday), a skin (options.js SKINS), custom:<slug> (a theme saved from the Look tab's
-// editor, snap.customThemes: a base skin's decor and filter over nine colours), a holiday key (halloween, christmas,
+// editor, snap.customThemes: a base skin's decor over nine colours, untinted), a holiday key (halloween, christmas,
 // newyear, valentine, lunar, hanami, goldenweek, tanabata, obon, tsukimi: classic + that holiday) or skin+holiday.
 import { setPalette, CLASSIC as TOWER, BW, SHAFT, WALL, SLAB, IX, FW, GROUND, STREET_L, PLAQUE, garageRect } from '../building.js'
 import { CLASSIC as STREET } from '../city.js'
@@ -25,6 +25,10 @@ function pixText(c, s, x, y, k = 1, down = false) {   // a 3x5 pixel font in the
   }
 }
 
+// sky: false — the skin paints its own sky (grid paper, space, the sea): no sun, moon, stars, clouds or weather, and the
+// real weather neither dulls the light nor shuts the roof. own: the weather family it already draws itself ('rain', 'snow').
+// A custom theme takes its base's decor, sky and own, but not its tint: the nine colours are the theme's colouring, and a
+// wash over them (blueprint's blue, noir's grey) would hide them. The Game Boy's four greens are a display mode and stay.
 const SKINS = {
   classic: { label: 'Classic' },
   cyberpunk: {
@@ -43,7 +47,7 @@ const SKINS = {
       dayTop: [44, 26, 78], dayHz: [150, 64, 140], nightTop: [6, 4, 18], nightHz: [70, 20, 84],
       styles: [['#2e2a44', '#1e1a30', '#ff3fb4'], ['#24304a', '#162036', '#3ae0ff'], ['#3a2a3e', '#24182a', '#b46aff'], ['#1e3038', '#122028', '#3affc0']],
     },
-    tint: [['multiply', 'rgba(110,80,170,.55)'], ['screen', 'rgba(40,0,60,.18)']],
+    tint: [['multiply', 'rgba(110,80,170,.55)'], ['screen', 'rgba(40,0,60,.18)']], own: 'rain',
   },
   cottage: {
     label: 'Cottage',
@@ -116,7 +120,7 @@ const SKINS = {
       dayTop: [70, 72, 80], dayHz: [130, 132, 138], nightTop: [4, 4, 8], nightHz: [26, 26, 32],
       styles: [['#5a5856', '#3a3836', '#7a7876'], ['#4a4a4e', '#2e2e32', '#6a6a6e'], ['#6a6662', '#4a4642', '#8a8682'], ['#3e3e40', '#262628', '#5e5e60']],
     },
-    tint: [['saturation', 'rgb(128,128,128)'], ['soft-light', 'rgba(0,0,0,.4)']],
+    tint: [['saturation', 'rgb(128,128,128)'], ['soft-light', 'rgba(0,0,0,.4)']], own: 'rain',
   },
   underwater: {
     label: 'Underwater',
@@ -134,7 +138,7 @@ const SKINS = {
       dayTop: [8, 50, 96], dayHz: [40, 150, 170], nightTop: [2, 8, 26], nightHz: [8, 40, 64],
       styles: [['#3a8a8a', '#2a6a6a', '#8ad0c8'], ['#c87a6a', '#a05a4a', '#f0b0a0'], ['#c8b488', '#a89468', '#e8d8b0'], ['#4a7aa0', '#3a5a80', '#8ab8d8']],
     },
-    tint: [['multiply', 'rgba(130,215,225,.75)'], ['screen', 'rgba(0,50,80,.22)']],
+    tint: [['multiply', 'rgba(130,215,225,.75)'], ['screen', 'rgba(0,50,80,.22)']], sky: false,
   },
   'space-station': {
     label: 'Space station',
@@ -152,7 +156,7 @@ const SKINS = {
       dayTop: [2, 2, 8], dayHz: [10, 12, 28], nightTop: [0, 0, 4], nightHz: [6, 6, 20],
       styles: [['#5a6270', '#3a4048', '#8a94a4'], ['#4a5464', '#2e3644', '#6ab0ff'], ['#6a7080', '#4a5060', '#f0c020'], ['#525a68', '#343a46', '#9aa4b4']],
     },
-    tint: [['multiply', 'rgba(205,218,240,.85)']],
+    tint: [['multiply', 'rgba(205,218,240,.85)']], sky: false,
   },
   gameboy: { label: 'Game Boy', quantise: true },
   blueprint: {
@@ -171,7 +175,7 @@ const SKINS = {
       dayTop: [24, 70, 140], dayHz: [34, 88, 160], nightTop: [10, 30, 70], nightHz: [20, 50, 100],
       styles: [['#2a5a9a', '#1e4a86', '#4a7ab8'], ['#24508e', '#1a4278', '#3a6aa8'], ['#3060a0', '#22508a', '#5080c0'], ['#2a5490', '#1e4680', '#4070b0']],
     },
-    tint: [['color', 'rgb(40,96,176)']],
+    tint: [['color', 'rgb(40,96,176)']], sky: false,
   },
   steampunk: {
     label: 'Steampunk',
@@ -207,7 +211,7 @@ const SKINS = {
       dayTop: [140, 165, 195], dayHz: [215, 225, 235], nightTop: [8, 12, 30], nightHz: [40, 52, 80],
       styles: [['#9a3a2a', '#7a2a1e', '#eef2f6'], ['#6a4a30', '#4a3220', '#eef2f6'], ['#5a6a5a', '#3e4a3e', '#eef2f6'], ['#8a6a4a', '#6a4e34', '#eef2f6']],
     },
-    tint: [['soft-light', 'rgba(200,220,255,.25)']],
+    tint: [['soft-light', 'rgba(200,220,255,.25)']], own: 'snow',
   },
   candy: {
     label: 'Candy',
@@ -250,11 +254,16 @@ export default function init(api, tower) {
     if (cur === key) return
     const rebuild = cur !== null && sk !== skin
     cur = key; theme = t; skin = sk
-    setPalette(skin.building); tower.city.setTheme(skin.city ? { id, ...skin.city } : null)
+    setPalette(skin.building); tower.city.setTheme(skin.city ? { id, ...skin.city, sky: skin.sky !== false, own: skin.own || null } : null)
     pinHoliday(t.holiday)
     if (rebuild && tower.floor('lobby')) tower.setOpen('lobby', null)   // a no-op squeeze that rebuilds the cached layers
   }
   const wanted = () => DEMO ? CYCLE[Math.floor((Date.now() - T0) / 8000) % CYCLE.length] : urlTheme || tower.snapshot?.theme || 'auto'
+  const d = api.daylight                                     // no sky, no weather: the roof stays open and the light undimmed
+  if (d && !d.themed) {
+    const kind = d.weatherKind, gloom = d.gloom
+    Object.assign(d, { themed: true, weatherKind: () => skin.sky === false ? 'clear' : kind(), gloom: () => skin.sky === false ? 0 : gloom() })
+  }
   if (DEMO || urlTheme) apply(wanted())
   tower.on('snapshot', data => { customs = data.customThemes || []; apply(DEMO || urlTheme ? wanted() : data.theme || 'auto') })
   if (DEMO) tower.on('step', () => apply(wanted()))
@@ -629,7 +638,7 @@ export default function init(api, tower) {
   })
   const POST = { cyberpunk, synthwave, noir, underwater, 'space-station': hullLights, blueprint, 'winter-cabin': snowfall, gameboy }
   tower.on('post', (c, now, ctx) => {
-    if (!tower.floors.length || (!skin.tint && !skin.quantise)) return
+    if (!tower.floors.length) return
     const v = ctx.view
     for (const [op, col] of skin.tint || []) { c.globalCompositeOperation = op; c.fillStyle = col; c.fillRect(v.x0 - 2, v.y0 - 2, v.x1 - v.x0 + 4, v.y1 - v.y0 + 4) }
     c.globalCompositeOperation = 'source-over'
@@ -666,7 +675,7 @@ export function customSkin(def) {
   const base = SKINS[def.base] || SKINS.classic, k = def.colours, s = streetOf(base)
   const floor = { session: k.floor, lobby: shade(k.floor, 0.05), meeting: shade(k.floor, -0.04), cafe: shade(k.floor, 0.08), ceo: shade(k.floor, -0.08), post: shade(k.floor, -0.05) }
   return {
-    label: def.name, base: def.base, quantise: base.quantise, tint: base.tint,
+    label: def.name, base: def.base, quantise: base.quantise, sky: base.sky, own: base.own,
     building: {
       ...base.building, interior: floor, wainscot: same(floor, shade(k.floor, -0.28)),
       wall: k.facade, wallEdge: shade(k.facade, -0.3), footing: shade(k.facade, -0.35), footingLine: shade(k.facade, -0.55), doorFrame: shade(k.facade, -0.4),

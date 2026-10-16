@@ -116,4 +116,4 @@ function snapshot(snap) {
   snap.ghostAnnex = { day: store.day, ghosts: store.ghosts.map(({ seenAt, ...g }) => g) }
 }
 
-export default { session, snapshot }
+export default { serves: ['ghost-annex'], session, snapshot }   // off: no ghosts recorded, annex.json untouched

@@ -2,7 +2,7 @@
 // and queue left of his desk behind a velvet rope, longest wait at the front. Each says what it last asked
 // (snap ext['waiting-line'], or the permission it needs): the front bubble in full, the rest shortened, hover for
 // the whole line, click to open that session in Orca. Answered, they ride home. The phone keeps ringing for
-// 'attention' (tower.js); here those bubbles are red. ?demo=waitline fakes a line that moves.
+// 'attention' (ceo.js); here those bubbles are red. ?demo=waitingline (or the old waitline) fakes a line that moves.
 import { IX } from '../building.js'
 
 const GAP = 32, FRONT = IX + 278, CAP = 8, PLAN_MS = 1000
@@ -12,7 +12,7 @@ const mins = ms => { const m = Math.max(0, Math.round(ms / 60000)); return m < 6
 
 export default function init(api, tower) {
   const { Z, font, fitText } = tower, esc = api.esc
-  const params = new URLSearchParams(location.search + '&' + location.hash.slice(1)), demo = params.getAll('demo').includes('waitline')
+  const params = api.params, demo = api.demo('waitingline', 'waitline')   // waitline: the old name
   const sent = new Map()      // session id -> x we sent them to
   let line = [], over = 0, planAt = 0, boxes = []
 
@@ -44,12 +44,11 @@ export default function init(api, tower) {
       if (!p?.activity?.startsWith('meeting:')) tower.release(id)
       sent.delete(id)
     }
-    const car = tower.crowd?.car, load = f => (car?.riders.length || 0) + (car?.queue.get(f)?.length || 0)
     let budget = 2
     line.forEach((s, i) => {
       const x = FRONT - i * GAP; if (sent.get(s.id) === x) return
       const p = tower.person(s.id)
-      if (p.floor !== 'ceo' && (budget <= 0 || load(p.floor) > 3)) return
+      if (p.floor !== 'ceo' && (budget <= 0 || tower.liftLoad(p.floor) > 3)) return
       if (p.floor !== 'ceo') budget--
       if (tower.sendTo(s.id, 'ceo', x, { face: 'right', pose: 'stand', activity: 'waitline' })) sent.set(s.id, x)
     })
@@ -170,7 +169,7 @@ export default function init(api, tower) {
   })
   tower.on('click', (w, person, m) => { const s = hit(person, m); if (!s) return false; tower.focusSession(s); return true })
 
-  // ---------- ?demo=waitline ----------
+  // ---------- ?demo=waitingline ----------
   if (!demo) return
   const SAYS = [
     ['Once the extension in Edge is signed in with this session\'s account, should I rerun the connection test?', 'reply'],

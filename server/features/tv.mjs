@@ -82,8 +82,8 @@ function line(s, l, { now, today }) {
     const u = e.message.usage
     if (isToday && u && e.message.id) {
       if (s.day !== today) { s.tok.clear(); s.day = today }
-      const used = (u.input_tokens || 0) + (u.cache_creation_input_tokens || 0) + (u.cache_read_input_tokens || 0) + (u.output_tokens || 0)
-      s.tok.set(own(e.message.id), [used, u.output_tokens || 0])
+      const read = u.cache_read_input_tokens || 0, used = (u.input_tokens || 0) + (u.cache_creation_input_tokens || 0) + read + (u.output_tokens || 0)
+      s.tok.set(own(e.message.id), [used - read, u.output_tokens || 0, read])   // work = all but cache reads (see tokensToday)
       if (used > s.maxUsed) s.maxUsed = used
     }
     if (isToday) { if (!s.first) s.first = t; s.last = t }
@@ -148,7 +148,7 @@ function aggregate(snap) {
   const names = { sessions: new Map(), agents: new Map() }
   for (const x of snap.sessions) { names.sessions.set(x.id, x.title); for (const a of x.agents) names.agents.set(a.id, a.description || a.type) }
   const spark = new Array(60).fill(0)
-  let tokens = 0, out = 0, busiest = null
+  let tokens = 0, out = 0, cached = 0, busiest = null
   for (const s of files.values()) {
     let recent = 0
     for (const [m, n] of s.mins) {
@@ -157,14 +157,16 @@ function aggregate(snap) {
       if (m > m0 - 10) recent += n
     }
     if (recent && (!busiest || recent > busiest.calls)) busiest = { s, calls: recent }
-    if (s.day === today) for (const [a, b] of s.tok.values()) { tokens += a; out += b }
+    if (s.day === today) for (const [a, b, c] of s.tok.values()) { tokens += a; out += b; cached += c }
   }
   for (const [id, c] of commits) if (now - c.t > 30 * MIN) commits.delete(id)
   const live = snap.sessions.filter(x => x.state !== 'idle').length
   return {
     ready,
     spark, toolsHour: spark.reduce((a, b) => a + b, 0),
-    tokensToday: tokens, outToday: out,
+    // tokensToday leaves out cache reads: every turn re-reads the whole cached context, so they grow with context size ×
+    // turns (often 90%+ of the total) rather than with work done; cacheReadToday keeps them for anyone who wants the sum.
+    tokensToday: tokens, outToday: out, cacheReadToday: cached,
     prsWeek: prsSince(now - WEEK).length, mergedWeek: snap.trophies?.merged ?? null,
     busiest: busiest && { name: whoOf(busiest.s, names), calls: busiest.calls, agent: !!busiest.s.agent },
     online: { sessions: snap.sessions.length, active: live, agents: snap.sessions.reduce((n, x) => n + x.agents.filter(a => a.state !== 'done' && a.state !== 'idle').length, 0) },

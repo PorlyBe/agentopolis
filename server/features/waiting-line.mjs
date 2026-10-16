@@ -39,6 +39,7 @@ function session({ entries }) {
 }
 
 export default {
+  serves: ['waiting-line'],
   session,
   snapshot(snap) {
     for (const s of snap.sessions) if (s.ext?.['waiting-line'] && s.state !== 'waiting' && s.state !== 'attention') {

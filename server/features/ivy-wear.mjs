@@ -39,6 +39,7 @@ function repoBorn(root, now) {
 }
 
 export default {
+  serves: ['ivy-wear'],   // off: no git log for the repo's age
   session: ({ file, stat }) => ({ start: startOf(file, stat) }),
   snapshot(snap) {
     const root = exec.mainRoot(snap.sessions)

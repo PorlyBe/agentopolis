@@ -22,6 +22,7 @@ async function measure(cwd, branch) {
 }
 
 export default {
+  serves: ['refactor-crane', 'ghost-annex'],   // ghost-annex marks a big change's ghost
   after: ['github-street', 'pr-celebration'],   // reads snap.street and session.ext['pr-celebration']
   snapshot(snap) {
     const st = snap.street || {}, mine = st.mine || [], post = new Map((st.post || []).map(p => [p.n, p]))

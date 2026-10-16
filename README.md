@@ -146,7 +146,7 @@ And a lot more, each driven by something real in your transcripts or on GitHub:
 ## Demos
 
 Add `?demo=<name>` to see any feature without waiting for it to happen. For example: `towerlife`, `moveinout`,
-`waitline`, `myprs`, `postroom`, `rocket`, `helipad`, `firedrill`, `printerjam`, `groundhog`, `milestonecake`,
+`waitingline`, `myprs`, `postroom`, `deployrocket`, `helipad`, `firedrill`, `printerjam`, `groundhog`, `milestonecake`,
 `walkabout`, `reviewervisits`, `fridaydrinks`, `standup`, `lunchrush`, `screensaver`, `cisubway`, `seismograph`,
 `windowheatmap`, `readablemonitors`, `floorsounds`, `stormcloud`, `catchaos`, `tamagotchiplant`, `reportcard`,
 `hallofrecords`, `expresselevator`, `directormode`, `ghostannex`, `memoryarchive`, `agentxp`, `branchmetro`,
@@ -159,9 +159,15 @@ Add `?demo=<name>` to see any feature without waiting for it to happen. For exam
 
 - **Local only.** The server listens on `127.0.0.1` and refuses any other `Host`.
 - **Transcripts.** It only reads them (`~/.claude/projects`, `~/.claude/sessions`) and never writes under `~/.claude`.
-- **Its own data.** The only files it writes are `~/.agentopolis/records.json` (the hall of records) and
-  `~/.agentopolis/settings.json` (what you set in the ⚙ panel, which only the page itself can change). `--demo` writes
-  nothing; its settings last until the server stops.
+- **Its own data.** These are the only files it writes. `--demo` writes none of them; its settings last until the server
+  stops.
+  - `~/.agentopolis/settings.json`: what you set in the ⚙ panel, which only the page itself can change.
+  - `~/.agentopolis/records.json`: the hall of records' all-time bests.
+  - `~/.agentopolis/annex.json`: today's closed sessions for the ghost annex (title, branch, worktree, tool-call count).
+  - `$TMPDIR/agent-office-achievements-<port>.json` and `$TMPDIR/agent-office-gazette-<port>.json`: today's medals and
+    the gazette's day so far.
+  - `~/Downloads/`: a photo-booth picture, only when you take one.
+  - `server.log` in this folder, when you start it with `start.sh`.
 - **GitHub.** It runs `gh` without a shell, and only read commands (`pr list`, `run list`, `api` GETs), cached and
   rate-limited. It never writes to GitHub.
 - **Update check.** Every 6 hours (and when you press **Check now**) it sends one unauthenticated request to
@@ -169,8 +175,9 @@ Add `?demo=<name>` to see any feature without waiting for it to happen. For exam
   `agentopolis-update-check` user agent: no token, no cookies. It's skipped under `--demo`, when the folder isn't a git clone of this repo, and when you
   switch it off in **⚙ Settings → Updates** (`"updateCheck": false` in `settings.json`).
 - **Outbound requests.** Apart from GitHub, it makes two: [Open-Meteo](https://open-meteo.com) for the weather, for a
-  coarse location taken from your system time zone (there's no IP geolocation), and a public price feed for the
-  BTC/BCH billboard. Neither carries any data about you.
+  coarse location taken from your system time zone (there's no IP geolocation), and
+  [CoinGecko](https://www.coingecko.com) for the top-ten price billboard. Neither carries any data about you, and
+  switching the billboard off in ⚙ Settings stops its requests.
 - **Links.** They open in your default browser via `/api/open`, which only accepts `https://github.com/` URLs from
   the page itself.
 
@@ -185,7 +192,8 @@ gh (read-only)             ─┘   server/features/*.mjs        polls 1.5 s    
 - **Server.** `server.mjs` parses transcripts incrementally into a snapshot of sessions, agents and their states.
   Each file in `server/features/` can add data per session (`session(ctx)`), per agent (`agent(ctx)`) or to the
   whole snapshot (`snapshot(snap)`).
-- **Tower.** `app/tower/tower.js` draws the building and owns the people, the elevator and the camera. Each file in
+- **Tower.** `app/tower/tower.js` wires the tower together: the camera, render, overlay and input live beside it in
+  `app/tower/`, the people and both elevators in `people.js`, and features are registered in `registry.js`. Each file in
   `app/tower/features/` is a plugin that hooks into `sync`, `step`, `items`, `overlay`, `hover`, `click` and so on.
   The full plugin API is documented at the top of `tower.js`.
 - **Page.** The DOM around the canvas (header, side panel, toasts, replay) lives in `app/features/`.
@@ -195,7 +203,7 @@ gh (read-only)             ─┘   server/features/*.mjs        polls 1.5 s    
 Most of the building is plugins, and adding one takes one command:
 
 ```sh
-npm run new-feature coffee-machine              # app/tower/features/coffee-machine.js, registered in tower.js
+npm run new-feature coffee-machine              # app/tower/features/coffee-machine.js, registered in registry.js
 npm run new-feature coffee-machine -- --server  # also server/features/coffee-machine.mjs
 npm run demo                                    # then open http://127.0.0.1:4747/?demo=coffeemachine
 ```
@@ -210,7 +218,7 @@ the privacy rules every plugin follows, and how to check yours with screenshots.
 Claude Code), one floor at a time. PorlyBe dreamed up the building and kept asking for more; Claude wrote the code, often
 with a crew of subagents working in parallel, which is fitting.
 
-Character, furniture and pet sprites come from [Pixel Agents](https://github.com/pixel-agents-hq/pixel-agents)
+Character and pet sprites come from [Pixel Agents](https://github.com/pixel-agents-hq/pixel-agents)
 (MIT, © Pablo De Lucca). The characters are based on
 [JIK-A-4's Metro City](https://jik-a-4.itch.io/metrocity-free-topdown-character-pack) pack (CC0). Everything else is drawn
 in code.

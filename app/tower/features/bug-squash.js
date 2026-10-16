@@ -42,17 +42,17 @@ export default function init(api, tower) {
   function squish(n) {
     const lv = api.soundscape?.level() ?? 0, ctx = api.soundscape?.ctx
     if (!lv || !ctx || ctx.state !== 'running') return
-    const t = ctx.currentTime, len = 0.2, buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * len), ctx.sampleRate), d = buf.getChannelData(0)
+    const dest = api.soundscape.out || ctx.destination, t = ctx.currentTime, len = 0.2, buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * len), ctx.sampleRate), d = buf.getChannelData(0)
     for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / d.length) ** 2
     const src = ctx.createBufferSource(); src.buffer = buf
     const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.Q.value = 7; f.frequency.setValueAtTime(2200, t); f.frequency.exponentialRampToValueAtTime(180, t + len)
     const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.6 * lv, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + len)
-    src.connect(f).connect(g).connect(ctx.destination); src.start(t); src.stop(t + len)
+    src.connect(f).connect(g).connect(dest); src.start(t); src.stop(t + len)
     if (n > 1) {
       const o = ctx.createOscillator(), og = ctx.createGain()
       o.type = 'square'; o.frequency.setValueAtTime(520 + n * 110, t + 0.05); o.frequency.setValueAtTime(780 + n * 110, t + 0.1)
       og.gain.setValueAtTime(0.0001, t); og.gain.setValueAtTime(0.06 * lv, t + 0.05); og.gain.exponentialRampToValueAtTime(0.0001, t + 0.2)
-      o.connect(og).connect(ctx.destination); o.start(t + 0.05); o.stop(t + 0.22)
+      o.connect(og).connect(dest); o.start(t + 0.05); o.stop(t + 0.22)
     }
   }
 

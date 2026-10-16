@@ -63,6 +63,7 @@ function board(st) {
 }
 
 export default {
+  serves: ['work-signals'],   // off: no whole-transcript reads for task lists
   snapshot(snap) {
     const now = Date.now()
     for (const x of snap.sessions) {

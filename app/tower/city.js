@@ -15,6 +15,8 @@ export const CLASSIC = {
   walk: '#b9b4ab', walkLine: '#a29d94', road: '#3d3f47', lane: '#d8c25a', curb: '#8a867e', curbLine: '#6a665e',
   post: '#3a3d46', bulb: '#e8e0c0', lampGlow: '255,220,150', trunk: '#5a3e2a', leaf: '#3f7a44', leafHi: '#56994f', winLit: 'rgba(255,205,110,.85)',
   dayTop: [91, 143, 208], dayHz: [183, 211, 238], nightTop: [8, 12, 32], nightHz: [30, 40, 82],
+  sky: true,      // false: the skin paints its own sky (grid paper, space, the sea), so no sun, moon, stars, clouds or weather
+  own: null,      // a weather family the skin already draws itself ('rain' or 'snow'), so the real one is not drawn twice
 }
 
 export function createCity(api) {
@@ -234,10 +236,10 @@ export function createCity(api) {
 
   // ---------- sky (drawn behind everything with destination-over, so front-most first) ----------
   function drawSky(c, v, now, sun) {
-    const { n, hour, sr, ss, kind, clouds, lightColor } = sun
+    const { n, hour, sr, ss, clouds, lightColor } = sun, kind = P.sky ? sun.kind : 'clear'
     const wet = /rain|storm|drizzle/.test(kind || ''), grey = wet || kind === 'fog' || kind === 'snow'
     const span = v.x1 - v.x0 + 400, cx = (v.x0 + v.x1) / 2 * 0.3
-    const count = Math.round((clouds ?? 30) / 100 * 9) + (wet ? 5 : 0)
+    const count = P.sky ? Math.round((clouds ?? 30) / 100 * 9) + (wet ? 5 : 0) : 0
     const cc = n > 0.6 ? [58, 66, 96] : grey ? [168, 172, 182] : [250, 251, 253]
     for (let i = 0; i < count; i++) {
       const h = api.hash('cloud' + i), sp = 3 + h % 6
@@ -253,11 +255,11 @@ export function createCity(api) {
     const day = hour >= sr && hour <= ss
     const t = day ? (hour - sr) / (ss - sr) : ((hour < sr ? hour + 24 : hour) - ss) / (sr + 24 - ss)
     const bx = v.x0 + (0.12 + 0.76 * t) * (v.x1 - v.x0), by = top + skyH * (0.8 - 0.62 * Math.sin(Math.PI * t))
-    if (!wet) {
+    if (!wet && P.sky) {
       if (day) { glow(c, bx, by, 40, '255,230,160', 0.5); R(c, '#fff2c0', bx - 7, by - 7, 14, 14); R(c, '#ffe08a', bx - 5, by - 9, 10, 18); R(c, '#ffe08a', bx - 9, by - 5, 18, 10) }
       else { glow(c, bx, by, 30, '200,215,255', 0.25); R(c, '#e8ecf4', bx - 6, by - 6, 12, 12); R(c, '#c8d0e0', bx - 1, by - 3, 3, 3) }
     }
-    if (n > 0.35) {
+    if (n > 0.35 && P.sky) {
       c.globalAlpha = Math.min(1, (n - 0.35) * 2.5)
       for (let i = 0; i < 160; i++) {
         const h = api.hash('star' + i), x = v.x0 + (((h % 2000) - (v.x0 + v.x1) / 2 * 0.1) % (v.x1 - v.x0) + (v.x1 - v.x0)) % (v.x1 - v.x0)
@@ -275,7 +277,9 @@ export function createCity(api) {
     c.fillStyle = g; c.fillRect(v.x0 - 2, top - 2, v.x1 - v.x0 + 4, Math.max(0, horizon - top) + 40)
   }
   function drawWeather(c, v, now, kind) {
-    if (!kind || kind === 'clear' || kind === 'clouds') return
+    if (!kind || kind === 'clear' || kind === 'clouds' || !P.sky) return
+    const fam = kind === 'snow' ? 'snow' : /rain|storm|drizzle/.test(kind) ? 'rain' : null
+    if (fam && P.own === fam) return
     const W = v.x1 - v.x0, H = v.y1 - v.y0, t = now / 1000
     if (kind === 'fog') { c.fillStyle = 'rgba(205,210,220,.28)'; c.fillRect(v.x0, v.y0, W, H); return }
     const snow = kind === 'snow', storm = kind === 'storm', n = Math.round(W * H / (snow ? 9000 : storm ? 4000 : kind === 'drizzle' ? 12000 : 6000))

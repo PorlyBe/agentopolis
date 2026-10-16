@@ -25,6 +25,7 @@ async function lookup(cwd) {
 }
 
 export default {
+  serves: ['skyline-towers'],
   after: ['github-street'],   // reads snap.street
   snapshot(snap) {
     const live = snap.sessions.filter(s => s.running !== false && s.cwd)

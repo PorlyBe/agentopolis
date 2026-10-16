@@ -5,7 +5,7 @@
 // subagent for a detour before it walks out (the 'leaving' hook, asked through `ask`). See tower.js for the API.
 import { SEAT, SEAT_H, MAX_DESKS, DOOR, DOOR_X, BW, SHAFT1, CAR_X, CAR_W, CAR_H, XCAR_X, XCAR_W, OUTSIDE, spotsFor, partnerOf } from './building.js'
 
-const SPEED = 56, CAR_SPEED = 150, XCAR_SPEED = 190, CAP = 6, DWELL = 0.9, STUCK = 12
+const SPEED = 56, CAR_SPEED = 150, XCAR_SPEED = 190, CAP = 6, DWELL = 0.9, XDWELL = 0.45, HURRY = 1.5, STUCK = 12
 const RESTING = new Set(['waiting', 'idle', 'delegating', 'building'])
 const LONG_WAIT = new Set(['delegating', 'building'])
 const READING = /^(Read|Grep|Glob|WebFetch|WebSearch|ToolSearch)$|^mcp__|claude-in-chrome/
@@ -20,7 +20,7 @@ export function createPeople(api, demo, ask = () => false) {
   const departed = new Set()
   let floors = [], byId = new Map(), spots = [], firstSync = true, arrivals = 0
   const queue = new Map()                // floor id -> people waiting there for whichever car comes
-  const mkCar = (x, w, speed, express) => ({ x, w, speed, express, active: !express, lit: express ? 0 : 1, y: 0, at: 'lobby', state: 'idle', dir: 0, t: 0, doors: 0, riders: [], moving: 0, queue })
+  const mkCar = (x, w, speed, express) => ({ x, w, speed, express, dwell: express ? XDWELL : DWELL, active: !express, lit: express ? 0 : 1, y: 0, at: 'lobby', state: 'idle', dir: 0, t: 0, doors: 0, riders: [], moving: 0, queue })
   const car = mkCar(CAR_X, CAR_W, CAR_SPEED, false), xcar = mkCar(XCAR_X, XCAR_W, XCAR_SPEED, true), cars = [car, xcar]
 
   const fy = id => byId.get(id)?.y
@@ -73,9 +73,10 @@ export function createPeople(api, demo, ask = () => false) {
   // an express rider crossing the main shaft waits (2 s at most) while the main car passes the landing, rather than
   // walk through it
   const holdFor = (a, dt) => car.state === 'moving' && Math.abs(car.y - fy(a.floor)) < CAR_H && (a.held = (a.held || 0) + dt) < 2
-  // a.sx / a.tx: where the current walk started and where it ends (tower.js draws a walker passing front furniture in front of it)
+  // a.sx / a.tx: where the current walk started and where it ends (render.js draws a walker passing front furniture in front of it)
   const walkTo = (a, x, dt) => {
-    const d = x - a.x, mv = SPEED * dt * (a.kind === 'session' ? 1.05 : 1)
+    // express riders hurry in and out of their car, so its stops stay short
+    const d = x - a.x, mv = SPEED * dt * (a.kind === 'session' ? 1.05 : 1) * (a.car?.express && a.liftPhase !== 'riding' ? HURRY : 1)
     a.tx = x
     if (Math.abs(d) <= mv) { a.x = x; return true }
     if (!a.wasWalking) a.sx = a.x
@@ -164,10 +165,14 @@ export function createPeople(api, demo, ask = () => false) {
   // who gets on: only people already at the landing, so the car never holds its doors for someone across the floor
   // or out on the street; the rest stay queued and the car comes back for them
   const atLanding = a => a.fade == null && !(a.delay > 0) && a.x > DOOR_X - 16 - 8 * CAP
-  const shouldOpen = k => byId.has(k.at) && (k.riders.some(a => wantsOut(a, k)) || (k.active && k.riders.length < CAP && !!queue.get(k.at)?.some(atLanding)))
+  // The express is quick: a short dwell (XDWELL), it boards only until that is over, never reopens for boarders once
+  // someone is aboard (the next car takes them), and waits for its leavers only until they clear its doorway.
+  const boards = k => k.active && (!k.express || !k.riders.length)
+  const shouldOpen = k => byId.has(k.at) && (k.riders.some(a => wantsOut(a, k)) || (boards(k) && k.riders.length < CAP && !!queue.get(k.at)?.some(atLanding)))
+  const inDoorway = (a, k) => !k.express || a.liftPhase === 'boarding' || a.x > k.x - k.w / 2 - 4
   function inOut(k) {
     let n = 0
-    for (const a of actors.values()) if (a.car === k && a.fade == null && (a.liftPhase === 'boarding' || a.liftPhase === 'exiting')) n++
+    for (const a of actors.values()) if (a.car === k && a.fade == null && (a.liftPhase === 'boarding' || a.liftPhase === 'exiting') && inDoorway(a, k)) n++
     return n
   }
   function depart(car) {
@@ -194,7 +199,7 @@ export function createPeople(api, demo, ask = () => false) {
         car.riders.splice(car.riders.indexOf(a), 1); a.floor = car.at; a.y = undefined; a.liftPhase = 'exiting'; a.liftAt = clock
       }
       const q = queue.get(car.at) || []
-      for (let i = 0; car.active && i < q.length && car.riders.length < CAP;) {
+      for (let i = 0; car.active && (!car.express || car.t < car.dwell) && i < q.length && car.riders.length < CAP;) {
         const a = q[i]
         if (!atLanding(a)) { i++; continue }
         q.splice(i, 1)
@@ -202,11 +207,11 @@ export function createPeople(api, demo, ask = () => false) {
       }
       car.moving = inOut(car)
       // a backstop: nobody takes STUCK s to step in or out; send them back to the queue, or on their way
-      if (car.moving) for (const a of actors.values()) if (a.car === car && clock - a.liftAt > STUCK) {
+      if (car.moving) for (const a of actors.values()) if (a.car === car && inDoorway(a, car) && clock - a.liftAt > STUCK) {
         if (a.liftPhase === 'boarding') { console.warn('[tower:lift] boarder stuck', a.key); detach(a); car.moving-- }
         else if (a.liftPhase === 'exiting') { console.warn('[tower:lift] exiter stuck', a.key); stepOut(a); car.moving-- }
       }
-      if (car.t > DWELL && !car.moving) {
+      if (car.t > car.dwell && !car.moving) {
         for (const a of car.riders) if (a.liftPhase === 'riding') a.floor = null
         car.state = 'closing'
       }
@@ -438,7 +443,10 @@ export function createPeople(api, demo, ask = () => false) {
     if (api.wear?.length && a.data) { const p = person(a); for (const w of api.wear) { try { w(c, p, { row, frame, now }) } catch (e) { console.error('[wear]', e) } } }
     c.restore()
   }
-  function drawCar(c, front) { for (const k of cars) drawOne(c, k, front) }
+  function drawCar(c, front, only) { for (const k of cars) if (!only || k === only) drawOne(c, k, front) }
+  // an express rider stepping across the main shaft walks along its landing, in front of the main car (render.js draws
+  // them between the two cars' glass), never through it
+  const crossing = a => !!a.car?.express && (a.liftPhase === 'boarding' || a.liftPhase === 'exiting') && Math.abs(a.x - car.x) < car.w / 2 + 8
   function drawOne(c, car, front) {
     const W = car.w, x = car.x - W / 2, y = car.y, lit = car.lit
     if (!front) {
@@ -457,8 +465,11 @@ export function createPeople(api, demo, ask = () => false) {
     c.fillStyle = car.state === 'moving' ? (car.dir < 0 ? '#5fd17a' : '#f4c64f') : '#7a8494'; c.fillRect(car.x - 2, y - CAR_H - 2, 4, 2)
   }
   return {
-    actors, slots, overflow, car, xcar, cars, queue, setFloors, sync, step, drawActor, drawCar, yOf, sitDy, sendTo, release, spawn, person, find,
+    actors, slots, overflow, car, xcar, cars, queue, setFloors, sync, step, drawActor, drawCar, crossing, yOf, sitDy, sendTo, release, spawn, person, find,
     get spots() { return spots },
     occupied: activity => { let n = 0; for (const a of actors.values()) if (a.activity === activity && !a.walking) n++; return n },
+    // riders in the main car plus whoever is queued for a lift on that floor (tower.liftLoad): features steering
+    // several people somewhere send them a few at a time while it is high
+    liftLoad: floorId => car.riders.length + (queue.get(floorId)?.length || 0),
   }
 }

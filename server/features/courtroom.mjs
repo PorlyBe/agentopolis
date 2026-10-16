@@ -3,6 +3,9 @@
 // agent it launched (background ones report through a task-notification) has answered, and closes with the findings
 // as charges: ReportFindings' findings, else table rows / numbered items of the result text. Transcripts are read like
 // groundhog.mjs: once from near their end, then only their appended bytes. Attached as session.ext.courtroom.
+// Verdicts: guilty (a finding that is not a nit, or `gh pr review --request-changes`), acquitted (only nits, an explicit
+// approval — `gh pr review --approve` or words like "LGTM" / "no findings"), else adjourned: prose with no findings and
+// no ruling, like a GitHub review left as a plain comment, is not an approval.
 import { readSync, tailState } from '../lib/tail.mjs'
 import { filesOf, sweep } from '../lib/transcripts.mjs'
 
@@ -15,6 +18,14 @@ const textOf = c => typeof c === 'string' ? c : Array.isArray(c) ? c.map(b => b?
 const clip = (s, n = 60) => { s = s.replace(/\s+/g, ' ').trim(); return s.length > n ? s.slice(0, n - 1).trimEnd() + '…' : s }
 const plain = s => String(s).replace(/\[([^\]]+)\]\([^)]*\)/g, '$1').replace(/\*\*|__|`|~~/g, '').replace(/(^|\s)[*_]([^*_\s][^*_]*)[*_](?=\s|$|[.,;:])/g, '$1$2').replace(/<[^>]+>/g, '').trim()
 const MINOR = /\b(minor|nit|nitpick|low|info|trivial|style)\b/i
+// an explicit clean bill in the review's own words; a bare "approve" is left out ("I can't approve this")
+const CLEAN = /\b(lgtm|looks good( to me)?|ship it|all clear|no (blocking |significant |real |material |further )?(findings|issues|problems|concerns|defects|bugs)( found| to report| remain)?(?=\s*[.!]|\s*$)|nothing (to report|found|blocking))/i
+// the session's own GitHub ruling on the PR: `gh pr review --approve | --request-changes | --comment`, or the reviews API's event
+function ghRuling(cmd) {
+  if (/\bgh\s+pr\s+review\b/.test(cmd)) return /\s(--request-changes|-r)\b/.test(cmd) ? 'changes' : /\s(--approve|-a)\b/.test(cmd) ? 'approve' : /\s(--comment|-c)\b/.test(cmd) ? 'comment' : null
+  const ev = /\bgh\s+api\b[\s\S]*\/reviews\b/.test(cmd) && cmd.match(/\bevent['"]?\s*[=:]\s*['"]?(APPROVE|REQUEST_CHANGES|COMMENT)\b/)
+  return ev ? { APPROVE: 'approve', REQUEST_CHANGES: 'changes', COMMENT: 'comment' }[ev[1]] : null
+}
 
 // findings out of a review's text: a markdown table's rows (its finding/issue column), else numbered items
 function charges(text) {
@@ -42,12 +53,15 @@ function verdictOf(t) {
   let list = t.findings ?? []
   for (const r of t.results) { if (list.length) break; list = charges(r) }
   if (!list.length && t.closing) list = charges(t.closing)
-  const guilty = list.some(c => !c.minor), said = list.slice(0, MAX_CHARGES).map(c => c.text)
-  return guilty ? { verdict: 'guilty', count: list.length, nits: 0, charges: said } : { verdict: 'acquitted', count: 0, nits: list.length, charges: said }
+  const said = list.slice(0, MAX_CHARGES).map(c => c.text)
+  if (list.some(c => !c.minor)) return { verdict: 'guilty', count: list.length, nits: 0, charges: said }
+  if (t.ruling === 'changes') return { verdict: 'guilty', count: Math.max(1, list.length), nits: 0, charges: said.length ? said : ['changes requested on the PR'] }
+  if (list.length || t.ruling === 'approve' || [...t.results, t.closing || ''].some(r => CLEAN.test(r))) return { verdict: 'acquitted', count: 0, nits: list.length, charges: said }
+  return { verdict: 'adjourned', count: 0, nits: 0, charges: [] }   // prose only, or a plain comment: no ruling either way
 }
 
 function open(s, kind, name, at, id) {
-  s.trial = { id, kind, name: clip(name, 48), start: at, end: null, pending: new Set(), jurors: [], results: [], findings: null, closing: null, turnDone: false }
+  s.trial = { id, kind, name: clip(name, 48), start: at, end: null, pending: new Set(), jurors: [], results: [], findings: null, closing: null, ruling: null, turnDone: false }
   return s.trial
 }
 function close(t, at) { if (t && !t.end) { Object.assign(t, verdictOf(t)); t.end = at } }
@@ -98,6 +112,7 @@ function line(s, l) {
       if (!tt) tt = open(s, b.name === 'Workflow' ? 'workflow' : 'agent', desc || b.name, at, b.id)
       tt.pending.add(b.id); tt.jurors.push(clip(desc || b.name, 40))
     }
+    if (b.name === 'Bash' && tt) { const r = ghRuling(String(i.command || '')); if (r && (r !== 'comment' || !tt.ruling)) tt.ruling = r }
     if (b.name === 'ReportFindings' && tt && Array.isArray(i.findings)) {
       tt.findings = i.findings.map(f => ({ text: clip(plain(f.short_summary || f.summary || '')), minor: false })).filter(f => f.text)
     }

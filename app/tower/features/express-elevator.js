@@ -15,7 +15,7 @@ function pixText(c, s, x, y, col) {
 
 export default function init(api, tower) {
   const { Z } = tower, crowd = tower.crowd, xcar = crowd.xcar
-  const params = new URLSearchParams(location.search + '&' + location.hash.slice(1)), demo = params.getAll('demo').includes('expresselevator')
+  const params = api.params, demo = api.demo('expresselevator')
   const X0 = BW + SHAFT1, X1 = BW + SHAFT1 + XSHAFT
   let openedAt = 0, quietSince = 0, stats = { n: 0, oldest: 0 }
 

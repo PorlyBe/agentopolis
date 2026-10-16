@@ -51,6 +51,7 @@ function scan(ctx) {
 }
 
 export default {
+  serves: ['interoffice-mail'],
   session(ctx) { scan(ctx) },
   agent(ctx) { scan(ctx) },
   snapshot(snap) {

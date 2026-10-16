@@ -75,11 +75,10 @@ export default function init(api, tower) {
       if (!p || p.leaving || skip(s)) { if (su.sent.has(id)) tower.release(id); su.sent.delete(id); su.ids.splice(su.ids.indexOf(id), 1) }
     }
     if (!su.ids.length) return finish()
-    const car = tower.crowd?.car, load = f => (car?.riders.length || 0) + (car?.queue.get(f)?.length || 0)
     let budget = 2
     for (const id of su.ids) {
       if (su.sent.has(id) || budget <= 0) continue
-      const p = tower.person(id); if (!p || (p.floor && p.floor !== 'meeting' && load(p.floor) > 3)) continue
+      const p = tower.person(id); if (!p || (p.floor && p.floor !== 'meeting' && tower.liftLoad(p.floor) > 3)) continue
       if (tower.sendTo(id, 'meeting', su.slot.get(id), { face: 'down', pose: 'stand', activity: 'standup' })) { su.sent.add(id); budget-- }
     }
     if (!su.talkAt && (su.ids.every(here) || now - su.t0 > GATHER_MS)) {

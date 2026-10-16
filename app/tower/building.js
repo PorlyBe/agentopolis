@@ -452,6 +452,16 @@ function roofDeck(c, fc, f) {
   for (const x of [IX + 140, IX + 250, IX + 380, IX + 440]) plant(c, x, y - 3, x % 3 === 0)
 }
 
+// ---------- the front layer, as x spans per floor kind ----------
+// The furniture painted on the front layer above (fc: reception, the meeting table, the café table and lounge sofa, the
+// parasol table, the CEO desk) covers the people band; render.js draws a walker passing one of these in front of it.
+const FRONT_SPANS = { lobby: [[IX + 94, IX + 162]], meeting: [[IX + 156, IX + 324]], cafe: [[IX + 104, IX + 158], [IX + 416, IX + 468]], roof: [[IX + 180, IX + 210]] }
+export function frontSpans(f) {
+  if (f?.kind !== 'ceo') return FRONT_SPANS[f?.kind]
+  const d = ceoSlots([f]).desk
+  return [[d.x - 2, d.x + d.w + 2]]
+}
+
 // ---------- spots: where people on a break go ----------
 // face: which way they look ('up' = toward the back wall, 'down' = at the viewer); anim: type | read | null
 export function spotsFor(f) {

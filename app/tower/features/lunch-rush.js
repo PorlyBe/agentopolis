@@ -87,12 +87,11 @@ export default function init(api, tower) {
       }
     }
     const target = busy() ? BUSY : QUIET
-    const car = tower.crowd?.car, load = fl => (car?.riders.length || 0) + (car?.queue.get(fl)?.length || 0)
     let budget = 2
     for (const p of tower.people) {
       if (who.size >= target || budget <= 0 || queue().length >= QUEUE.length) break
       if (who.has(p.id) || ate.has(p.id) || !hungry(p) || p.steered || p.floor === null || p.activity?.startsWith('meeting:')) continue
-      if (p.floor !== 'cafe' && load(p.floor) > 3) continue
+      if (p.floor !== 'cafe' && tower.liftLoad(p.floor) > 3) continue
       who.set(p.id, { phase: 'queue', joined: now + Math.random(), eatMs: demo ? 35_000 + api.hash(p.id) % 20_000 : (12 + api.hash(p.id) % 10) * 60_000 })
       budget--
     }

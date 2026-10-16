@@ -142,13 +142,13 @@ function sessionExt(s, x, now) {
   const day = midnight(now), into = Math.max(1, (now - day) / HOUR)
   const ctxPct = 0.18 + ((now / (90 * MIN) + hash(s.key) / 1e9) % 1) * 0.6
   const usd = cents(s.usd * Math.min(into, 9) / 4 + ((now / MIN) % 60) * 0.02)
-  const tokens = Math.round(usd * 160_000)
+  const tokens = Math.round(usd * 80_000)   // work tokens (no cache reads): ~80k per list-price dollar, measured
   const clockIn = Math.min(now - 2 * HOUR - (hash(s.key) % 3) * HOUR, now)
   const hours = []; for (let t = clockIn; t <= now; t += HOUR) hours.push(new Date(t).getHours())
   const ext = {
     'context-meter': { used: Math.round(ctxPct * s.m.window), window: s.m.window, pct: ctxPct, model: s.m.model },
     uniforms: SCRIPTS[s.key] ? uniformOf(s.key, s.key, step(s.key, now).k, now) : undefined,
-    'cost-jar': { usdToday: usd, tokensToday: tokens, byModel: { [s.m.model]: { family: s.m.family, usd, tokens, messages: Math.round(tokens / 9000) } } },
+    'cost-jar': { usdToday: usd, tokensToday: tokens, byModel: { [s.m.model]: { family: s.m.family, usd, tokens, messages: Math.round(tokens / 4500) } } },
     'desk-props': { top: s.stacks.map(([stack, share]) => ({ stack, w: Math.round(share * 300), share })), files: 40 + hash(s.key) % 300 },
     'time-clock': { in: clockIn, hours: [...new Set(hours)] },
     'ivy-wear': { start: now - ({ payments: 9 * 24, mobile: 2 * 24 + 5, docs: 0.4, data: 5, auth: 31 * 24 }[s.key] ?? 3) * HOUR },
@@ -339,7 +339,7 @@ export function generate(now) {
   const usdToday = cents(Object.values(byS).reduce((a, b) => a + b, 0))
   const agentsBusy = out.reduce((n, x) => n + x.agents.filter(a => a.state !== 'done').length, 0)
   const spark = Array.from({ length: 60 }, (_, i) => { const m = Math.floor(now / MIN) - 59 + i; return 12 + (hash('sp' + m) % 22) + Math.round(8 * Math.sin(m / 7)) })
-  const toolsHour = spark.reduce((a, b) => a + b, 0), tokensToday = Math.round(usdToday * 165_000)
+  const toolsHour = spark.reduce((a, b) => a + b, 0), tokensToday = Math.round(usdToday * 82_000)
   const online = { sessions: out.length, active: out.length, agents: agentsBusy }
   const tvCommits = MERGED.slice(0, 4).map(([n, , t], i) => ({ id: 'toolu_' + hex('c' + n, 20), t: now - (8 + i * 11) * MIN, msg: t, branch: '', who: out[i % out.length].title }))
   const weather = { place: 'Harbor City', temp: 22, code: 1, kind: 'clear', wind: 3, windDir: 120, clouds: 15, precip: 0, isDay: true,
@@ -415,7 +415,7 @@ export function generate(now) {
     trophies: { merged: 2, open: 3, closed: 0, gh: true, pending: 0, items: [
       ...st.mine.map(p => ({ n: p.number, repo: REPO, at: p.updatedAt, state: 'OPEN', mergedAt: 0, title: p.title, checked: true })),
       ...MERGED.filter(m => m[1] === ME).map(([n, , title], i) => ({ n, repo: REPO, at: now - (3 + i) * HOUR, state: 'MERGED', mergedAt: now - (1 + i * 2) * HOUR, title, checked: true }))] },
-    tv: { ready: true, spark, toolsHour, tokensToday, outToday: Math.round(tokensToday / 180), prsWeek: 23, mergedWeek: 17,
+    tv: { ready: true, spark, toolsHour, tokensToday, outToday: Math.round(tokensToday / 11), cacheReadToday: tokensToday * 23, prsWeek: 23, mergedWeek: 17,
       busiest: { name: 'build iOS 3.2', calls: 64, agent: true }, online, commits: tvCommits },
     weather,
     ivyWear: { repoBorn: now - Math.round(2.4 * 365 * 24 * HOUR) },
