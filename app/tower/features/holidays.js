@@ -4,6 +4,7 @@
 // streamers on the sidewalk), Tanabata (a wish bamboo in the lobby, streamers off the awning), Obon (paper lanterns),
 // Tsukimi (the harvest moon, dango and pampas grass). ?date=YYYY-MM-DD previews a day; ?demo=holidays cycles through them.
 import { IX, BW } from '../building.js'
+import { R, rnd } from '../draw.js'
 
 const MD = s => s.split('-').map(Number)
 // [key, name, icon, from, to (MM-DD, inclusive, may wrap the year) | per-year dates ±days, claims]
@@ -61,9 +62,7 @@ export function calendarOf(d) {
   return null
 }
 
-const R = (c, col, x, y, w = 1, h = 1) => { c.fillStyle = col; c.fillRect(Math.round(x), Math.round(y), w, h) }
 const pool = (c, x, y, r, rgb, a) => { const g = c.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, `rgba(${rgb},${a})`); g.addColorStop(1, `rgba(${rgb},0)`); c.fillStyle = g; c.fillRect(x - r, y - r, 2 * r, 2 * r) }
-const rnd = k => { const s = Math.sin(k * 127.1 + 311.7) * 43758.5453; return s - Math.floor(s) }
 
 // ---------- sprites ----------
 function kadomatsu(c, cx, by) {

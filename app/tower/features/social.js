@@ -11,7 +11,7 @@ const rnd = (a, b) => a + Math.random() * (b - a)
 const baseOf = act => (act || '').split(':').pop().replace(/-\d+$/, '').replace(/\d+$/, '')
 
 export default function init(api, tower) {
-  const demos = new URLSearchParams(location.search + '&' + location.hash.slice(1)).getAll('demo')
+  const demos = api.params.getAll('demo')
   const pizza = pizzas(api, tower, demos.includes('pizza'))
   meetings(api, tower, demos.includes('meeting'))
   chatter(api, tower, demos.includes('chatter'), pizza)

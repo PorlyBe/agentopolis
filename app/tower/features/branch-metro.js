@@ -3,9 +3,9 @@
 // and, once merged, rejoins it at an interchange; today's merges are lit stations under the TODAY band, open branches
 // end in a terminus (named at close zoom). Hover a line for its branch, last commit, ahead/behind and merge time.
 // ?demo=branchmetro invents a map.
-import { WALL_MAP as M, pixText } from './ci-subway.js'
+import { WALL_MAP as M } from './ci-subway.js'
+import { R, pixText } from '../draw.js'
 
-const R = (c, col, x, y, w, h) => { c.fillStyle = col; c.fillRect(Math.round(x), Math.round(y), w, h) }
 const COLS = ['#d8452e', '#2f78c8', '#e8a21a', '#3a9a52', '#9a4ab8', '#1aa0a8', '#c8508a', '#e86a1a', '#5a6ad8', '#8a7a5a']
 const TRUNK = '#22252e', INK = '#3a3640', PAPER = '#f4f0e6', LIT = '#ffe14a'
 const HEAD = 6, TY = M.y + 17, LANES = [-4, 4, -7, 7, -10, 10]
@@ -16,7 +16,7 @@ const midnight = t => { const d = new Date(t); d.setHours(0, 0, 0, 0); return d.
 
 export default function init(api, tower) {
   const { Z } = tower, esc = api.esc
-  const params = new URLSearchParams(location.search + '&' + location.hash.slice(1)), demo = params.getAll('demo').includes('branchmetro')
+  const params = api.params, demo = api.demo('branchmetro')
   let data = null, map = null
 
   tower.on('snapshot', snap => { if (demo) snap.branchMetro = fake(Date.now()) })

@@ -3,14 +3,14 @@
 // holds a clipboard with the failing workflow. Green again, or two minutes on, they go back in; while it stays red a
 // small TRUNK RED sign hangs from the lobby awning. Hover the marshal or the sign for the runs, click to open one.
 // ?demo=firedrill fakes a red trunk that turns green again, over and over.
-const R = (c, col, x, y, w, h) => { c.fillStyle = col; c.fillRect(Math.round(x), Math.round(y), w, h) }
+import { R } from '../draw.js'
 const FRESH = 20 * 60_000, KEY = 'agent-office:firedrill'
 const MARSHAL_X = -118, POST_X = -110, CROWD_X = -132, GAP = 9
 const SIGN = { x: -28, y: -42, w: 24, h: 8 }
 
 export default function init(api, tower) {
   const { Z, font, fitText } = tower, esc = api.esc
-  const params = new URLSearchParams(location.search + '&' + location.hash.slice(1)), demo = params.getAll('demo').includes('firedrill')
+  const params = api.params, demo = api.demo('firedrill')
   const DRILL_MS = demo ? 45_000 : 120_000
   let red = [], drill = null, marshal = null, sweepAt = 0, clearAt = -1e9, primed = false, demoT0 = 0
   const evac = new Map()      // person id -> { slot, prior }

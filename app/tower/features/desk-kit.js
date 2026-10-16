@@ -143,7 +143,7 @@ const PLANT_X = IX + 82                      // the floor plant beside the sessi
 const CONFETTI = ['#f4c64f', '#5fd17a', '#63b3f0', '#b996f5', '#f07a8a', '#ffffff', '#ff9a3c']
 
 export default function init(api, tower) {
-  const demos = new URLSearchParams(location.search + '&' + location.hash.slice(1)).getAll('demo')
+  const demos = api.params.getAll('demo')
   const demoKit = demos.includes('deskkit'), demoPr = demos.includes('deskpr'), demoJan = demos.includes('deskjanitor'), demoWilt = demos.includes('deskwilt')
   const t0 = performance.now()
   const R = (c, col, x, y, w, h) => { c.fillStyle = col; c.fillRect(x, y, w, h) }

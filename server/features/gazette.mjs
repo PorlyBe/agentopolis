@@ -1,5 +1,5 @@
 // gazette: today's front page for the newspaper stand, from what tv, github-street, trophies and weather already gathered.
-// Snapshot hooks run alphabetically, so this reads the previous snapshot (after those features filled it in).
+// It runs after those features (after: [...]), so it reads them from this snapshot.
 // Their feeds are short windows (street events: 2 h, commits: 30 min, tool calls: 1 h), so a day ledger accumulates them
 // and is kept in the temp dir per port, so a restart keeps the morning's news.
 import fs from 'node:fs'
@@ -18,7 +18,7 @@ const midnight = (t = Date.now()) => { const d = new Date(t); d.setHours(0, 0, 0
 const dayKey = t => new Date(t).toDateString()
 const blank = now => ({ day: dayKey(now), events: {}, titles: {}, minutes: {}, since: 0, ciFails: {}, workflows: {}, lead: {}, peak: null, commits: {} })
 let ledger = (() => { try { const j = JSON.parse(fs.readFileSync(FILE, 'utf8')); return j.day === dayKey(Date.now()) ? j : null } catch { return null } })() || blank(Date.now())
-let prev = null, edition = null, builtAt = 0, streetWasOk = false
+let edition = null, builtAt = 0, streetWasOk = false
 
 const clip = (s, n) => { s = String(s ?? '').replace(/\s+/g, ' ').trim(); return s.length > n ? s.slice(0, n - 1).trimEnd() + '…' : s }
 const plural = (n, w, p = w + 's') => `${n} ${n === 1 ? w : p}`
@@ -154,16 +154,16 @@ function compose(s, now) {
 }
 
 export default {
+  after: ['github-street', 'trophies', 'tv', 'weather'],
   snapshot(snap) {
     const now = snap.now
     if (ledger.day !== dayKey(now)) ledger = blank(now)
-    const streetOk = prev?.street?.status === 'ok'
-    if (prev && (!edition || now - builtAt >= MIN || (streetOk && !streetWasOk))) {
-      absorb(prev, now)
-      edition = compose(prev, now); builtAt = now; streetWasOk = streetOk
+    const streetOk = snap.street?.status === 'ok'
+    if (!edition || now - builtAt >= MIN || (streetOk && !streetWasOk)) {
+      absorb(snap, now)
+      edition = compose(snap, now); builtAt = now; streetWasOk = streetOk
       fs.writeFile(FILE, JSON.stringify(ledger), () => {})
     }
-    prev = snap
     if (edition) snap.gazette = edition
   },
 }

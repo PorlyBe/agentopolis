@@ -3,7 +3,8 @@
 // about once a minute and the 1.5 s snapshot only attaches the cached result. Events accumulate by id for 24 h.
 // Contributor stats (commits per week per author) are fetched once a day; GitHub answers 202 while it computes them,
 // so a miss retries every few minutes and the last good copy stays. Each engineer gets contrib: { commits12w, merged, score }.
-import { execFile } from 'node:child_process'
+import { watched } from '../lib/transcripts.mjs'
+import { run as exec } from '../lib/exec.mjs'
 
 const TICK = 20_000, DAY = 24 * 3600_000, HOUR = 3600_000, RETRY_NO_GH = 5 * 60_000, REPO_TTL = 10 * 60_000
 const WINDOW = 12 * 7 * DAY, STATS_RETRY = 3 * 60_000
@@ -20,9 +21,7 @@ const state = {
 const remotes = new Map() // cwd -> 'owner/repo' | null
 let cwds = new Set(), repoAt = 0
 
-const run = (cmd, args, opts = {}) => new Promise(resolve => {
-  execFile(cmd, args, { timeout: 30_000, maxBuffer: 16 * 1024 * 1024, ...opts }, (err, out, stderr) => resolve({ err, out, stderr: String(stderr || '') }))
-})
+const run = (cmd, args, opts) => exec(cmd, args, opts)
 const gh = async args => {
   const r = await run('gh', args)
   if (r.err) {
@@ -102,6 +101,7 @@ const JOBS = {
 }
 
 async function tick() {
+  if (!watched()) return   // no page open
   if (state.busy) return
   state.busy = true
   try {

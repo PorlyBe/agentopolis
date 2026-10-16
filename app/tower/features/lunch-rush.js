@@ -4,6 +4,7 @@
 // board with today's three specials (picked by the date). A character whose session gets busy goes straight back to
 // work; everyone else is released after their meal or at 13:00. Each eats once a day. ?demo=lunchrush forces it.
 import { IX } from '../building.js'
+import { R } from '../draw.js'
 
 const QUEUE = [40, 56, 72, 88].map(x => IX + x)
 const SEATS = [
@@ -18,7 +19,6 @@ const DISHES = [
   ['Pho bo', 1080], ['Laksa', 1150], ['Falafel bowl', 900], ['Tempura udon', 950], ['Oyakodon', 820], ['Dal & rice', 780],
   ['Burrito bowl', 1200], ['Mapo tofu', 880], ['Chicken nanban', 1020], ['Onigiri set', 650],
 ]
-const R = (c, col, x, y, w, h) => { c.fillStyle = col; c.fillRect(Math.round(x), Math.round(y), w, h) }
 const GLYPH = { L: '100100100100111', U: '101101101101111', N: '110101101101101', C: '011100100100011', H: '101101111101101' }
 function pixText(c, s, x, y, col) {
   c.fillStyle = col
@@ -33,7 +33,7 @@ function specials(d = new Date()) {
 
 export default function init(api, tower) {
   const { Z, font, fitText } = tower, esc = api.esc
-  const params = new URLSearchParams(location.search + '&' + location.hash.slice(1)), demo = params.getAll('demo').includes('lunchrush')
+  const demo = api.demo('lunchrush')
   const who = new Map()     // person id -> { phase 'queue'|'served'|'eat', joined, servedAt, seat, eatAt, eatMs }
   const ate = new Set()
   let planAt = 0, demoT0 = 0, day = '', stash = null

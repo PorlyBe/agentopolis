@@ -5,7 +5,7 @@ const KEY = 'agent-office.update-dismissed'
 
 export default function init(api) {
   const { esc } = api
-  const params = new URLSearchParams(location.search + '&' + location.hash.slice(1))
+  const params = api.params
   const demo = params.getAll('demo').includes('update')
   let dismissed = null, u = null, isOpen = false, autoOpen = params.get('update') === 'open'
   try { dismissed = localStorage.getItem(KEY) } catch {}

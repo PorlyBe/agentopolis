@@ -19,7 +19,7 @@ function demoBoard(i) {
 
 export default function init(api, tower) {
   const Z = tower.Z, crowd = tower.crowd
-  const demos = new URLSearchParams(location.search + '&' + location.hash.slice(1)).getAll('demo')
+  const demos = api.params.getAll('demo')
   const sessions = () => tower.snapshot?.sessions || []
   const sessionFloors = () => tower.floors.filter(f => f.kind === 'session' && f.session)
   const pulse = (now, ms = 420) => 0.5 + 0.5 * Math.sin(now / ms)

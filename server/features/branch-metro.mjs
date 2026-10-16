@@ -2,27 +2,15 @@
 // first-parent history of the default branch; a branch forks where its merge base sits on trunk (behind count) and is
 // merged either as an ancestor of trunk or by a squash commit whose subject carries the branch's ticket token
 // (feature/abc-12-x ↔ "... [ABC-12]"). Read-only git via execFile, refreshed at most every two minutes.
-import path from 'node:path'
-import { execFile } from 'node:child_process'
+import * as exec from '../lib/exec.mjs'
 
 const REFRESH_MS = 2 * 60_000, RETRY_MS = 30_000, SPAN_MS = 14 * 86400_000, MAX = 10, MERGED_MAX = 5, PROBE = 60
-const roots = new Map()
 const state = { root: null, busy: false, at: 0, data: null }
 
-const run = (args, opts = {}) => new Promise(resolve =>
-  execFile('git', args, { timeout: 30_000, maxBuffer: 16 * 1024 * 1024, ...opts }, (err, out) => resolve(err ? null : String(out))))
+const run = (args, opts) => exec.run('git', args, opts).then(r => r.out)
 
 function pickRoot(sessions) {
-  const count = new Map()
-  for (const s of sessions) {
-    if (!s.running || !s.cwd) continue
-    if (!roots.has(s.cwd)) {
-      roots.set(s.cwd, null)
-      run(['-C', s.cwd, 'rev-parse', '--path-format=absolute', '--git-common-dir']).then(out => roots.set(s.cwd, out ? path.dirname(out.trim()) : null))
-    }
-    const r = roots.get(s.cwd); if (r) count.set(r, (count.get(r) || 0) + 1)
-  }
-  const best = [...count].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null
+  const best = exec.mainRoot(sessions)
   if (best !== state.root) { state.root = best; state.at = 0; state.data = null }
 }
 
@@ -77,6 +65,7 @@ async function refresh() {
 }
 
 export default {
+  serves: ['branch-metro'],   // only its own tower feature reads it
   snapshot(snap) {
     pickRoot(snap.sessions)
     if (!state.root) { snap.branchMetro = null; return }

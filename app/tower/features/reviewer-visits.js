@@ -3,7 +3,7 @@
 // head, or the session opened it; else the CEO office), sticks a note on the wall (✓ approved, ✎ changes requested,
 // 💬 comment) and walks home. A note stays an hour, or until the PR's branch gets a push. Hover: who, what, which PR;
 // click opens the PR. ?demo=reviewervisits sends three neighbours up, one after another.
-const R = (c, col, x, y, w, h) => { c.fillStyle = col; c.fillRect(Math.round(x), Math.round(y), w, h) }
+import { R } from '../draw.js'
 const KIND = {
   approved: { glyph: '✓', paper: '#9fe0a0', edge: '#5aa860', ink: '#1f5a2a', label: 'approved' },
   changes: { glyph: '✎', paper: '#ffc98a', edge: '#d0883a', ink: '#7a3a10', label: 'requested changes on' },
@@ -15,7 +15,7 @@ const kindOf = e => e.type === 'review' && e.review === 'approved' ? 'approved' 
 
 export default function init(api, tower) {
   const { Z, font } = tower, esc = api.esc
-  const params = new URLSearchParams(location.search + '&' + location.hash.slice(1)), demo = params.getAll('demo').includes('reviewervisits')
+  const params = api.params, demo = api.demo('reviewervisits')
   const notes = new Map()          // actor|pr -> { key, who, pr, kind, at, posted, said }
   const seen = new Set(), queue = [], walkers = []
   let st = null, sessions = [], primed = false, demoT0 = 0, demoN = 0, demoPrs = new Map(), npcN = 0

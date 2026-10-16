@@ -9,10 +9,9 @@ import { CLASSIC as STREET } from '../city.js'
 import { HOLIDAYS, pinHoliday } from './holidays.js'
 import { parseTheme, slugOf, THEME_SLOTS } from '../../options.js'
 import floorDecor from './floor-decor.js'
+import { R, rnd } from '../draw.js'
 
-const R = (c, col, x, y, w = 1, h = 1) => { c.fillStyle = col; c.fillRect(Math.round(x), Math.round(y), w, h) }
 const pool = (c, x, y, r, rgb, a) => { const g = c.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, `rgba(${rgb},${a})`); g.addColorStop(1, `rgba(${rgb},0)`); c.fillStyle = g; c.fillRect(x - r, y - r, 2 * r, 2 * r) }
-const rnd = k => { const s = Math.sin(k * 127.1 + 311.7) * 43758.5453; return s - Math.floor(s) }
 const same = (o, v) => Object.fromEntries(Object.keys(o).map(k => [k, v]))
 const KINDS = { session: 0, lobby: 0, meeting: 0, cafe: 0, ceo: 0, post: 0 }
 const GLYPH = { H: '101101111101101', O: '111101101101111', T: '111010010010010', E: '111100110100111', L: '100100100100111',
@@ -235,7 +234,7 @@ const CYCLE = [...Object.keys(SKINS), 'halloween', 'christmas', 'newyear', 'vale
 
 export default function init(api, tower) {
   const { Z, font } = tower
-  const params = new URLSearchParams(location.search + '&' + location.hash.slice(1))
+  const params = api.params
   const DEMO = params.getAll('demo').includes('themes'), urlTheme = params.get('theme'), T0 = Date.now()
   let cur = null, skin = SKINS.classic, theme = parseTheme('auto'), customs = [], preview = null
   const deco = () => skin.base || theme.skin                // a custom theme draws its base skin's decor

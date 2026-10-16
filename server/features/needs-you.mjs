@@ -7,6 +7,7 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { execFile } from 'node:child_process'
+import { watched } from '../lib/transcripts.mjs'
 
 const ORCA = process.env.ORCA_CLI_BIN_DIR ? path.join(process.env.ORCA_CLI_BIN_DIR, 'orca') : 'orca'
 const LIVE_SESSIONS = path.join(os.homedir(), '.claude', 'sessions')
@@ -82,7 +83,7 @@ async function poll() {
 }
 async function loop() {
   let wait = POLL_MS
-  try { wait = await poll() } catch (e) { console.error('[needs-you]', e.message) }
+  if (watched()) try { wait = await poll() } catch (e) { console.error('[needs-you]', e.message) }   // nobody looking: skip orca
   setTimeout(loop, wait).unref()
 }
 loop()

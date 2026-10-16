@@ -156,8 +156,11 @@ const MARK = { done: '✓', active: '●', pending: '○', stopped: '✕' }
 export default async function init(api) {
   setHash(api.hash)
   const hooks = { snapshot: [], sync: [], layout: [], step: [], items: [], glow: [], post: [], overlay: [], click: [], dblclick: [], hover: [], leaving: [], mode: [], plaque: [] }
-  const run = (name, ...args) => { for (const fn of hooks[name]) { try { fn(...args) } catch (e) { console.error(`[tower:${name}]`, e) } } }
-  const ask = (name, ...args) => { for (const fn of hooks[name]) { try { const r = fn(...args); if (r) return r } catch (e) { console.error(`[tower:${name}]`, e) } } return null }
+  // a throw is logged once per distinct message, so a bug that throws every frame does not flood the console
+  const seen = new Set()
+  const report = (tag, e) => { const k = tag + ' ' + (e?.message ?? e); if (seen.has(k)) return; if (seen.size > 500) seen.clear(); seen.add(k); console.error(`[tower:${tag}]`, e) }
+  const run = (name, ...args) => { for (const fn of hooks[name]) { try { fn(...args) } catch (e) { report(name, e) } } }
+  const ask = (name, ...args) => { for (const fn of hooks[name]) { try { const r = fn(...args); if (r) return r } catch (e) { report(name, e) } } return null }
   const params = new URLSearchParams(location.search + '&' + location.hash.slice(1))
   const demo = params.getAll('demo').includes('towerlife'), demoFire = params.getAll('demo').includes('towerfire')
   // ?demo=towerfire: one PR of the first engineer failed CI (they get four PRs if they have fewer), one of the third's
@@ -232,7 +235,9 @@ export default async function init(api) {
   }
 
   // ---------- camera ----------
-  const vw = () => wrap.clientWidth, vh = () => wrap.clientHeight, usableH = () => Math.max(100, vh() - (api.reserveBottom || 0))
+  // the view size is read once per resize (size()), not on each of the ~20 reads a frame
+  const sz = { w: 0, h: 0 }
+  const vw = () => sz.w || wrap.clientWidth, vh = () => sz.h || wrap.clientHeight, usableH = () => Math.max(100, vh() - (api.reserveBottom || 0))
   // fit frames the tower; zooming out goes on until the whole street (every engineer's building) fits the width
   function fitBox() { const b = bounds(floors); return { ...b, x0: b.x0 - 6, x1: b.x1 + 6 } }
   function cityBox() { const b = fitBox(), e = city.extent(); return { ...b, x0: Math.min(b.x0, e.x0) - 24, x1: Math.max(b.x1, e.x1) + 24 } }
@@ -310,16 +315,22 @@ export default async function init(api) {
   }
   const toWorld = (sx, sy) => ({ x: cam.cx + (sx - vw() / 2) / cam.zoom, y: cam.cy + (sy - vh() / 2) / cam.zoom })
   const toScreen = (x, y) => [(x - cam.cx) * cam.zoom + vw() / 2, (y - cam.cy) * cam.zoom + vh() / 2]
-  function size() { const dpr = devicePixelRatio || 1; cv.width = Math.round(vw() * dpr); cv.height = Math.round(vh() * dpr) }
+  function size() { sz.w = wrap.clientWidth; sz.h = wrap.clientHeight; const dpr = devicePixelRatio || 1; cv.width = Math.round(vw() * dpr); cv.height = Math.round(vh() * dpr) }
   new ResizeObserver(() => { if (!active) return; size(); if (cam.auto) fit(); else clampCam() }).observe(wrap)
 
   // ---------- the frame ----------
   let last = performance.now()
   function frame(now) {
     if (!active) return
-    const dt = Math.min(0.1, (now - last) / 1000); last = now
-    if (floors.length) { people.step(dt, now); run('step', dt, now); stepCamera(dt); render(now); hover() }
+    // queued first and each stage isolated: one throw must not stop movement (or drawing) until a reload
     requestAnimationFrame(frame)
+    const dt = Math.min(0.1, (now - last) / 1000); last = now
+    if (!floors.length) return
+    try { people.step(dt, now) } catch (e) { report('people', e) }
+    run('step', dt, now)
+    try { stepCamera(dt) } catch (e) { report('camera', e) }
+    try { render(now) } catch (e) { report('render', e); oc.reset?.() }
+    try { hover() } catch (e) { report('hover', e) }
   }
   function sunInfo() {
     const d = api.daylight, hour = d?.hourNow ? d.hourNow() : new Date().getHours() + new Date().getMinutes() / 60
@@ -338,8 +349,12 @@ export default async function init(api) {
     const sun = sunInfo(), lb = layers.bounds
     const items = [], ctx = { now, view: v, sun }
     run('items', items, now, ctx)
+    // people: a walker passing a piece of front furniture is drawn in front of it (with the items on it), others in the people band
+    const crowd = [...people.actors.values()].filter(a => !(a.delay > 0))
+    const passers = new Set(crowd.filter(passing))
+    for (const a of passers) items.push({ z: Z.FRONT + 5, draw: () => people.drawActor(c, a, now) })
     items.sort((p, q) => p.z - q.z)
-    const band = (lo, hi) => { for (const it of items) if (it.z >= lo && it.z < hi) { c.save(); try { it.draw(c, now) } catch (e) { console.error('[tower:item]', e) } c.restore() } }
+    const band = (lo, hi) => { for (const it of items) if (it.z >= lo && it.z < hi) { c.save(); try { it.draw(c, now) } catch (e) { report('item', e) } c.restore() } }
     city.drawBack(c, v, now, sun.n)
     windowView(c, sun.n)
     band(-Infinity, 0)
@@ -349,10 +364,10 @@ export default async function init(api) {
     people.drawCar(c, false)
     // people, the user and feature items in the people band, back to front by z (stable, so equal z keeps insertion order)
     const zOf = a => a.z ?? (a.liftPhase === 'riding' ? Z.RIDE : a.walking ? Z.WALK : a.pose === 'desk' || a.sitting ? Z.SEATED : Z.STAND)
-    const mid = [...people.actors.values()].filter(a => !(a.delay > 0)).map(a => ({ z: zOf(a), draw: () => people.drawActor(c, a, now) }))
-    mid.push({ z: Z.SEATED + 5, draw: () => drawPaul(c, now) }, ...items.filter(it => it.z >= 100 && it.z < 200).map(it => ({ z: it.z, draw: () => { c.save(); try { it.draw(c, now) } catch (e) { console.error('[tower:item]', e) } c.restore() } })))
+    const mid = crowd.filter(a => !passers.has(a)).map(a => ({ z: zOf(a), draw: () => people.drawActor(c, a, now) }))
+    mid.push({ z: Z.SEATED + 5, draw: () => drawPaul(c, now) }, ...items.filter(it => it.z >= 100 && it.z < 200).map(it => ({ z: it.z, draw: () => { c.save(); try { it.draw(c, now) } catch (e) { report('item', e) } c.restore() } })))
     mid.sort((p, q) => p.z - q.z)
-    for (const it of mid) it.draw()
+    for (const it of mid) { try { it.draw() } catch (e) { report('actor', e) } }
     c.drawImage(layers.front, lb.x0, lb.y0)
     drawDesk(c, now)
     band(200, 300)
@@ -386,8 +401,19 @@ export default async function init(api) {
     vc.imageSmoothingEnabled = z < 1
     vc.fillStyle = '#14151c'; vc.fillRect(0, 0, W, H)
     vc.drawImage(off, 0, 0, ow, oh, (ox - v.x0) * z, (oy - v.y0) * z, ow * z, oh * z)
-    overlay(now)
+    try { overlay(now) } catch (e) { report('overlay', e) }
     if (hooks.overlay.length) { vc.save(); run('overlay', vc, now, ctx); vc.restore() }
+  }
+  // Front-layer furniture (building.js paints these on layers.front, over the people band): x spans per floor kind.
+  // A walker whose walk neither starts nor ends behind one walks in front of it (crossing the CEO office to the
+  // waiting line, say); someone heading to or leaving a seat behind it stays behind it.
+  const FRONT_SPANS = { lobby: [[IX + 94, IX + 162]], meeting: [[IX + 156, IX + 324]], cafe: [[IX + 104, IX + 158], [IX + 416, IX + 468]], roof: [[IX + 180, IX + 210]] }
+  const frontSpans = f => f?.kind === 'ceo' && slots ? [[slots.desk.x - 2, slots.desk.x + slots.desk.w + 2]] : FRONT_SPANS[f?.kind]
+  function passing(a) {
+    if (!a.walking || a.z != null || a.liftPhase === 'riding') return false
+    const spans = frontSpans(byId.get(a.floor)); if (!spans) return false
+    const inside = (x, x0, x1) => x + 8 > x0 && x - 8 < x1
+    return spans.some(([x0, x1]) => inside(a.x, x0, x1) && !inside(a.sx ?? a.x, x0, x1) && !inside(a.tx ?? a.x, x0, x1))
   }
   function interiorRects() {
     const top = floors[floors.length - 2].top, base = floors[0]
@@ -648,7 +674,7 @@ export default async function init(api) {
       const s = f.session, tx = sx + 8 * k
       let right = sx + w - 5 * k
       c.letterSpacing = '0px'
-      for (const fn of hooks.plaque) { try { right -= fn(c, f, { x: sx, y: sy, w, h, fs, k, right }) || 0 } catch (e) { console.error('[tower:plaque]', e) } }
+      for (const fn of hooks.plaque) { try { right -= fn(c, f, { x: sx, y: sy, w, h, fs, k, right }) || 0 } catch (e) { report('plaque', e) } }
       c.letterSpacing = sp + 'px'
       const max = right - tx - 2, title = String(s?.title || '').toUpperCase(), br = s?.worktree || s?.branch || ''
       const name = fitText(title, max, font(fs, 700)); c.font = font(fs, 700)

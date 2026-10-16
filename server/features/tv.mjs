@@ -1,14 +1,12 @@
-// tv: wall-TV stats and the printer's commits, from one incremental crawl of every transcript touched this week.
-// Each file is read once from the start, then only its appended bytes; reads are async so a cold start never blocks a poll.
+// tv: wall-TV stats and the printer's commits, from the shared crawl of every transcript touched this week
+// (server/lib/crawler.mjs: each file read once from the start, then only its appended bytes, asynchronously).
 // trophies.mjs reads the PR links this crawl collects through prsSince(); achievements.mjs reads today's per-file facts through dayFacts().
 import fs from 'node:fs'
-import path from 'node:path'
-import os from 'node:os'
-import { StringDecoder } from 'node:string_decoder'
+import * as crawler from '../lib/crawler.mjs'
+import { own, tsOf as tsAt } from '../lib/tail.mjs'
+import { midnight } from '../lib/transcripts.mjs'
 
-const PROJECTS = path.join(os.homedir(), '.claude', 'projects')
 const MIN = 60_000, HOUR = 60 * MIN, WEEK = 7 * 24 * HOUR
-const CHUNK = 4 * 1024 * 1024
 const COMMIT = /(?:^|[;&|(\n])\s*git(?:\s+-C\s+\S+)?\s+commit\b/  // a command, not the words inside a script
 const COMMIT_OUT = /^\[([^\]\n]+?) ([0-9a-f]{7,40})\] (.+)$/gm
 const NOT_A_BUG = /doesn't want to proceed|was rejected|Request interrupted|Permission for this action/
@@ -22,46 +20,42 @@ function messageOf(cmd) {
 const files = new Map() // file -> per-transcript state
 const prs = new Map() // repo#n -> { n, url, repo, at }
 const commits = new Map() // hash -> { id, t, msg, branch, file }
-let list = [], listedAt = 0, crawling = false, ready = false, crawledAt = 0, cache = null
+const week = new Map() // commit hash (or tool call id) -> time, for friday-drinks' weekly count
+let cache = null
 
-const midnight = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return d.getTime() }
-const tsOf = l => {
-  const i = l.lastIndexOf('"timestamp":"'); if (i < 0) return 0
-  return Date.parse(l.slice(i + 13, l.indexOf('"', i + 13))) || 0
-}
+const tsOf = l => tsAt(l, true)
 
-async function listFiles(now) {
-  const out = []
-  const dir = async d => { try { return await fs.promises.readdir(d) } catch { return [] } }
-  const agentsIn = async d => (await dir(d)).filter(f => f.startsWith('agent-') && f.endsWith('.jsonl')).map(f => path.join(d, f))
-  for (const proj of await dir(PROJECTS)) {
-    const pd = path.join(PROJECTS, proj)
-    for (const f of await dir(pd)) {
-      if (!f.endsWith('.jsonl')) continue
-      const file = path.join(pd, f)
-      let st; try { st = await fs.promises.stat(file) } catch { continue }
-      if (now - st.mtimeMs > WEEK) continue
-      out.push(file)
-      const sub = path.join(pd, f.slice(0, -6), 'subagents')
-      out.push(...await agentsIn(sub))
-      for (const wf of await dir(path.join(sub, 'workflows'))) out.push(...await agentsIn(path.join(sub, 'workflows', wf)))
-    }
-  }
-  return out
-}
-
-function fresh(file) {
-  const rel = path.relative(PROJECTS, file).split(path.sep)
-  const agent = rel.at(-1).startsWith('agent-') ? rel.at(-1).slice(6, -6) : null
-  return { offset: 0, rest: '', dec: new StringDecoder('utf8'), mtime: 0, project: rel[0], session: agent ? rel[1] : rel[1].slice(0, -6), agent,
-    wf: agent && rel[2] === 'subagents' && rel[3] === 'workflows' ? rel[4] : null, title: null,
-    mins: new Map(), tok: new Map(), day: 0, pending: new Map(), who: undefined, ...dayFresh(0) }
+function fresh(e) {
+  return { file: e.file, project: e.project, session: e.session, agent: e.agent, wf: e.wf, title: null,
+    mins: new Map(), tok: new Map(), day: 0, pending: new Map(), who: undefined, ...dayFresh(0), weekPending: new Set() }
 }
 // today's facts per file, for achievements: tool calls per minute, tool errors, successful commits, first/last activity,
 // and when a compact followed a context that had passed 90%
 const dayFresh = today => ({ factDay: today, calls: new Map(), errs: [], commitTs: [], first: 0, last: 0, maxUsed: 0, bigAt: 0 })
 
-function line(s, l, now, today) {
+// friday-drinks' weekly commit count: each successful `git commit` Bash call, once per printed hash (or per call when -q)
+const WEEK_HASH = /^\[[^\]\n]+? ([0-9a-f]{7,40})\] /gm
+function weekLine(s, l, now) {
+  const bash = l.includes('"type":"assistant"') && l.includes('git') && l.includes('commit')
+  const result = s.weekPending.size && l.includes('"tool_result"')
+  if (!bash && !result) return
+  const t = tsAt(l), since = now - WEEK
+  if (t && t < since) return
+  let e; try { e = JSON.parse(l) } catch { return }
+  const content = Array.isArray(e.message?.content) ? e.message.content : []
+  if (e.type === 'assistant') for (const b of content) {
+    if (b.type === 'tool_use' && b.name === 'Bash' && COMMIT.test(String(b.input?.command || ''))) s.weekPending.add(own(b.id))
+  } else if (e.type === 'user') for (const b of content) {
+    if (b.type !== 'tool_result' || !s.weekPending.delete(b.tool_use_id) || b.is_error) continue
+    const out = typeof b.content === 'string' ? b.content : (b.content || []).map(x => x.text || '').join('\n')
+    if (/nothing to commit|no changes added/.test(out)) continue
+    const found = [...out.matchAll(WEEK_HASH)].map(m => m[1])
+    for (const k of found.length ? found : [b.tool_use_id]) if (!week.has(k)) week.set(own(k), t || now)
+  }
+}
+
+function line(s, l, { now, today }) {
+  weekLine(s, l, now)
   if (s.factDay !== today) Object.assign(s, dayFresh(today))
   if (!s.agent && l.length < 2000 && l.includes('"ai-title"')) { try { s.title = JSON.parse(l).aiTitle || s.title } catch {} return }
   if (l.length < 1000 && l.includes('"type":"pr-link"')) {
@@ -69,7 +63,7 @@ function line(s, l, now, today) {
     if (e.type === 'pr-link' && e.prNumber && e.prUrl) {
       const key = `${e.prRepository}#${e.prNumber}`, at = Date.parse(e.timestamp) || 0
       const had = prs.get(key)
-      if (!had || at < had.at) prs.set(key, { n: e.prNumber, url: e.prUrl, repo: e.prRepository, at, session: s.session })
+      if (!had || at < had.at) prs.set(own(key), { n: e.prNumber, url: e.prUrl, repo: e.prRepository, at, session: s.session })
       return
     }
   }
@@ -89,7 +83,7 @@ function line(s, l, now, today) {
     if (isToday && u && e.message.id) {
       if (s.day !== today) { s.tok.clear(); s.day = today }
       const used = (u.input_tokens || 0) + (u.cache_creation_input_tokens || 0) + (u.cache_read_input_tokens || 0) + (u.output_tokens || 0)
-      s.tok.set(e.message.id, [used, u.output_tokens || 0])
+      s.tok.set(own(e.message.id), [used, u.output_tokens || 0])
       if (used > s.maxUsed) s.maxUsed = used
     }
     if (isToday) { if (!s.first) s.first = t; s.last = t }
@@ -99,7 +93,7 @@ function line(s, l, now, today) {
       if (inHour) s.mins.set(m, (s.mins.get(m) || 0) + 1)
       if (isToday) s.calls.set(m, (s.calls.get(m) || 0) + 1)
       const cmd = b.name === 'Bash' ? String(b.input?.command || '') : ''
-      if (COMMIT.test(cmd) && isToday) s.pending.set(b.id, messageOf(cmd))
+      if (COMMIT.test(cmd) && isToday) s.pending.set(own(b.id), own(messageOf(cmd)))
     }
   } else if (e.type === 'user') {
     if (failed && isToday) for (const b of content) {
@@ -116,51 +110,23 @@ function line(s, l, now, today) {
       s.commitTs.push(t || now)
       if (t && t < now - 30 * MIN) continue
       const found = [...out.matchAll(COMMIT_OUT)]
-      for (const m of found) if (!commits.has(m[2])) commits.set(m[2], { id: m[2], t: t || now, msg: m[3].trim().slice(0, 120), branch: m[1].replace(/ \(root-commit\)$/, ''), file: s.file })
-      if (!found.length) commits.set(b.tool_use_id, { id: b.tool_use_id, t: t || now, msg: msg || 'commit', branch: '', file: s.file })
+      for (const m of found) if (!commits.has(m[2])) commits.set(own(m[2]), { id: own(m[2]), t: t || now, msg: own(m[3].trim().slice(0, 120)), branch: own(m[1].replace(/ \(root-commit\)$/, '')), file: s.file })
+      if (!found.length) commits.set(own(b.tool_use_id), { id: own(b.tool_use_id), t: t || now, msg: msg || 'commit', branch: '', file: s.file })
     }
   }
 }
 
-async function read(file, size, now, today) {
-  let s = files.get(file)
-  if (!s || size < s.offset) { s = fresh(file); s.file = file; files.set(file, s) }
-  if (size <= s.offset) return
-  const fh = await fs.promises.open(file, 'r')
-  try {
-    while (s.offset < size) {
-      const buf = Buffer.alloc(Math.min(CHUNK, size - s.offset))
-      const { bytesRead } = await fh.read(buf, 0, buf.length, s.offset)
-      if (!bytesRead) break
-      s.offset += bytesRead
-      const lines = (s.rest + s.dec.write(buf.subarray(0, bytesRead))).split('\n')
-      s.rest = lines.pop()
-      for (const l of lines) if (l) line(s, l, now, today)
-    }
-  } finally { await fh.close() }
-}
-
-// Relist the tree every 20 s; between relists only stat files touched in the last hour.
-async function crawl() {
-  if (crawling) return
-  crawling = true
-  try {
-    const now = Date.now(), today = midnight(), relist = now - listedAt > 20_000
-    if (relist) { list = await listFiles(now); listedAt = now }
-    for (const file of list) {
-      const s = files.get(file)
-      if (!relist && s && now - s.mtime > HOUR) continue
-      let st; try { st = await fs.promises.stat(file) } catch { continue }
-      if (now - st.mtimeMs > WEEK) continue
-      await read(file, st.size, now, today)
-      files.get(file).mtime = st.mtimeMs
-    }
-    ready = true
-  } catch (e) { console.error('[tv crawl]', e.message) } finally { crawling = false; crawledAt = Date.now() }
-}
+let ready = false
+crawler.week.subscribe({
+  files,
+  open: e => fresh(e),
+  line,
+  after({ now }) { ready = true; for (const [k, t] of week) if (now - t > WEEK) week.delete(k) },
+})
 
 export const prsSince = t => [...prs.values()].filter(p => p.at >= t)
 export const crawlReady = () => ready
+export const commitsSince = t => { let n = 0; for (const x of week.values()) if (x >= t) n++; return n }
 export const dayFacts = () => { const today = midnight(); return { today, files: [...files.values()].filter(s => s.factDay === today && (s.first || s.bigAt)) } }
 export const titleOf = session => { for (const s of files.values()) if (!s.agent && s.session === session) return s.title || projectName(s.project); return null }
 
@@ -210,8 +176,9 @@ function aggregate(snap) {
 }
 
 export default {
+  after: ['trophies'],   // reads snap.trophies
   snapshot(snap) {
-    if (!crawling && snap.now - crawledAt > 1000) crawl()
+    crawler.week.poke(snap.now)
     if (!cache || snap.now - cache.at > 1200) cache = { at: snap.now, data: aggregate(snap) }
     snap.tv = cache.data
   },

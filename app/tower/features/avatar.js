@@ -193,7 +193,7 @@ function petSheet(src, kind) {
 
 export default function init(api, tower) {
   const { Z } = tower
-  const params = new URLSearchParams(location.search + '&' + location.hash.slice(1))
+  const params = api.params
   const demo = params.getAll('demo').includes('avatar'), forced = params.get('avatar')
   let look = parseLook(forced || ''), key = null, sheet = null, pets = {}, demoAt = 0, demoIdx = -1
   const previews = new Map()

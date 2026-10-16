@@ -3,30 +3,13 @@
 // balloons is tied up beside it, and now and then one floats off up the facade. A release published while the page is
 // open bursts: a toast, a flight of balloons from the lobby door and confetti; one already out on page load just hangs.
 // Hover the banner, ribbon or balloons for the release; click to open it. ?demo=releaseparty publishes one after 3 s.
-const R = (c, col, x, y, w, h) => { c.fillStyle = col; c.fillRect(Math.round(x), Math.round(y), w, h) }
+import { R, pixText, textW } from '../draw.js'
 const PARTY = 30 * 60_000, FADE = 60_000, BURST = 28, DRIFT = 7
 const COLS = ['#e8453a', '#f4c43a', '#3a8ae8', '#4ac46a', '#e86ab8', '#f48a2a', '#9a5ae8']
-const FONT = {
-  A: [2, 5, 7, 5, 5], B: [6, 5, 6, 5, 6], C: [3, 4, 4, 4, 3], D: [6, 5, 5, 5, 6], E: [7, 4, 6, 4, 7], F: [7, 4, 6, 4, 4], G: [3, 4, 5, 5, 3],
-  H: [5, 5, 7, 5, 5], I: [7, 2, 2, 2, 7], J: [1, 1, 1, 5, 2], K: [5, 5, 6, 5, 5], L: [4, 4, 4, 4, 7], M: [5, 7, 7, 5, 5], N: [6, 5, 5, 5, 5],
-  O: [2, 5, 5, 5, 2], P: [6, 5, 6, 4, 4], Q: [2, 5, 5, 6, 3], R: [6, 5, 6, 5, 5], S: [3, 4, 2, 1, 6], T: [7, 2, 2, 2, 2], U: [5, 5, 5, 5, 7],
-  V: [5, 5, 5, 5, 2], W: [5, 5, 7, 7, 5], X: [5, 5, 2, 5, 5], Y: [5, 5, 2, 2, 2], Z: [7, 1, 2, 4, 7], 0: [7, 5, 5, 5, 7], 1: [2, 6, 2, 2, 7],
-  2: [6, 1, 2, 4, 7], 3: [6, 1, 2, 1, 6], 4: [5, 5, 7, 1, 1], 5: [7, 4, 6, 1, 6], 6: [3, 4, 7, 5, 7], 7: [7, 1, 1, 2, 2], 8: [7, 5, 7, 5, 7],
-  9: [7, 5, 7, 1, 6], '-': [0, 0, 7, 0, 0], '.': [0, 0, 0, 0, 2], '/': [1, 1, 2, 4, 4], '_': [0, 0, 0, 0, 7], '!': [2, 2, 2, 0, 2], '@': [2, 5, 7, 4, 3],
-}
-const textW = (s, k) => String(s).length * 4 * k - k
-function pixText(c, s, x, y, col, k = 1) {
-  c.fillStyle = col
-  for (const ch of String(s).toUpperCase()) {
-    const g = FONT[ch]
-    if (g) for (let r = 0; r < 5; r++) for (let b = 0; b < 3; b++) if (g[r] & (4 >> b)) c.fillRect(Math.round(x) + b * k, Math.round(y) + r * k, k, k)
-    x += 4 * k
-  }
-}
 
 export default function init(api, tower) {
   const { Z } = tower, esc = api.esc
-  const demo = new URLSearchParams(location.search + '&' + location.hash.slice(1)).getAll('demo').includes('releaseparty')
+  const demo = api.demo('releaseparty')
   const demoAt = Date.now() + 3000
   let rel = null, seen = null, first = true, balloons = [], confetti = [], nextDrift = 0
 

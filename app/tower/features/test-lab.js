@@ -3,16 +3,15 @@
 // while running, green and glowing on pass, red and fizzing on fail, amber when the output went to a log; each keeps its
 // last result until the next run. Hover a flask for its suite, service and result. ?demo=testlab fakes a rack that cycles.
 import { IX } from '../building.js'
+import { R, inR } from '../draw.js'
 
 const RACK_X = IX + 150, PITCH = 8, GAP = 4, MAX = 8, SHELF = 44
 const LIQ = { running: ['#5fb3f0', '#2f7fc0'], pass: ['#5fd17a', '#2f9a4a'], fail: ['#ef5d5d', '#a8322a'], unknown: ['#d9b25a', '#9a7a30'] }
 const WORD = { running: 'running', pass: 'passed', fail: 'failed', unknown: 'finished, output in a log' }
-const R = (c, col, x, y, w, h) => { c.fillStyle = col; c.fillRect(Math.round(x), Math.round(y), w, h) }
-const inR = (w, r, pad = 0) => r && w.x >= r.x - pad && w.x <= r.x + r.w + pad && w.y >= r.y - pad && w.y <= r.y + r.h + pad
 
 export default function init(api, tower) {
   const { Z } = tower, esc = api.esc
-  const params = new URLSearchParams(location.search + '&' + location.hash.slice(1)), demo = params.getAll('demo').includes('testlab')
+  const params = api.params, demo = api.demo('testlab')
   const flips = new Map() // `${floor}|${key}` -> { state, at } for the settle flash
 
   const flasksOf = f => (f.session?.ext?.['test-lab']?.flasks || []).slice(0, MAX)

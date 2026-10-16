@@ -4,17 +4,17 @@
 // board shrinks into a framed sheet with a green tick, pinned high on the wall until the next plan. Hover for the plan.
 // ?demo=planwhiteboard cycles the first floor through sketching, review and approval.
 import { IX } from '../building.js'
+import { inR } from '../draw.js'
 
 const BOARD = { dx: IX + 92, dy: -62, w: 48, h: 22 }, POSTER = { dx: IX + 108, dy: -60, w: 16, h: 13 }
 const STAND_X = IX + 116, FLIP_MS = 500, PIN_MS = 1400
 const INK = ['#2f5fb0', '#2a2a32', '#c0392b']
 const R = (c, col, x, y, w, h) => { c.fillStyle = col; c.fillRect(Math.round(x), Math.round(y), Math.max(1, Math.round(w)), Math.max(1, Math.round(h))) }
-const inR = (w, r, pad = 0) => r && w.x >= r.x - pad && w.x <= r.x + r.w + pad && w.y >= r.y - pad && w.y <= r.y + r.h + pad
 const ease = t => t < 0 ? 0 : t > 1 ? 1 : t * t * (3 - 2 * t)
 
 export default function init(api, tower) {
   const { Z, font, fitText } = tower, esc = api.esc
-  const params = new URLSearchParams(location.search + '&' + location.hash.slice(1)), demo = params.getAll('demo').includes('planwhiteboard')
+  const params = api.params, demo = api.demo('planwhiteboard')
   const seen = new Map()   // floor id -> { state, at (performance.now of the change) }
   const sent = new Set()   // session ids standing at their board
 

@@ -2,12 +2,12 @@
 // ext['window-cleaner'] from server/features/window-cleaner.mjs), a gondola on ropes from a trolley davit on the roof
 // railing comes down in front of that floor's glass and two cleaners squeegee it from left to right; the panes they leave
 // sparkle for a while. One gondola, so floors queue. ?demo=windowcleaner fakes runs on the first two floors.
-const R = (c, col, x, y, w, h) => { c.fillStyle = col; c.fillRect(Math.round(x), Math.round(y), w, h) }
+import { R } from '../draw.js'
 const GW = 40, PARK = 32, DOWN = 110, SWEEP = 30, ROLL = 140, FRESH = 120_000, SHINE = 45_000
 
 export default function init(api, tower) {
   const { Z, font, fitText } = tower, esc = api.esc
-  const params = new URLSearchParams(location.search + '&' + location.hash.slice(1)), demo = params.getAll('demo').includes('windowcleaner')
+  const params = api.params, demo = api.demo('windowcleaner')
   const seen = new Set(), queue = [], shine = new Map()   // shine: sid -> { x1, done }
   let job = null, tx = PARK, gy = null, first = true, box = null
 

@@ -4,8 +4,8 @@
 // "00 06 12 18" sits in the slab under the lobby. Off by day. Hover a pane at night for its hour and count.
 // ?demo=windowheatmap forces 22:30 and fake counts.
 import { IX, IX1 } from '../building.js'
+import { R } from '../draw.js'
 
-const R = (c, col, x, y, w, h) => { c.fillStyle = col; c.fillRect(Math.round(x), Math.round(y), w, h) }
 const X0 = IX + 196, PITCH = (IX1 - 4 - X0) / 24, CW = 8, CH = 5, DY = 2
 const ROWS = new Set(['lobby', 'cafe', 'session', 'meeting', 'ceo'])
 const DIGITS = { 0: '111101101101111', 1: '010110010010111', 2: '111001111100111', 6: '111100111101111', 8: '111101111101111' }
@@ -13,7 +13,7 @@ const hh = h => String(h).padStart(2, '0')
 
 export default function init(api, tower) {
   const { Z } = tower
-  const params = new URLSearchParams(location.search + '&' + location.hash.slice(1)), demo = params.getAll('demo').includes('windowheatmap')
+  const params = api.params, demo = api.demo('windowheatmap')
   const forceNight = demo && !params.get('time')
   let lastN = 0
 

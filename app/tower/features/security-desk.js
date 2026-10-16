@@ -4,9 +4,9 @@
 // desk: the guard holds up a hand and a big red DENIED stamp lands on a new slip on the board. Hover the board for the
 // list (session, agent, tool), a slip for that one stop; click opens the session in Orca. ?demo=securitydesk fakes stops.
 import { IX } from '../building.js'
+import { R } from '../draw.js'
 
-const R = (c, col, x, y, w, h) => { c.fillStyle = col; c.fillRect(Math.round(x), Math.round(y), w, h) }
-const DESK_X = IX + 444, GUARD_X = IX + 460, STOP_X = IX + 436, BOARD = { dx: IX + 400, dy: 12, w: 44, h: 26 }
+const DESK_X = IX + 444, GUARD_X = IX + 460, STOP_X = IX + 436, BOARD = { dx: IX + 412, dy: 12, w: 44, h: 26 }   // right of the lobby bookshelf (IX+380..408)
 const COLS = 4, ROWS = 2, SLIP_W = 9, SLIP_H = 10
 const FRESH = 3 * 60_000, HOLD_MS = 7000, WALK_MS = 45_000, STAMP_MS = 900, SHOW_MS = 4500
 const KIND = { rejected: { name: 'prompt rejected', paper: '#fbfaf4', icon: '🙅' }, hook: { name: 'hook block', paper: '#f6e6a0', icon: '🪝' }, classifier: { name: 'classifier block', paper: '#d8e4f4', icon: '🤖' } }
@@ -14,7 +14,7 @@ const time = t => new Date(t).toTimeString().slice(0, 5)
 
 export default function init(api, tower) {
   const { Z, font, fitText } = tower, esc = api.esc
-  const params = new URLSearchParams(location.search + '&' + location.hash.slice(1)), demo = params.getAll('demo').includes('securitydesk')
+  const params = api.params, demo = api.demo('securitydesk')
   let stops = [], guard = null, primed = false, ev = null, demoT0 = 0
   const seen = new Set(), queue = [], stampedAt = new Map()
 
@@ -122,7 +122,7 @@ export default function init(api, tower) {
   tower.on('items', (out, now) => {
     const b = board(); if (!b) return
     out.push({ z: Z.WALL + 3, draw: c => drawBoard(c, b, now) })
-    out.push({ z: Z.FRONT + 3, draw: c => drawDesk(c, b.f) })
+    out.push({ z: Z.STAND - 0.5, draw: c => drawDesk(c, b.f) })   // over the guard, under the lift queue standing on it
   })
 
   // ---------- the stamp, labels ----------

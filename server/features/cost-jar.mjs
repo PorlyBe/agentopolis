@@ -1,14 +1,9 @@
 // cost-jar: today's (local day) estimated spend per session, from the usage on each assistant message.
-// One incremental crawl of every transcript touched today; a file first seen mid-day is entered by binary search
-// at local midnight, then only its appended bytes are read. Each message counts once (message id, else requestId).
+// From the shared crawl of every transcript touched today (server/lib/crawler.mjs: a file first seen mid-day is entered
+// at local midnight, then only its appended bytes are read). Each message counts once (message id, else requestId).
 // Attaches session.ext['cost-jar'] = { usdToday, tokensToday, byModel } and snap.cost (the TV shows the total).
-import fs from 'node:fs'
-import path from 'node:path'
-import os from 'node:os'
-import { StringDecoder } from 'node:string_decoder'
-
-const PROJECTS = path.join(os.homedir(), '.claude', 'projects')
-const CHUNK = 4 * 1024 * 1024, PROBE = 256 * 1024, DAY = 24 * 3600_000
+import * as crawler from '../lib/crawler.mjs'
+import { own, tsOf } from '../lib/tail.mjs'
 
 // USD per million tokens at Anthropic's published list prices — ESTIMATES, not a bill (no plan discounts, no batch).
 // [input, output, cache write 5m, cache write 1h, cache read]; long: a pricier tier when the prompt exceeds `above` tokens.
@@ -43,49 +38,10 @@ function costOf(model, u) {
   return { label, usd, tokens: prompt + out }
 }
 
-const files = new Map()   // file -> { offset, rest, dec, session }
 const msgs = new Map()    // message id -> { session, model, usd, tokens }
-let list = [], listedAt = 0, crawling = false, ready = false, crawledAt = 0, day = 0, firstScanMs = null
-const midnight = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return d.getTime() }
-const tsOf = l => { const i = l.indexOf('"timestamp":"'); return i < 0 ? 0 : Date.parse(l.slice(i + 13, l.indexOf('"', i + 13))) || 0 }
+let ready = false
 
-async function listFiles(today) {
-  const out = []
-  const dir = async d => { try { return await fs.promises.readdir(d) } catch { return [] } }
-  const touched = async f => { try { return (await fs.promises.stat(f)).mtimeMs >= today } catch { return false } }
-  const add = async (f, session) => { if (await touched(f)) out.push([f, session]) }
-  for (const proj of await dir(PROJECTS)) {
-    const pd = path.join(PROJECTS, proj)
-    for (const f of await dir(pd)) {
-      if (!f.endsWith('.jsonl')) continue
-      const id = f.slice(0, -6), main = path.join(pd, f)
-      let st; try { st = await fs.promises.stat(main) } catch { continue }
-      if (st.mtimeMs < today - DAY) continue   // a workflow can leave its session's own transcript quiet for hours
-      if (st.mtimeMs >= today) out.push([main, id])
-      const sub = path.join(pd, id, 'subagents')
-      const agents = d => dir(d).then(xs => xs.filter(x => x.startsWith('agent-') && x.endsWith('.jsonl')).map(x => path.join(d, x)))
-      for (const a of await agents(sub)) await add(a, id)
-      for (const wf of await dir(path.join(sub, 'workflows'))) for (const a of await agents(path.join(sub, 'workflows', wf))) await add(a, id)
-    }
-  }
-  return out
-}
-
-// Byte offset of a line at or just before the first entry stamped today (transcripts are append-only, in time order).
-async function seekToday(fh, size, today) {
-  let lo = 0, hi = size
-  while (hi - lo > PROBE) {
-    const mid = Math.floor((lo + hi) / 2), buf = Buffer.alloc(Math.min(PROBE, size - mid))
-    const { bytesRead } = await fh.read(buf, 0, buf.length, mid)
-    const lines = buf.subarray(0, bytesRead).toString('utf8').split('\n').slice(1, -1)
-    const t = lines.map(tsOf).find(Boolean)
-    if (!t) return lo
-    if (t < today) lo = mid; else hi = mid
-  }
-  return lo
-}
-
-function line(s, l, today) {
+function line(s, l, { today }) {
   if (!l.includes('"usage"') || !l.includes('"type":"assistant"')) return
   if (tsOf(l) < today) return
   let e; try { e = JSON.parse(l) } catch { return }
@@ -93,46 +49,19 @@ function line(s, l, today) {
   if (e.type !== 'assistant' || !u || !key || !m.model || m.model === '<synthetic>') return
   const had = msgs.get(key)
   if (had && had.session !== s.session) return   // copied into another transcript (resume/fork): first owner keeps it
-  const model = m.model.replace(/\[.*\]$/, '')
-  msgs.set(key, { session: s.session, model, ...costOf(model, u) })   // later entries of one message repeat or grow its usage
+  const model = own(m.model.replace(/\[.*\]$/, ''))
+  msgs.set(own(key), { session: s.session, model, ...costOf(model, u) })   // later entries of one message repeat or grow its usage
 }
 
-async function read(file, session, size, today) {
-  let s = files.get(file)
-  if (!s || size < s.offset) { s = { offset: 0, rest: '', dec: new StringDecoder('utf8'), session, fresh: true }; files.set(file, s) }
-  if (size <= s.offset) return
-  const fh = await fs.promises.open(file, 'r')
-  try {
-    if (s.fresh) { s.fresh = false; s.offset = await seekToday(fh, size, today); if (s.offset) s.skip = true }
-    while (s.offset < size) {
-      const buf = Buffer.alloc(Math.min(CHUNK, size - s.offset))
-      const { bytesRead } = await fh.read(buf, 0, buf.length, s.offset)
-      if (!bytesRead) break
-      s.offset += bytesRead
-      const lines = (s.rest + s.dec.write(buf.subarray(0, bytesRead))).split('\n')
-      s.rest = lines.pop()
-      if (s.skip) { lines.shift(); s.skip = false }   // entered mid-line
-      for (const l of lines) if (l) line(s, l, today)
-    }
-  } finally { await fh.close() }
+// one crawl of today's transcripts, shared with the other today-features (server/lib/crawler.mjs)
+const sub = {
+  files: new Map(),   // file -> { session }
+  open: e => ({ session: e.session }),
+  line,
+  after() { ready = true },
+  onDay() { msgs.clear() },
 }
-
-async function crawl() {
-  if (crawling) return
-  crawling = true
-  const t0 = Date.now()
-  try {
-    const today = midnight()
-    if (today !== day) { day = today; msgs.clear(); listedAt = 0 }
-    if (t0 - listedAt > 20_000) { list = await listFiles(today); listedAt = t0 }
-    for (const [file, session] of list) {
-      let st; try { st = await fs.promises.stat(file) } catch { continue }
-      await read(file, session, st.size, today)
-    }
-    if (!ready) { firstScanMs = Date.now() - t0; console.log(`[cost-jar] first scan: ${list.length} files in ${firstScanMs} ms`) }
-    ready = true
-  } catch (e) { console.error('[cost-jar crawl]', e.message) } finally { crawling = false; crawledAt = Date.now() }
-}
+crawler.today.subscribe(sub)
 
 const cents = n => Math.round(n * 100) / 100
 function aggregate() {
@@ -149,10 +78,9 @@ function aggregate() {
 }
 
 let cache = null
-export const costScanMs = () => firstScanMs
 export default {
   snapshot(snap) {
-    if (!crawling && snap.now - crawledAt > 1500) crawl()
+    crawler.today.poke(snap.now)
     if (!ready) return
     if (!cache || snap.now - cache.at > 1200) {
       const by = aggregate(), bySession = {}

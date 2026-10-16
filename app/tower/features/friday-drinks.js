@@ -3,8 +3,8 @@
 // commits, workflow runs, and today's cheapest and priciest session. Everything stays left of the deploy rocket pad.
 // ?demo=fridaydrinks makes it Friday evening and sends a few people on a break.
 import { IX } from '../building.js'
+import { R } from '../draw.js'
 
-const R = (c, col, x, y, w, h) => { c.fillStyle = col; c.fillRect(Math.round(x), Math.round(y), w, h) }
 const SLOTS = [[20, 'right'], [34, 'left'], [158, 'right'], [170, 'left'], [222, 'right'], [270, 'right'], [284, 'left']]
 const BOARD = { x: IX + 108, w: 28, h: 24 }, COOLER = { x: IX + 230, w: 16 }, POLE = IX + 292
 const BULBS = ['#ffd27a', '#ff9a5a', '#fff2c0', '#ffb8d0']
@@ -12,7 +12,7 @@ const usd = n => '$' + (n >= 100 ? Math.round(n) : n.toFixed(2))
 
 export default function init(api, tower) {
   const { Z, font, fitText } = tower, esc = api.esc
-  const demo = new URLSearchParams(location.search + '&' + location.hash.slice(1)).getAll('demo').includes('fridaydrinks')
+  const demo = api.demo('fridaydrinks')
   const sent = new Map()   // person id -> slot index
   let planAt = 0
 

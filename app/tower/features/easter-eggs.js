@@ -2,17 +2,17 @@
 // sweep every floor, everyone bobs, a beat if the ambience is on). Clicking the CEO 10× quickly makes him dance a jig.
 // Typing "coffee" sends everyone who isn't working to the café for a break. Clicking the elevator 5× plays elevator
 // music. Keys typed into inputs or dialogs never count. ?demo=eastereggs starts the disco.
+import { R } from '../draw.js'
 const DISCO_MS = 20_000, JIG_MS = 9000, COFFEE_MS = 30_000, MUZAK_MS = 16_000
 const KONAMI = ['arrowup', 'arrowup', 'arrowdown', 'arrowdown', 'arrowleft', 'arrowright', 'arrowleft', 'arrowright', 'b', 'a']
 const WORKING = new Set(['tool', 'thinking', 'building'])   // a delegating lead is free: the subagents do the work
 const HUES = [330, 50, 190, 120, 270, 20]
-const R = (c, col, x, y, w, h) => { c.fillStyle = col; c.fillRect(Math.round(x), Math.round(y), w, h) }
 const NOTE = ['.##', '.#.', '.#.', '##.', '##.']
 function note(c, x, y, col) { c.fillStyle = col; NOTE.forEach((r, j) => { for (let i = 0; i < 3; i++) if (r[i] === '#') c.fillRect(Math.round(x) + i, Math.round(y) + j, 1, 1) }) }
 
 export default function init(api, tower) {
   const { Z } = tower
-  const params = new URLSearchParams(location.search + '&' + location.hash.slice(1)), demo = params.getAll('demo').includes('eastereggs')
+  const demo = api.demo('eastereggs')
   let disco = 0, jig = 0, muzak = 0, keys = [], typed = ''
   const ceoClicks = [], carClicks = [], coffee = new Map()   // person id -> sent at
   const sound = () => { const s = api.soundscape; return s?.level() > 0 && s.ctx?.state === 'running' ? s : null }

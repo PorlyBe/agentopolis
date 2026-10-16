@@ -4,15 +4,14 @@
 // labelled with the task and flies off; it comes back when the result or task-notification lands (30 min at most).
 // Hover the pad for what is out. ?demo=helipad fakes a quick publish and a long remote review.
 import { BW, SHAFT } from '../building.js'
+import { R, easeInOut as ease } from '../draw.js'
 
 const HX = BW + Math.round(SHAFT / 2), LAD = BW - 8, STAND = BW - 16, TIMEOUT = 30 * 60_000, MIN_AWAY = 12_000, OLD = 3 * 60_000, WAIT = 45
-const R = (c, col, x, y, w, h) => { c.fillStyle = col; c.fillRect(Math.round(x), Math.round(y), w, h) }
-const ease = t => t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2
 const ICON = { artifact: '📄', cron: '⏰', schedule: '⏰', trigger: '📡', agent: '☁️', workflow: '☁️', review: '🔎' }
 
 export default function init(api, tower) {
   const { Z, font, fitText } = tower, esc = api.esc
-  const params = new URLSearchParams(location.search + '&' + location.hash.slice(1)), demo = params.getAll('demo').includes('helipad')
+  const params = api.params, demo = api.demo('helipad')
   const trips = new Map(), jobs = [], busy = new Set()
   let heli = null, primed = false, recent = []
 

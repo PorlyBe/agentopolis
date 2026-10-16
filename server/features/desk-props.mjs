@@ -1,10 +1,9 @@
 // desk-props: which language/stack a session works in, from the files it (and its subagents) edit, write and read.
-// Each transcript is scanned once and then only its appended bytes; scores decay per event so the desk follows current work.
-import fs from 'node:fs'
-import path from 'node:path'
-import { StringDecoder } from 'node:string_decoder'
+// Each transcript is read whole once, then only its appended bytes, off the request path (server/lib/history.mjs);
+// scores decay per event so the desk follows current work. A session's props appear once all its transcripts are read.
+import * as history from '../lib/history.mjs'
+import { transcriptsOf } from '../lib/transcripts.mjs'
 
-const CHUNK = 4 * 1024 * 1024
 const DECAY = 0.997
 const WEIGHT = { Edit: 3, MultiEdit: 3, Write: 3, NotebookEdit: 3, Read: 1 }
 const USE = /"name":"(Edit|MultiEdit|Write|NotebookEdit|Read)","input":\{[^{}]*?"(?:file_path|notebook_path)":"((?:[^"\\]|\\.)*)"/g
@@ -27,7 +26,6 @@ const RULES = [
 const SKIP = /\/\.claude\/(?!worktrees\/)|^\/(private\/)?tmp\/|\/node_modules\//
 
 const stackOf = p => { for (const [re, s] of RULES) if (re.test(p)) return s; return null }
-const scans = new Map() // file -> { offset, rest, dec, score: {stack: n} }
 
 function add(s, l) {
   if (!l.includes('_path"')) return
@@ -42,50 +40,40 @@ function add(s, l) {
   }
 }
 
-function scan(file) {
-  let size; try { size = fs.statSync(file).size } catch { return null }
-  let s = scans.get(file)
-  if (!s || size < s.offset) s = { offset: 0, rest: '', dec: new StringDecoder('utf8'), score: {}, n: 0 }
-  if (size > s.offset) {
-    const fd = fs.openSync(file, 'r')
-    try {
-      while (s.offset < size) {
-        const buf = Buffer.alloc(Math.min(CHUNK, size - s.offset))
-        const n = fs.readSync(fd, buf, 0, buf.length, s.offset)
-        if (!n) break
-        s.offset += n
-        const lines = (s.rest + s.dec.write(buf.subarray(0, n))).split('\n')
-        s.rest = lines.pop()
-        for (const l of lines) if (l) add(s, l)
-      }
-    } finally { fs.closeSync(fd) }
-  }
-  scans.set(file, s)
-  return s
-}
+const sub = { files: new Map(), open: () => ({ score: {}, n: 0 }), line: add }   // file -> { score: {stack: n}, n }
+history.subscribe(sub)
+const done = new Map()   // session id -> { at: readers' progress, value }
 
-const ls = d => { try { return fs.readdirSync(d) } catch { return [] } }
-function agentFiles(sessionDir) {
-  const sub = path.join(sessionDir, 'subagents'), out = []
-  const take = d => { for (const f of ls(d)) if (f.startsWith('agent-') && f.endsWith('.jsonl')) out.push(path.join(d, f)) }
-  take(sub)
-  for (const wf of ls(path.join(sub, 'workflows'))) take(path.join(sub, 'workflows', wf))
-  return out
+function props(files) {
+  const total = {}
+  let n = 0
+  for (const { file } of files) {
+    const s = sub.files.get(file); if (!s) continue
+    n += s.n
+    for (const [k, v] of Object.entries(s.score)) total[k] = (total[k] || 0) + v
+  }
+  const sum = Object.values(total).reduce((a, b) => a + b, 0)
+  if (!sum) return undefined
+  const top = Object.entries(total).sort((a, b) => b[1] - a[1]).slice(0, 2)
+    .map(([stack, w]) => ({ stack, w: Math.round(w * 10) / 10, share: Math.round(w / sum * 100) / 100 }))
+  return { top, files: n }
 }
 
 export default {
-  session({ file, sessionDir }) {
-    const total = {}
-    let n = 0
-    for (const f of [file, ...agentFiles(sessionDir)]) {
-      const s = scan(f); if (!s) continue
-      n += s.n
-      for (const [k, v] of Object.entries(s.score)) total[k] = (total[k] || 0) + v
+  snapshot(snap) {
+    const now = Date.now()
+    for (const s of snap.sessions) {
+      const files = transcriptsOf(s.id)
+      let ready = true
+      for (const t of files) if (!history.want(t, now)) ready = false
+      let d = done.get(s.id)
+      if (ready) {
+        const at = history.progress(files)
+        if (!d || d.at !== at) done.set(s.id, d = { at, value: props(files) })
+      }
+      if (d?.value) s.ext['desk-props'] = d.value
+      else delete s.ext['desk-props']
     }
-    const sum = Object.values(total).reduce((a, b) => a + b, 0)
-    if (!sum) return undefined
-    const top = Object.entries(total).sort((a, b) => b[1] - a[1]).slice(0, 2)
-      .map(([stack, w]) => ({ stack, w: Math.round(w * 10) / 10, share: Math.round(w / sum * 100) / 100 }))
-    return { top, files: n }
+    for (const id of done.keys()) if (!snap.sessions.some(s => s.id === id)) done.delete(id)
   },
 }

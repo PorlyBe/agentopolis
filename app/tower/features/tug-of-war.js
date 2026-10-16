@@ -4,15 +4,15 @@
 // git command gets through, the flag crosses, the stranger falls over in a puff of dust and leaves; an abort lets the
 // rope go slack instead. Hover the rope for the files, click to open the session. ?demo=tugofwar fakes one.
 import { IX } from '../building.js'
+import { R } from '../draw.js'
 
-const R = (c, col, x, y, w, h) => { c.fillStyle = col; c.fillRect(Math.round(x), Math.round(y), w, h) }
 const MID = IX + 204, HALF = 46, MIN_PULL = 9000, END = 2600, LIE = 2200, FRESH_END = 45_000
 const ROPE = '#c9a66b', ROPE_D = '#8f6f3e', FLAG = '#d8352a'
 const base = f => String(f || '').split('/').pop()
 
 export default function init(api, tower) {
   const { Z, font, fitText } = tower, esc = api.esc
-  const params = new URLSearchParams(location.search + '&' + location.hash.slice(1)), demo = params.getAll('demo').includes('tugofwar')
+  const params = api.params, demo = api.demo('tugofwar')
   const bouts = new Map()   // session id -> bout
   const seen = new Set()
   const look = api.lookOf('the-other-branch')

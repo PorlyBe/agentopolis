@@ -2,19 +2,18 @@
 // ends in "cd", "deploy", "migrate" or "rollback"), from one read-only gh run list every 30 s. The repo and the merged
 // PRs come from github-street's part of the previous snapshot (this feature sorts first, so it reads it a tick late).
 // Each deploy carries the PRs merged since the previous run of its workflow (or the #N in its title).
-import { execFile } from 'node:child_process'
+import { watched } from '../lib/transcripts.mjs'
+import { gh as ghCall } from '../lib/exec.mjs'
 
 const TICK = 30_000, KEEP = 6 * 3600_000, MAX = 12
 const DEPLOY = /(^|[^a-z])(cd|deploy|migrate|rollback)$/i
 const state = { status: 'loading', repo: null, branch: null, runs: [], at: 0, busy: false, downAt: 0 }
 let last = null, timer = null
 
-const gh = args => new Promise(resolve => execFile('gh', args, { timeout: 30_000, maxBuffer: 8 * 1024 * 1024 }, (err, out) => {
-  if (err) { if (err.code === 'ENOENT' || /auth|401/i.test(String(err.message))) state.downAt = Date.now(); return resolve(null) }
-  try { resolve(JSON.parse(out)) } catch { resolve(null) }
-}))
+const gh = args => ghCall(args, { maxBuffer: 8 * 1024 * 1024 }, () => { state.downAt = Date.now() })
 
 async function tick() {
+  if (!watched()) return   // no page open
   const repo = last?.street?.repo
   if (state.busy || !repo || (state.downAt && Date.now() - state.downAt < 5 * 60_000)) return
   state.busy = true

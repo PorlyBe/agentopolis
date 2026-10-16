@@ -5,8 +5,8 @@
 // ghosts, newest lowest; the rest are "+N earlier" on the annex roof. Hover a ghost floor for what it was.
 // ?demo=ghostannex fakes ten ghosts, keeps the wing showing and flies there.
 import { IX } from '../building.js'
+import { R } from '../draw.js'
 
-const R = (c, col, x, y, w, h) => { c.fillStyle = col; c.fillRect(Math.round(x), Math.round(y), w, h) }
 const AX0 = -114, AX1 = -28, AW = AX1 - AX0, MAX = 8
 const INK = { classic: '190,215,255', noir: '225,225,225', gameboy: '155,188,15', synthwave: '255,130,235', cyberpunk: '90,235,255', blueprint: '210,235,255', candy: '255,190,230' }
 const hm = t => new Date(t).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
@@ -15,7 +15,7 @@ const STATE = { tool: 'mid-tool', thinking: 'thinking', waiting: 'waiting on you
 
 export default function init(api, tower) {
   const { Z, font, fitText } = tower, esc = api.esc
-  const params = new URLSearchParams(location.search + '&' + location.hash.slice(1)), demo = params.getAll('demo').includes('ghostannex')
+  const params = api.params, demo = api.demo('ghostannex')
   let ghosts = [], cranes = new Set(), reveal = 0, hoverAt = -1e9, flown = false, vis = 0
   const hovering = () => performance.now() - hoverAt < 250
 

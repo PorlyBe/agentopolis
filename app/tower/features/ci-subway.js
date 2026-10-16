@@ -4,7 +4,7 @@
 // departs for good, tail lamp green or red. More than five queued and the board flashes DELAYS. The board lists the next
 // runs (workflow · branch · wait). Hover a passenger, a car, the board or the entrance; click opens the run.
 // ?demo=cisubway fakes a queue that builds up and drains.
-const R = (c, col, x, y, w, h) => { c.fillStyle = col; c.fillRect(Math.round(x), Math.round(y), w, h) }
+import { R, pixText } from '../draw.js'
 const SX0 = -300, SX1 = -10, CEIL = 22, HALL = 26, PLAT = 84, TUN0 = 92, RAIL = 121, TUN1 = 126
 export const WALL_MAP = { x: -298, y: 48, w: 144, h: 29 }   // the back wall between the name plates and the benches, left of the stairs (branch-metro)
 const TOP = { x: -92, y: HALL }, FOOT = { x: -150, y: PLAT }, BOARD = { x: -84, y: 30, w: 70, h: 32 }, TOTEM = -84
@@ -12,29 +12,13 @@ const LOOP = 900, GAP = 3, SLOW = 26, FAST = 64, OUT = 150, WALK = 26, DELAY = 5
 const LINES = ['#d8452e', '#2f78c8', '#e8a21a', '#3a9a52', '#9a4ab8', '#1aa0a8', '#c8508a', '#8a7a5a']
 const QUEUED = /^(queued|pending|waiting|requested)$/, BAD = /failure|timed_out|startup_failure/
 const SKIN = ['#f1c9a5', '#d9a47e', '#b07a52', '#7a5236', '#e8b890'], HAIR = ['#2a1e16', '#5a3a22', '#c89a4a', '#1a1a1e', '#8a4a2a', '#d8d0c0']
-const FONT = {
-  A: [2, 5, 7, 5, 5], B: [6, 5, 6, 5, 6], C: [3, 4, 4, 4, 3], D: [6, 5, 5, 5, 6], E: [7, 4, 6, 4, 7], F: [7, 4, 6, 4, 4], G: [3, 4, 5, 5, 3],
-  H: [5, 5, 7, 5, 5], I: [7, 2, 2, 2, 7], J: [1, 1, 1, 5, 2], K: [5, 5, 6, 5, 5], L: [4, 4, 4, 4, 7], M: [5, 7, 7, 5, 5], N: [6, 5, 5, 5, 5],
-  O: [2, 5, 5, 5, 2], P: [6, 5, 6, 4, 4], Q: [2, 5, 5, 6, 3], R: [6, 5, 6, 5, 5], S: [3, 4, 2, 1, 6], T: [7, 2, 2, 2, 2], U: [5, 5, 5, 5, 7],
-  V: [5, 5, 5, 5, 2], W: [5, 5, 7, 7, 5], X: [5, 5, 2, 5, 5], Y: [5, 5, 2, 2, 2], Z: [7, 1, 2, 4, 7], 0: [7, 5, 5, 5, 7], 1: [2, 6, 2, 2, 7],
-  2: [6, 1, 2, 4, 7], 3: [6, 1, 2, 1, 6], 4: [5, 5, 7, 1, 1], 5: [7, 4, 6, 1, 6], 6: [3, 4, 7, 5, 7], 7: [7, 1, 1, 2, 2], 8: [7, 5, 7, 5, 7],
-  9: [7, 5, 7, 1, 6], '-': [0, 0, 7, 0, 0], '.': [0, 0, 0, 0, 2], '/': [1, 1, 2, 4, 4], ':': [0, 2, 0, 2, 0], '+': [0, 2, 7, 2, 0], '!': [2, 2, 2, 0, 2],
-}
-export function pixText(c, s, x, y, col) {
-  c.fillStyle = col
-  for (const ch of String(s).toUpperCase()) {
-    const g = FONT[ch]
-    if (g) for (let r = 0; r < 5; r++) for (let b = 0; b < 3; b++) if (g[r] & (4 >> b)) c.fillRect(Math.round(x) + b, Math.round(y) + r, 1, 1)
-    x += 4
-  }
-}
 const mins = ms => { const m = Math.max(0, Math.floor(ms / 60000)); return m < 60 ? m + 'm' : Math.floor(m / 60) + 'h' + (m % 60 ? String(m % 60).padStart(2, '0') : '') }
 const wfName = w => String(w || 'workflow').replace(/^[^\p{L}\p{N}]+/u, '').trim() || 'workflow'
 const abbr = (s, n) => String(s || '').toUpperCase().replace(/[^A-Z0-9\-./:+!]/g, '').slice(0, n)
 
 export default function init(api, tower) {
   const { Z } = tower, esc = api.esc
-  const demo = new URLSearchParams(location.search + '&' + location.hash.slice(1)).getAll('demo').includes('cisubway')
+  const demo = api.demo('cisubway')
   const line = w => LINES[api.hash(wfName(w)) % LINES.length], lenOf = w => 30 + (api.hash(wfName(w) + '#') % 4) * 6
   const pax = new Map(), cars = new Map()
   let runs = [], queue = [], repo = null, first = true

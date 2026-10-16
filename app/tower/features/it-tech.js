@@ -3,14 +3,14 @@
 // until the next clean call to that server; the floor's plaque carries an IT sticker meanwhile. Hover the ladder or the
 // sticker for the server, its error and since when. ?demo=ittech fakes an outage that is fixed after a while.
 import { IX } from '../building.js'
+import { R } from '../draw.js'
 
 const LX = IX + 244, STALE_MS = 60 * 60_000, MIN_WORK = 8000, PLAN_MS = 1000, MAX_TECHS = 3, LADDER = 40
-const R = (c, col, x, y, w, h) => { c.fillStyle = col; c.fillRect(Math.round(x), Math.round(y), w, h) }
 const mins = ms => { const m = Math.max(0, Math.floor(ms / 60000)); return m < 1 ? 'just now' : m < 60 ? m + 'm' : Math.floor(m / 60) + 'h' + String(m % 60).padStart(2, '0') }
 
 export default function init(api, tower) {
   const { Z, font } = tower, esc = api.esc
-  const params = new URLSearchParams(location.search + '&' + location.hash.slice(1)), demo = params.getAll('demo').includes('ittech')
+  const params = api.params, demo = api.demo('ittech')
   let down = new Map()            // floor id -> [outage] (most recent first)
   const techs = new Map()         // floor id -> { npc, phase, t, fixedAt }
   const stickers = new Map()      // floor id -> world rect

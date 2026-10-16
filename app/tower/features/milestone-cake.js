@@ -1,14 +1,14 @@
 // milestone-cake: when a session passes 100, 500, 1000 (then every 1000) tool calls today (snap ext['milestone-cake']
 // { today, milestone, at }), a cake with candles stands on its desk for ten minutes; the floor's subagents gather round,
 // confetti flies and a toast says so. ?demo=milestonecake gives the first session two helpers and a fresh 1000.
+import { R } from '../draw.js'
 const STAY_MS = 10 * 60_000, PARTY_MS = 20_000, FRESH_MS = 60_000, CAP = 4
 const CONFETTI = ['#f2c14e', '#e85a7a', '#63b3f0', '#5fd17a', '#b996f5', '#fbfaf4']
-const R = (c, col, x, y, w, h) => { c.fillStyle = col; c.fillRect(Math.round(x), Math.round(y), w, h) }
 const label = n => n >= 1000 ? (n / 1000) + 'k' : String(n)
 
 export default function init(api, tower) {
   const { Z } = tower, esc = api.esc
-  const demo = new URLSearchParams(location.search + '&' + location.hash.slice(1)).getAll('demo').includes('milestonecake')
+  const demo = api.demo('milestonecake')
   const cakes = new Map()     // session id -> { m, at, today }
   const known = new Map()     // session id -> last milestone seen
   const parties = new Map()   // session id -> { t0, guests: [person ids] }

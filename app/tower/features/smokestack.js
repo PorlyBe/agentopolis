@@ -3,13 +3,13 @@
 // thin wisps when quiet, steady puffs when busy, thick dark plumes in a big workflow, drifting with the real wind
 // (snap.weather wind/windDir). A dial on the stack shows tokens/min; at night the plume is lit orange from below.
 // ?demo=smokestack cycles quiet → busy → workflow every 10 s.
-const R = (c, col, x, y, w, h) => { c.fillStyle = col; c.fillRect(Math.round(x), Math.round(y), w, h) }
+import { R } from '../draw.js'
 const MAX = 200, WIN = 3 * 60_000, LO = 3e5, HI = 3e7
 const fmt = n => n >= 1e9 ? (n / 1e9).toFixed(n >= 1e10 ? 0 : 1) + 'B' : n >= 1e6 ? (n / 1e6).toFixed(n >= 1e7 ? 0 : 1) + 'M' : n >= 1e3 ? Math.round(n / 1e3) + 'k' : String(Math.round(n))
 
 export default function init(api, tower) {
   const { Z, font } = tower
-  const params = new URLSearchParams(location.search + '&' + location.hash.slice(1)), demo = params.getAll('demo').includes('smokestack')
+  const params = api.params, demo = api.demo('smokestack')
   const samples = [], parts = []
   let rate = null, shown = 0, total = null, acc = 0, flown = false
 

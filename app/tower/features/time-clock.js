@@ -5,8 +5,8 @@
 // on the elevator with a torch. Hover a card or the clock; click a card to open its session. ?demo=timeclock fakes an
 // arrival and a departure on a loop and forces the late shift.
 import { IX, SEAT, OUTSIDE, DOOR_X } from '../building.js'
+import { R } from '../draw.js'
 
-const R = (c, col, x, y, w, h = 1) => { c.fillStyle = col; c.fillRect(Math.round(x), Math.round(y), w, h) }
 const CLOCK_X = IX + 284, RACK = { x: IX + 298, w: 76 }, CW = 7, CH = 12, PITCH = 9, PER_ROW = 8
 const PUNCH_MS = 1700, WAIT_MS = 45_000, LINGER_MS = 30_000
 const hhmm = t => new Date(t).toTimeString().slice(0, 5)
@@ -14,7 +14,7 @@ const dur = ms => { const m = Math.max(0, Math.round(ms / 60000)); return m < 60
 
 export default function init(api, tower) {
   const { Z, font } = tower, esc = api.esc
-  const params = new URLSearchParams(location.search + '&' + location.hash.slice(1)), demo = params.getAll('demo').includes('timeclock')
+  const params = api.params, demo = api.demo('timeclock')
   const forced = (params.get('time') || '').match(/^(\d{1,2}):(\d{2})$/)
   const cards = new Map()            // session id -> { id, title, in, hours, out, endedAt, gone }
   const pending = new Map()          // session id -> { kind 'in'|'out', t0, diverted }

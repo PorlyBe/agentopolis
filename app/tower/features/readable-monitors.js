@@ -48,7 +48,7 @@ function entryOf(o) {
 }
 
 export default function init(api, tower) {
-  const params = new URLSearchParams(location.search + '&' + location.hash.slice(1)), all = params.getAll('demo')
+  const params = api.params, all = params.getAll('demo')
   const demo = all.includes('readablemonitors'), ssDemo = all.includes('screensaver'), t0 = Date.now()
   const terms = new Map()   // person key -> { sig, hist: [{ lines, at }] }
   let lastPrompt = 0

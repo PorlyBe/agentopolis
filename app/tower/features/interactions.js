@@ -203,7 +203,7 @@ export default function init(api, tower) {
   }, { passive: false })
 
   // ---------- demos ----------
-  const demos = new URLSearchParams(location.search + '&' + location.hash.slice(1)).getAll('demo')
+  const demos = api.params.getAll('demo')
   let demoDone = false
   if (demos.some(d => /^tower(panel|follow|chip|map)$/.test(d))) tower.on('sync', data => {
     if (demoDone || !tower.people.length) return

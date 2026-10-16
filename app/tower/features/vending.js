@@ -3,9 +3,9 @@
 // stalled characters queue in front of it tapping their feet. Office-wide when several sessions hit it within 5 minutes.
 // Hover the machine for who is stuck, click to open the first. ?demo=vending cycles overloaded → usage limit → fixed.
 import { IX } from '../building.js'
+import { R } from '../draw.js'
 
 const VX = IX + 155, VW = 20, VH = 46, FRONT = VX + 10, GAP = 22, CAP = 6, PLAN_MS = 1000
-const R = (c, col, x, y, w, h) => { c.fillStyle = col; c.fillRect(Math.round(x), Math.round(y), w, h) }
 const SNACKS = ['#e0503a', '#f2c14e', '#5aa860', '#3a7ab8', '#c86ad8', '#f08a3a', '#e8e4d8', '#d84a6a', '#5fd1c8']
 
 const hhmm = t => { const d = new Date(t); return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}` }
@@ -26,7 +26,7 @@ function reason(v) {
 
 export default function init(api, tower) {
   const { Z, font, fitText } = tower, esc = api.esc
-  const params = new URLSearchParams(location.search + '&' + location.hash.slice(1)), demo = params.getAll('demo').includes('vending')
+  const params = api.params, demo = api.demo('vending')
   const sent = new Map()        // person id -> x
   let v = null, line = [], planAt = 0
 
@@ -43,8 +43,11 @@ export default function init(api, tower) {
     }
     line = want.slice(0, CAP)
     for (const id of [...sent.keys()]) if (!line.includes(id)) { tower.release(id); sent.delete(id) }
+    // the line runs right from the machine, stepping past the café's break spots so queuers never stand on a player
+    const taken = tower.spots.filter(s => s.floor === 'cafe').map(s => s.x), xs = []
+    for (let x = FRONT; xs.length < line.length; x += GAP) { if (xs.length) while (taken.some(t => Math.abs(t - x) < 7)) x++; xs.push(x) }
     line.forEach((id, i) => {
-      const x = FRONT + i * GAP; if (sent.get(id) === x) return
+      const x = xs[i]; if (sent.get(id) === x) return
       if (tower.sendTo(id, 'cafe', x, { face: i ? 'left' : 'up', pose: 'stand', activity: 'vending' })) sent.set(id, x)
     })
   }

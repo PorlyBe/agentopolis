@@ -40,9 +40,10 @@ export default function init(api) {
   const help = document.getElementById('help'), helpBtn = document.getElementById('helpBtn')
   const showHelp = on => { help.classList.toggle('on', on); helpBtn.classList.toggle('on', on) }
   helpBtn.onclick = () => showHelp(!help.classList.contains('on'))
+  document.getElementById('helpSupport').onclick = () => { showHelp(false); dispatchEvent(new CustomEvent('agentopolis:settings', { detail: 'about' })) }
   addEventListener('pointerdown', e => { if (!help.contains(e.target) && e.target !== helpBtn) showHelp(false) })
   addEventListener('keydown', e => { if (e.key === 'Escape' && help.classList.contains('on')) { e.stopImmediatePropagation(); showHelp(false) } }, true)
-  if (new URLSearchParams(location.search + '&' + location.hash.slice(1)).getAll('demo').includes('help')) showHelp(true)
+  if (api.params.getAll('demo').includes('help')) showHelp(true)
 
   const chips = new Map()
   const hue = id => api.hash(id) % 360

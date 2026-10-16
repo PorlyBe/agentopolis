@@ -86,5 +86,5 @@ export default function init(api) {
   const tick = () => { for (const el of nodes.values()) el.lastChild.textContent = agoShort(+el.dataset.t) }
   setInterval(tick, 1000)
 
-  if (new URLSearchParams(location.search + '&' + location.hash.slice(1)).getAll('demo').includes('activity')) setOpen(true)
+  if (api.params.getAll('demo').includes('activity')) setOpen(true)
 }

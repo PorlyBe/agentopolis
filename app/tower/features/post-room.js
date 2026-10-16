@@ -7,9 +7,8 @@
 // up by a postal worker to the van at the kerb, which drives off. Hover a parcel or a sign; click a parcel for its PR.
 // ?demo=postroom fakes the states, an arrival and a merge departure every 20 s, and flies there.
 import { IX } from '../building.js'
+import { R, inR } from '../draw.js'
 
-const R = (c, col, x, y, w = 1, h = 1) => { c.fillStyle = col; c.fillRect(Math.round(x), Math.round(y), w, h) }
-const inR = (w, r, pad = 0) => r && w.x >= r.x - pad && w.x <= r.x + r.w + pad && w.y >= r.y - pad && w.y <= r.y + r.h + pad
 const DAY = 864e5, STALE = 7 * DAY, TOP = 52, TIERS = [3, 19, 35]
 const CAGE = { x0: IX + 6, x1: IX + 176 }, RACK = { x0: IX + 190, x1: IX + 380 }, HOLE = { x: IX + 393, y: 52, cols: 4, rows: 2 }, CART = { x: IX + 394, w: 52 }
 const VAN_X = -178, VAN_W = 44
@@ -24,7 +23,7 @@ const smokes = p => p.ci === 'failed' && !p.draft
 
 export default function init(api, tower) {
   const { Z, font } = tower, esc = api.esc
-  const params = new URLSearchParams(location.search + '&' + location.hash.slice(1)), demo = params.getAll('demo').includes('postroom')
+  const params = api.params, demo = api.demo('postroom')
   let list = [], primed = false, known = new Map(), me = null, flown = false
   const gone = new Map()        // n -> { p, at }: left the open list, waiting for the merged list to say how
   const hidden = new Set()      // parcels in a courier's or a worker's hands

@@ -3,6 +3,8 @@
 // (`export const meta = { name, phases }`): the session's workflows/scripts/<name>-<runId>.js, else the
 // "Script file:" path or inline script the parent transcript's Workflow call carries.
 import fs from 'node:fs'
+import { readSync, tailState, own } from '../lib/tail.mjs'
+import { filesOf } from '../lib/transcripts.mjs'
 import path from 'node:path'
 import os from 'node:os'
 
@@ -30,43 +32,28 @@ function parseMeta(script) {
   return name || phases.length ? { name, phases } : null
 }
 
-const sessionFiles = new Map() // session id -> transcript path
-function sessionFile(id) {
-  if (sessionFiles.has(id)) return sessionFiles.get(id)
-  for (const p of ls(PROJECTS)) {
-    const f = path.join(PROJECTS, p, id + '.jsonl')
-    if (statOr(f)) { sessionFiles.set(id, f); return f }
-  }
-  return null
-}
+const sessionFile = id => filesOf(id)?.file ?? null
 
 // Incremental scan of the parent transcript for Workflow launches: runId -> { scriptPath, summary, script }.
 const launches = new Map() // file -> { offset, rest, inline: Map(toolUseId -> script), runs: Map(runId -> info) }
 function scanLaunches(file) {
   const st = statOr(file); if (!st) return null
   let s = launches.get(file)
-  if (!s || st.size < s.offset) { s = { offset: 0, rest: '', inline: new Map(), runs: new Map() }; launches.set(file, s) }
-  if (st.size === s.offset) return s
-  const fd = fs.openSync(file, 'r')
+  if (!s || st.size < s.offset) { s = tailState(0, { inline: new Map(), runs: new Map() }); launches.set(file, s) }
   try {
-    while (s.offset < st.size) {
-      const len = Math.min(4 * 1024 * 1024, st.size - s.offset), buf = Buffer.alloc(len)
-      fs.readSync(fd, buf, 0, len, s.offset); s.offset += len
-      const lines = (s.rest + buf.toString('utf8')).split('\n'); s.rest = lines.pop()
-      for (const l of lines) {
-        if (!l.includes('"Workflow"') && !l.includes('wf_')) continue
-        let e; try { e = JSON.parse(l) } catch { continue }
-        for (const b of Array.isArray(e.message?.content) ? e.message.content : []) {
-          if (b.type === 'tool_use' && b.name === 'Workflow' && b.input?.script) s.inline.set(b.id, b.input.script)
-          if (b.type !== 'tool_result') continue
-          const text = typeof b.content === 'string' ? b.content : (b.content || []).map(c => c.text || '').join('\n')
-          const run = text.match(/Transcript dir: .*?(wf_[0-9a-f]{8}-[0-9a-f]{3})/)?.[1]
-          if (!run) continue
-          s.runs.set(run, { scriptPath: text.match(/Script file: (\S+\.js)/)?.[1], summary: text.match(/Summary: (.*)/)?.[1], script: s.inline.get(b.tool_use_id) })
-        }
+    readSync(s, file, st.size, l => {
+      if (!l.includes('"Workflow"') && !l.includes('wf_')) return
+      let e; try { e = JSON.parse(l) } catch { return }
+      for (const b of Array.isArray(e.message?.content) ? e.message.content : []) {
+        if (b.type === 'tool_use' && b.name === 'Workflow' && b.input?.script) s.inline.set(b.id, b.input.script)
+        if (b.type !== 'tool_result') continue
+        const text = typeof b.content === 'string' ? b.content : (b.content || []).map(c => c.text || '').join('\n')
+        const run = text.match(/Transcript dir: .*?(wf_[0-9a-f]{8}-[0-9a-f]{3})/)?.[1]
+        if (!run) continue
+        s.runs.set(own(run), { scriptPath: own(text.match(/Script file: (\S+\.js)/)?.[1]), summary: own(text.match(/Summary: (.*)/)?.[1]), script: s.inline.get(b.tool_use_id) })
       }
-    }
-  } finally { fs.closeSync(fd) }
+    })
+  } catch {}
   return s
 }
 
@@ -96,8 +83,8 @@ function runMeta(sessionId, sessionDir, run) {
 
 // A workflow agent is finished once its last turn ended without a tool call.
 const agentDone = new Map() // file -> { mtimeMs, size, done }
-function isDone(file) {
-  const st = statOr(file); if (!st) return false
+function isDone(file, st = statOr(file)) {
+  if (!st) return false
   const hit = agentDone.get(file)
   if (hit && hit.mtimeMs === st.mtimeMs && hit.size === st.size) return hit.done
   let done = false
@@ -128,16 +115,28 @@ function isDone(file) {
   return done
 }
 
-function progress(sessionId, sessionDir, run) {
+// an agent's .meta.json is written once when it starts: its birth time and phase, read once
+const agentMetas = new Map() // meta path -> { birth, phase }
+function agentMeta(file) {
+  let m = agentMetas.get(file)
+  if (!m) {
+    const j = readJson(file)
+    m = { birth: statOr(file)?.birthtimeMs || 0, phase: j?.workflowPhase || '—' }
+    if (j) agentMetas.set(file, m)
+  }
+  return m
+}
+
+function progress(sessionId, sessionDir, run, stats) {
   const meta = runMeta(sessionId, sessionDir, run)
   const dir = path.join(sessionDir, 'subagents', 'workflows', run)
   const byPhase = new Map()
-  const agents = ls(dir).filter(f => f.endsWith('.meta.json')).map(f => ({ f, birth: statOr(path.join(dir, f))?.birthtimeMs || 0 })).sort((a, b) => a.birth - b.birth)
-  for (const { f } of agents) {
-    const phase = readJson(path.join(dir, f))?.workflowPhase || '—'
+  const agents = ls(dir).filter(f => f.endsWith('.meta.json')).map(f => ({ f, ...agentMeta(path.join(dir, f)) })).sort((a, b) => a.birth - b.birth)
+  for (const { f, phase } of agents) {
     const p = byPhase.get(phase) || { done: 0, total: 0 }
     p.total++
-    if (isDone(path.join(dir, f.replace(/\.meta\.json$/, '.jsonl')))) p.done++
+    const jsonl = path.join(dir, f.replace(/\.meta\.json$/, '.jsonl'))
+    if (isDone(jsonl, stats.has(jsonl) ? stats.get(jsonl) : undefined)) p.done++
     byPhase.set(phase, p)
   }
   const titles = [...meta.phases]
@@ -157,13 +156,16 @@ function progress(sessionId, sessionDir, run) {
 }
 
 function snapshot(snap) {
+  if (agentMetas.size > 5000) agentMetas.clear()
+  if (agentDone.size > 5000) agentDone.clear()
   for (const s of snap.sessions) {
     const runs = [...new Set(s.agents.map(a => a.workflowRun).filter(Boolean))]
     if (!runs.length) continue
     const f = sessionFile(s.id); if (!f) continue
     const sessionDir = f.slice(0, -6)
+    const stats = new Map((filesOf(s.id)?.agents || []).map(a => [a.file, a.stat]))   // already stat'ed by server.mjs
     const out = runs.map(r => {
-      const p = progress(s.id, sessionDir, r)
+      const p = progress(s.id, sessionDir, r, stats)
       p.last = Math.max(...s.agents.filter(a => a.workflowRun === r).map(a => a.lastActivity))
       return p
     }).sort((a, b) => b.last - a.last)

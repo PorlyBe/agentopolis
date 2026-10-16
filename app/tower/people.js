@@ -3,9 +3,9 @@
 // car in the shaft beside it while features/express-elevator.js has it open (xcar.active): calls go to the nearest car.
 // Tower features steer people (sendTo / release), add their own walkers (spawn, kind 'npc') and can hold a finished
 // subagent for a detour before it walks out (the 'leaving' hook, asked through `ask`). See tower.js for the API.
-import { SEAT, SEAT_H, MAX_DESKS, DOOR, DOOR_X, CAR_X, CAR_W, CAR_H, XCAR_X, XCAR_W, OUTSIDE, spotsFor, partnerOf } from './building.js'
+import { SEAT, SEAT_H, MAX_DESKS, DOOR, DOOR_X, BW, SHAFT1, CAR_X, CAR_W, CAR_H, XCAR_X, XCAR_W, OUTSIDE, spotsFor, partnerOf } from './building.js'
 
-const SPEED = 56, CAR_SPEED = 150, XCAR_SPEED = 190, CAP = 6, DWELL = 0.9
+const SPEED = 56, CAR_SPEED = 150, XCAR_SPEED = 190, CAP = 6, DWELL = 0.9, STUCK = 12
 const RESTING = new Set(['waiting', 'idle', 'delegating', 'building'])
 const LONG_WAIT = new Set(['delegating', 'building'])
 const READING = /^(Read|Grep|Glob|WebFetch|WebSearch|ToolSearch)$|^mcp__|claude-in-chrome/
@@ -30,19 +30,24 @@ export function createPeople(api, demo, ask = () => false) {
   function setFloors(list) {
     floors = list; byId = new Map(list.map(f => [f.id, f]))
     spots = list.flatMap(spotsFor)
-    for (const [id, q] of queue) if (!byId.has(id)) { for (const a of q) a.leg = null; queue.delete(id) }
+    for (const [id, q] of queue) if (!byId.has(id)) { for (const a of q) { a.leg = null; a.liftPhase = null } queue.delete(id) }
     for (const k of cars) {
-      if (!byId.has(k.at)) { k.at = 'lobby'; k.state = 'idle' }
-      if (k.state !== 'moving') k.y = fy(k.at)
+      for (const a of k.riders) if (a.liftPhase === 'riding') a.floor = null
+      // its floor is gone: whoever steps in or out there fades with it, and the car takes its riders to the nearest
+      // floor (stops()) instead of jumping anywhere with them aboard
+      if (!byId.has(k.at)) {
+        for (const a of actors.values()) if (a.car === k && a.liftPhase !== 'riding') detach(a)
+        if (k.state === 'open') k.state = 'closing'
+      } else if (k.state !== 'moving') k.y = fy(k.at)
       k.cableTop = list[list.length - 1].y - 4
     }
   }
+  const nearest = y => floors.reduce((b, f) => !b || Math.abs(f.y - y) < Math.abs(b.y - y) ? f : b, null)?.id
 
   // ---------- routes ----------
   // A route is a list of legs: { walk: x } on the current floor, { lift: floorId }, { then: fn }.
   function go(a, goal) {
-    if (a.leg?.lift && a.liftPhase === 'queued') unqueue(a)
-    if (a.liftPhase === 'boarding') { const k = a.car; a.liftPhase = null; k.moving--; const i = k.riders.indexOf(a); if (i >= 0) k.riders.splice(i, 1) }
+    if (a.liftPhase === 'queued' || a.liftPhase === 'boarding') detach(a)
     const keep = a.liftPhase === 'riding' || a.liftPhase === 'exiting' ? [a.leg] : []
     const from = a.liftPhase === 'riding' ? null : a.floor
     if (a.liftPhase === 'riding') a.leg.lift = goal.floor
@@ -52,21 +57,40 @@ export function createPeople(api, demo, ask = () => false) {
     a.pose = null; a.anim = null; a.activity = null
   }
   function unqueue(a) { const q = queue.get(a.floor); if (q) { const i = q.indexOf(a); if (i >= 0) q.splice(i, 1) } a.liftPhase = null }
+  // a.car is the car someone is boarding, riding or stepping out of. Nothing counts them: a car waits while anyone still
+  // walks in or out of it (inOut), so a person who fades, is removed or loses their floor mid-step never holds its doors.
+  function detach(a) {
+    if (a.liftPhase === 'queued') unqueue(a)
+    const k = a.car
+    if (k) { const i = k.riders.indexOf(a); if (i >= 0) k.riders.splice(i, 1) }
+    a.car = null; a.liftPhase = null; a.held = 0
+  }
+  function stepOut(a) {
+    const leg = a.leg
+    a.liftPhase = null; a.leg = null; a.car = null; a.held = 0
+    if (leg && a.floor !== leg.lift && byId.has(leg.lift)) a.route.unshift({ lift: leg.lift })
+  }
+  // an express rider crossing the main shaft waits (2 s at most) while the main car passes the landing, rather than
+  // walk through it
+  const holdFor = (a, dt) => car.state === 'moving' && Math.abs(car.y - fy(a.floor)) < CAR_H && (a.held = (a.held || 0) + dt) < 2
+  // a.sx / a.tx: where the current walk started and where it ends (tower.js draws a walker passing front furniture in front of it)
   const walkTo = (a, x, dt) => {
     const d = x - a.x, mv = SPEED * dt * (a.kind === 'session' ? 1.05 : 1)
+    a.tx = x
     if (Math.abs(d) <= mv) { a.x = x; return true }
+    if (!a.wasWalking) a.sx = a.x
     a.x += Math.sign(d) * mv; a.dir = d > 0 ? 'right' : 'left'; a.walking = true
     return false
   }
 
   function stepActor(a, dt) {
-    a.walking = false
+    a.wasWalking = a.walking; a.walking = false
     if (a.delay > 0) { a.delay -= dt; return }
     for (let guard = 0; guard < 4; guard++) {
       const leg = a.leg || (a.leg = a.route?.shift())
       if (!leg) return
       if (leg.walk != null) { if (!walkTo(a, leg.walk, dt)) return; a.leg = null; continue }
-      if (leg.then) { a.leg = null; leg.then(); continue }
+      if (leg.then) { a.leg = null; try { leg.then() } catch (e) { console.error('[tower:then]', e) } continue }
       if (leg.lift != null) {
         if (!a.liftPhase) {
           if (a.floor === leg.lift || !byId.has(leg.lift)) { a.leg = null; continue }
@@ -79,14 +103,15 @@ export function createPeople(api, demo, ask = () => false) {
         }
         if (a.liftPhase === 'boarding') {
           const k = a.car, n = k.express ? 3 : 4
-          if (walkTo(a, k.x - 9 + (k.express ? 1 : 0) + (a.carSlot % n) * 6, dt)) { a.liftPhase = 'riding'; a.face = a.carSlot % 2 ? 'left' : 'down'; k.moving-- }
+          if (k.express && a.x < BW && holdFor(a, dt)) { a.face = 'right'; return }
+          if (walkTo(a, k.x - 9 + (k.express ? 1 : 0) + (a.carSlot % n) * 6, dt)) { a.liftPhase = 'riding'; a.held = 0; a.face = a.carSlot % 2 ? 'left' : 'down' }
           return
         }
         if (a.liftPhase === 'riding') return
         if (a.liftPhase === 'exiting') {
+          if (a.car?.express && a.x > BW + SHAFT1 - 2 && holdFor(a, dt)) { a.face = 'left'; return }
           if (!walkTo(a, DOOR_X - 14 - (a.carSlot % 3) * 4, dt)) return
-          a.liftPhase = null; a.leg = null; a.car.moving--
-          if (a.floor !== leg.lift && byId.has(leg.lift)) a.route.unshift({ lift: leg.lift })
+          stepOut(a)
           continue
         }
       }
@@ -117,8 +142,10 @@ export function createPeople(api, demo, ask = () => false) {
   }
   function stops(k) {
     const s = new Set()
-    for (const a of k.riders) if (a.leg?.lift && byId.has(a.leg.lift)) s.add(a.leg.lift)
+    // a rider whose floor is gone gets off at the nearest one; so does a car whose own floor is gone
+    for (const a of k.riders) if (a.liftPhase === 'riding') s.add(byId.has(a.leg?.lift) ? a.leg.lift : nearest(k.y))
     for (const [id, c] of calls) if (c === k) s.add(id)
+    if (!byId.has(k.at)) s.add(nearest(k.y))
     if (!k.active && !s.size && byId.has('lobby')) s.add('lobby')        // a closed express car parks in the lobby
     return s
   }
@@ -128,58 +155,74 @@ export function createPeople(api, demo, ask = () => false) {
     if (!s.length) return null
     const pos = k.y, ahead = id => k.dir < 0 ? fy(id) < pos + 0.5 : fy(id) > pos - 0.5
     let cands = k.dir ? s.filter(ahead) : []
-    if (!cands.length) { cands = s; }
+    if (!cands.length) cands = s
     cands.sort((p, q) => Math.abs(fy(p) - pos) - Math.abs(fy(q) - pos))
     return cands[0]
   }
-  const waiting = k => k.active && queue.get(k.at)?.length && k.riders.length < CAP
+  // who gets out here: riders for this floor (also one redirected to it while the doors close), or whose floor is gone
+  const wantsOut = (a, k) => a.liftPhase === 'riding' && a.fade == null && (a.leg?.lift === k.at || !byId.has(a.leg?.lift))
+  // who gets on: only people already at the landing, so the car never holds its doors for someone across the floor
+  // or out on the street; the rest stay queued and the car comes back for them
+  const atLanding = a => a.fade == null && !(a.delay > 0) && a.x > DOOR_X - 16 - 8 * CAP
+  const shouldOpen = k => byId.has(k.at) && (k.riders.some(a => wantsOut(a, k)) || (k.active && k.riders.length < CAP && !!queue.get(k.at)?.some(atLanding)))
+  function inOut(k) {
+    let n = 0
+    for (const a of actors.values()) if (a.car === k && a.fade == null && (a.liftPhase === 'boarding' || a.liftPhase === 'exiting')) n++
+    return n
+  }
+  function depart(car) {
+    const next = nextStop(car)
+    if (next) { car.target = next; car.dir = Math.sign(fy(next) - car.y); car.state = 'moving' } else car.state = 'idle'
+  }
   function stepCar(car, dt) {
     if (car.state === 'moving') {
       // rethink the target every frame, so a call from a floor on the way stops the car there
-      const target = nextStop(car) ?? car.target
+      const target = nextStop(car) ?? (byId.has(car.target) ? car.target : nearest(car.y))
       car.target = target
       const ty = fy(target); if (ty == null) { car.state = 'idle'; return }
       const d = ty - car.y, v = Math.min(car.speed, 30 + Math.abs(d) * 3) * dt
       car.dir = Math.sign(d) || car.dir
       if (Math.abs(d) <= v) { car.y = ty; car.at = target; car.state = 'open'; car.t = 0 }
       else car.y += Math.sign(d) * v
-      for (const a of car.riders) a.y = car.y
       return
     }
     if (car.state === 'open') {
       car.t += dt; car.doors = Math.min(1, car.doors + dt * 4)
       if (car.doors < 1) return
       // out first, then in
-      for (const a of [...car.riders]) if (a.leg?.lift === car.at || !byId.has(a.leg?.lift)) {
-        car.riders.splice(car.riders.indexOf(a), 1); a.floor = car.at; a.y = undefined; a.liftPhase = 'exiting'; car.moving++
+      for (const a of [...car.riders]) if (wantsOut(a, car)) {
+        car.riders.splice(car.riders.indexOf(a), 1); a.floor = car.at; a.y = undefined; a.liftPhase = 'exiting'; a.liftAt = clock
       }
       const q = queue.get(car.at) || []
-      while (car.active && q.length && car.riders.length < CAP) {
-        const a = q.shift(); a.liftPhase = 'boarding'; a.car = car; a.carSlot = car.riders.length + Math.floor(Math.random() * 3); car.riders.push(a); car.moving++
-        a.ridingFrom = car.at
+      for (let i = 0; car.active && i < q.length && car.riders.length < CAP;) {
+        const a = q[i]
+        if (!atLanding(a)) { i++; continue }
+        q.splice(i, 1)
+        a.liftPhase = 'boarding'; a.car = car; a.carSlot = car.riders.length + Math.floor(Math.random() * 3); car.riders.push(a); a.ridingFrom = car.at; a.liftAt = clock
       }
-      if (car.t > DWELL && car.moving <= 0) {
-        car.moving = 0
+      car.moving = inOut(car)
+      // a backstop: nobody takes STUCK s to step in or out; send them back to the queue, or on their way
+      if (car.moving) for (const a of actors.values()) if (a.car === car && clock - a.liftAt > STUCK) {
+        if (a.liftPhase === 'boarding') { console.warn('[tower:lift] boarder stuck', a.key); detach(a); car.moving-- }
+        else if (a.liftPhase === 'exiting') { console.warn('[tower:lift] exiter stuck', a.key); stepOut(a); car.moving-- }
+      }
+      if (car.t > DWELL && !car.moving) {
         for (const a of car.riders) if (a.liftPhase === 'riding') a.floor = null
-        const next = nextStop(car)
-        if (!next) { car.state = 'closing'; car.target = null; return }
-        car.target = next; car.state = 'closing'
+        car.state = 'closing'
       }
       return
     }
     if (car.state === 'closing') {
       car.doors = Math.max(0, car.doors - dt * 4)
       if (car.doors > 0) return
-      // reopen only for someone who can still get on; a full car leaves them waiting and comes back for them
-      if (waiting(car)) { car.state = 'open'; car.t = 0; return }
-      const next = nextStop(car)
-      if (next) { car.target = next; car.dir = Math.sign(fy(next) - car.y); car.state = 'moving' } else car.state = 'idle'
+      // reopen only for someone who can still get on (or off); a full car leaves them waiting and comes back for them
+      if (shouldOpen(car)) { car.state = 'open'; car.t = 0; return }
+      depart(car)
       return
     }
     // idle: open for someone waiting here, or set off toward the nearest call
-    if (waiting(car)) { car.state = 'open'; car.t = 0; return }
-    const next = nextStop(car)
-    if (next) { car.target = next; car.dir = Math.sign(fy(next) - car.y); car.state = 'moving' }
+    if (shouldOpen(car)) { car.state = 'open'; car.t = 0; return }
+    depart(car)
   }
 
   // ---------- breaks ----------
@@ -345,12 +388,18 @@ export function createPeople(api, demo, ask = () => false) {
   }
 
   // ---------- frame ----------
-  let planAt = 0
+  let planAt = 0, clock = 0
   function step(dt, perf) {
+    clock += dt
     if (perf - planAt > 400) { planAt = perf; planBreaks(perf) }
     dispatch(); for (const k of cars) stepCar(k, dt)
     for (const [k, a] of actors) {
-      if (a.fade != null) { a.fade -= dt * 1.6; if (a.fade <= 0) { endBreak(a); if (a.liftPhase === 'queued') unqueue(a); for (const c of cars) { const i = c.riders.indexOf(a); if (i >= 0) c.riders.splice(i, 1) } actors.delete(k) } continue }
+      if (a.fade != null) {
+        // someone fading (session over, removed, floor gone) lets go of the lift at once, wherever they were in it
+        if (a.liftPhase || a.car) detach(a)
+        a.fade -= dt * 1.6; if (a.fade <= 0) { endBreak(a); actors.delete(k) }
+        continue
+      }
       // an actor whose floor vanished (its session ended) just fades
       if (a.floor && !byId.has(a.floor)) { a.fade = 1; continue }
       stepActor(a, dt)

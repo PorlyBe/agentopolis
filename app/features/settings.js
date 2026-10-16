@@ -1,4 +1,4 @@
-// settings: the ⚙ panel, in tabs (You · Look · Features · Updates · Advanced). Name, look, theme, the update check and
+// settings: the ⚙ panel, in tabs (You · Look · Features · Updates · Advanced · About). Name, look, theme, the update check and
 // the inactive-session window save to the server as you change them (POST /api/settings, ~/.agentopolis/settings.json)
 // and show on the next poll; tower features are switched on or off with "Apply & reload", since the tower starts them
 // once. ?demo=settings or ?settings=open opens it on the last tab; ?settings=<tab> (you, look, features…) on that tab.
@@ -9,8 +9,10 @@ import { thumb, skinLabel, coloursOf, builtinSkin } from '../tower/features/them
 import { HOLIDAYS, calendarOf } from '../tower/features/holidays.js'
 import { parseLook } from '../tower/features/avatar.js'
 
+const REPO = 'https://github.com/PorlyBe/agentopolis'
+const TIPS = [['EVM (Ethereum, Base, …)', '0x569C9deDfaFfACE51dc4953b886D34a60c3a64a3'], ['Bitcoin', 'bc1qe3hqjgkemnheysjxh75fxatq4utamylv36nukt'], ['Tron (TRX, USDT-TRC20)', 'TGRPLHVEvEXFjnpi2xzecDmPKcqBd4GxaW']]
 const LOOK_LABEL = { hair: 'Hair', haircolour: 'Hair colour', suit: 'Suit', skin: 'Skin', glasses: 'Glasses', pet: 'Pet' }
-const TABS = [['you', 'You'], ['look', 'Look'], ['features', 'Features'], ['updates', 'Updates'], ['advanced', 'Advanced']]
+const TABS = [['you', 'You'], ['look', 'Look'], ['features', 'Features'], ['updates', 'Updates'], ['advanced', 'Advanced'], ['about', 'About']]
 const TAB_KEY = 'agent-office.settings-tab'
 const cap = s => s[0].toUpperCase() + s.slice(1)
 const words = s => cap(s.replace(/-/g, ' '))
@@ -19,7 +21,7 @@ const RULE_LABEL = { wallpaper: 'Wallpaper', carpet: 'Carpet', plants: 'Plants',
 
 export default function init(api) {
   const { esc } = api
-  const params = new URLSearchParams(location.search + '&' + location.hash.slice(1))
+  const params = api.params
   const demos = params.getAll('demo')
   const urlTheme = params.get('theme') || (demos.includes('themes') ? 'cycling' : null)
   const urlAvatar = params.get('avatar') || (demos.includes('avatar') ? 'cycling' : null)
@@ -50,6 +52,10 @@ export default function init(api) {
     border-radius: var(--radius-s); border: 1px solid var(--card-line); background: rgba(255, 255, 255, .05); color: var(--ink); font: var(--fs) var(--font); }
   #settings select option { background: #1e2029; }
   #settings :is(input, select, button):focus-visible { outline: 2px solid var(--think); outline-offset: 1px; }
+  #settings a { color: var(--think); }
+  #settings .addr { display: flex; align-items: center; gap: 8px; margin: 6px 0; }
+  #settings .addr code { flex: 1; min-width: 0; overflow-wrap: anywhere; font-size: var(--fs-s); }
+  #settings .addr b { display: block; font-weight: 600; font-size: var(--fs-s); }
   #settings .note { color: var(--muted); font-size: var(--fs-s); margin: 6px 0 0; }
   #settings .note.warn { color: var(--wait); }
   #settings .skins { display: grid; grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); gap: 6px; }
@@ -232,6 +238,12 @@ export default function init(api) {
     + panel('advanced', `
       <label class="f" for="${id('win')}">Minutes an inactive session keeps its floor (${o.windowMin[0]}–${o.windowMin[1]})<input type="number" id="${id('win')}" min="${o.windowMin[0]}" max="${o.windowMin[1]}" step="1" value="${e.windowMin}"></label>
       <div class="row" style="margin-top:16px"><button class="btn danger" data-a="reset">Reset all to defaults</button></div>`)
+    + panel('about', `
+      <p style="margin:0 0 8px"><b>Agentopolis</b> — built by <a href="https://github.com/PorlyBe" data-a="link">PorlyBe</a> with Claude. MIT licensed.</p>
+      <div class="row"><button class="btn" data-a="repo">Open on GitHub</button></div>
+      <h3>Support</h3>
+      <p class="note" style="margin:0 0 4px">If Agentopolis makes your day nicer, a tip is welcome. Check the address and the network before sending.</p>
+      ${TIPS.map(([n, a]) => `<div class="addr"><code><b>${esc(n)}</b>${esc(a)}</code><button class="btn" data-a="copy" data-v="${esc(a)}">Copy</button></div>`).join('')}`)
     ft.textContent = st.file ? `Saved to ${st.file}. Command-line flags are startup defaults; what you set here wins.` : 'Demo: settings last until the server stops.'
     paintTheme(); paintFeatures(); paintNotes(); preview(); paintThumbs(); rules = (e.floorRules || []).map(r => ({ ...r })); paintRules()
   }
@@ -413,6 +425,12 @@ export default function init(api) {
       try { await navigator.clipboard.writeText(box.value); cmsg('Copied — send it to a colleague to Import.') } catch { cmsg('Copy the text above to share it.') }
     }
     else if (a === 'cimport') importCustom()
+    else if (a === 'repo' || a === 'link') { e.preventDefault(); api.openLink(a === 'repo' ? REPO : e.target.closest('a').href) }
+    else if (a === 'copy') {
+      const b = e.target.closest('button')
+      try { await navigator.clipboard.writeText(b.dataset.v); b.textContent = 'Copied' } catch { b.textContent = 'Copy failed' }
+      setTimeout(() => { if (b.isConnected) b.textContent = 'Copy' }, 1500)
+    }
     else if (a === 'radd') { rules.push({ pattern: '*', ...Object.fromEntries(Object.keys(st.options.floorPresets).map(k => [k, 'none'])) }); paintRules(); bd.querySelector('.rule:last-child [data-r="pattern"]')?.focus() }
     else if (a === 'rdel' || a === 'rup') {
       const i = +e.target.closest('.rule').dataset.i
@@ -438,6 +456,7 @@ export default function init(api) {
     }
   })
 
+  addEventListener('agentopolis:settings', e => open(e.detail))   // other panels open a tab, e.g. the help footer's ♥ support
   const at = params.get('settings')
   if (demos.includes('settings') || at) setTimeout(async () => { await open(at === 'editor' ? 'look' : at); if (at === 'editor') bd.querySelector('[data-a="cnew"]')?.click() }, 300)
 }

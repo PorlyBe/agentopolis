@@ -2,14 +2,14 @@
 // dims to a night-light, idle monitors bounce a logo, robot vacuums trundle along the floors and a zzz rises over the
 // CEO chair. Working desks keep their screens lit. A new prompt flicks the lights back on floor by floor, bottom up.
 // ?demo=screensaver: asleep for 22 s, awake for 8 s, repeating.
+import { R } from '../draw.js'
 const IDLE = 30 * 60_000, FADE = 3, STAGGER = 220, FLICK = 320, CYCLE = 30_000, DEMO_SLEEP = 22_000
-const R = (c, col, x, y, w, h) => { c.fillStyle = col; c.fillRect(Math.round(x), Math.round(y), w, h) }
 const LOGO = ['#f7931a', '#0ac18e', '#63b3f0', '#e58ad0', '#f4e04f']
 const busySession = st => st === 'tool' || st === 'thinking' || st === 'delegating' || st === 'building'
 const busyAgent = st => !!st && st !== 'idle' && st !== 'done'
 
 export default function init(api, tower) {
-  const params = new URLSearchParams(location.search + '&' + location.hash.slice(1)), demo = params.getAll('demo').includes('screensaver')
+  const demo = api.demo('screensaver')
   const t0 = Date.now(), dim = new Map(), bots = new Map()
   let lastPrompt = 0, asleep = false, wakeAt = 0
 

@@ -2,8 +2,8 @@
 // banner with today's Gazette headline (snap.gazette.headline); a long one scrolls. Every few minutes, or at the edge of
 // town, it turns around. At night its nav lights blink and the banner is lit. Click it to open the Gazette. ?demo=blimp.
 import { BW, SHAFT } from '../building.js'
+import { R } from '../draw.js'
 
-const R = (c, col, x, y, w, h) => { c.fillStyle = col; c.fillRect(Math.round(x), Math.round(y), w, h) }
 const BODY = { w: 72, h: 22 }, BAN = { w: 170, h: 16 }, ROPE = 12, SPEED = 6, TURN = 3.2
 const SCROLL = 34   // banner text, screen px per second
 // the envelope's colours; the steampunk skin flies a brass dirigible
@@ -14,7 +14,7 @@ const HULL = {
 
 export default function init(api, tower) {
   const { Z, font } = tower, esc = api.esc
-  const params = new URLSearchParams(location.search + '&' + location.hash.slice(1)), demo = params.getAll('demo').includes('blimp')
+  const params = api.params, demo = api.demo('blimp')
   let headline = null, paper = null, x = null, dir = 1, sx = 1, turning = 0, nextTurn = 0, flown = false
 
   if (demo) tower.on('snapshot', snap => {

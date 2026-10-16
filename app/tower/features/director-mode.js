@@ -11,7 +11,7 @@ const KEY = 'agentopolis:director', PAUSE = 60_000, MIN_CUT = 10_000
 const ease = t => 0.5 - 0.5 * Math.cos(Math.PI * Math.max(0, Math.min(1, t)))
 
 export default function init(api, tower) {
-  const params = new URLSearchParams(location.search + '&' + location.hash.slice(1)), demo = params.getAll('demo').includes('directormode')
+  const params = api.params, demo = api.demo('directormode')
   const k = demo ? 0.6 : 1   // the demo holds shots a little shorter so a screenshot run sees a few
   let on = false, pausedUntil = 0, shot = null, flight = null, base = null, cutAt = 0, t0 = 0
   const shown = new Map()     // shot key -> last time on air

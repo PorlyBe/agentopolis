@@ -2,16 +2,16 @@
 // snap.tamagotchiPlant), sprout → seedling → sapling → bush → big bush → small tree → in flower → in fruit, and droops
 // brown when neither yesterday nor today has any activity. The first prompt of the day (newest ext.walkabout.at) brings
 // a watering can. ?demo=tamagotchiplant grows it through every stage, wilts it, and waters it again.
+import { R } from '../draw.js'
 const DAY = 86_400_000, WATER_MS = 4200, KEY = 'tamagotchi-plant:watered', CYCLE = 32_000
 const STAGES = ['seed', 'sprout', 'seedling', 'sapling', 'bush', 'big bush', 'small tree', 'in flower', 'in fruit']
 const GREEN = ['#2f6b34', '#3f8a3e', '#5fb14f', '#8fd46a'], BROWN = ['#5e4a26', '#7a6230', '#9a7c3c', '#b89a52']
-const R = (c, col, x, y, w, h) => { c.fillStyle = col; c.fillRect(Math.round(x), Math.round(y), w, h) }
 const dayKey = t => { const d = new Date(t); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` }
 const store = { get: () => { try { return localStorage.getItem(KEY) } catch { return null } }, set: v => { try { localStorage.setItem(KEY, v) } catch {} } }
 
 export default function init(api, tower) {
   const { Z } = tower
-  const demo = new URLSearchParams(location.search + '&' + location.hash.slice(1)).getAll('demo').includes('tamagotchiplant')
+  const demo = api.demo('tamagotchiplant')
   let data = null, lastPrompt = 0, water = 0, t0 = 0, cyc = -1
 
   const spot = () => { const s = tower.slots, f = s?.floor; return f && f.open == null ? { x: tower.interior.x0 + 96, y: f.y, f } : null }

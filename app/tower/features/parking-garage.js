@@ -4,8 +4,8 @@
 // ext['cost-jar'].byModel between snapshots. Hover a car for session, model and rate; click it to open the session.
 // ?demo=parkinggarage parks four extra sessions, one of each kind, burning at very different rates.
 import { garageRect, BW } from '../building.js'
+import { R } from '../draw.js'
 
-const R = (c, col, x, y, w, h) => { c.fillStyle = col; c.fillRect(Math.round(x), Math.round(y), w, h) }
 const WINDOW_MS = 3 * 60_000, MIN_SPAN = 10_000, GAP = 10
 const LEN = { limo: 52, sedan: 30, scooter: 16 }, TRAILER = 22
 const kindOf = m => /opus|fable|mythos/i.test(m) ? 'limo' : /haiku/i.test(m) ? 'scooter' : 'sedan'
@@ -18,7 +18,7 @@ const DIGITS = { 1: ['010', '110', '010', '010', '111'], M: ['10001', '11011', '
 
 export default function init(api, tower) {
   const { Z } = tower, esc = api.esc
-  const demo = new URLSearchParams(location.search + '&' + location.hash.slice(1)).getAll('demo').includes('parkinggarage')
+  const demo = api.demo('parkinggarage')
   const samples = new Map()   // session id -> [[t, tokens]]
   const emitted = new Map()   // session id -> last puff time
   let cars = [], puffs = []

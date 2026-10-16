@@ -2,14 +2,14 @@
 // it — THUNK, the parcel jumps, red ink splatters — and leaves MERGED in red ink before the postal worker carries it
 // off to the van (post-room.js holds the pickup through tower.postRoom.hold). The parcel keeps a red mark on its way out.
 // ?demo=mergestamp merges one parcel every 15 s and flies to the post room.
-const R = (c, col, x, y, w = 1, h = 1) => { c.fillStyle = col; c.fillRect(Math.round(x), Math.round(y), w, h) }
+import { R } from '../draw.js'
 const GLYPH = { M: '7f020c027f', E: '7f49494941', R: '7f09192946', G: '3e4149497a', D: '7f4141221c' }
 const DROP = 420, PRESS = 380, LIFT = 520, HOLD = DROP + PRESS + LIFT + 450, IMPRINT_MS = 9000
 const INK = '#c8202a', W = 41, H = 13
 
 export default function init(api, tower) {
   const { Z, font } = tower
-  const params = new URLSearchParams(location.search + '&' + location.hash.slice(1)), demo = params.getAll('demo').includes('mergestamp')
+  const params = api.params, demo = api.demo('mergestamp')
   const stamps = new Map()   // PR number -> { p, t0, x, y, w, h, drops }
   let hooked = false
 

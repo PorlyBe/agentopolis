@@ -1,13 +1,11 @@
 // security-desk: today's guardrail stops across every transcript touched today (sessions, subagents, workflow agents):
 // a rejected permission prompt, a hook or harness block, an auto-mode classifier denial. Each names the tool it stopped,
-// found through its tool_use id. Files are read once from the start, then only their appended bytes, asynchronously.
-import fs from 'node:fs'
-import path from 'node:path'
-import os from 'node:os'
-import { StringDecoder } from 'node:string_decoder'
+// found through its tool_use id. Lines come from the shared crawl of the week's transcripts (server/lib/crawler.mjs: each
+// file read once from the start, then only its appended bytes, asynchronously); a file joins once touched since yesterday.
+import * as crawler from '../lib/crawler.mjs'
+import { own } from '../lib/tail.mjs'
 
-const PROJECTS = path.join(os.homedir(), '.claude', 'projects')
-const CHUNK = 4 * 1024 * 1024, KEEP = 80, TICK = 15_000
+const KEEP = 80, DAY = 24 * 3600_000
 const KINDS = [
   ['classifier', /auto mode classifier|classifier (?:gave no verdict|judged)/i],
   ['rejected', /doesn't want to proceed|tool use was rejected|was rejected by the user|Permission for this action/],
@@ -15,42 +13,21 @@ const KINDS = [
 ]
 const MARK = /auto mode classifier|doesn't want to proceed|was rejected|Permission for this action|Blocked:|hook/
 const USE = /"type":"tool_use","id":"(toolu_\w+)","name":"([^"]+)","input":(\{.{0,600})/g
-const files = new Map()
-let stops = [], crawling = false, crawledAt = 0, day = 0
+let stops = []
 
-const midnight = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return d.getTime() }
-const dir = async d => { try { return await fs.promises.readdir(d) } catch { return [] } }
-
-async function listFiles(since) {
-  const out = []
-  const agentsIn = async d => (await dir(d)).filter(f => f.startsWith('agent-') && f.endsWith('.jsonl')).map(f => path.join(d, f))
-  for (const proj of await dir(PROJECTS)) {
-    const pd = path.join(PROJECTS, proj)
-    for (const f of await dir(pd)) {
-      if (!f.endsWith('.jsonl')) continue
-      const sub = path.join(pd, f.slice(0, -6), 'subagents')
-      const all = [path.join(pd, f), ...await agentsIn(sub)]
-      for (const wf of await dir(path.join(sub, 'workflows'))) all.push(...await agentsIn(path.join(sub, 'workflows', wf)))
-      for (const file of all) { try { if ((await fs.promises.stat(file)).mtimeMs >= since) out.push(file) } catch {} }
-    }
-  }
-  return out
+function fresh(e) {
+  return { session: e.session, agent: e.agent, title: null, uses: new Map() }
 }
-
-function fresh(file) {
-  const rel = path.relative(PROJECTS, file).split(path.sep)
-  const agent = rel.at(-1).startsWith('agent-') ? rel.at(-1).slice(6, -6) : null
-  return { offset: 0, rest: '', dec: new StringDecoder('utf8'), session: agent ? rel[1] : rel[1].slice(0, -6), agent, title: null, uses: new Map() }
-}
+const PICK = Object.fromEntries(['description', 'command', 'file_path', 'url', 'skill', 'query'].map(k => [k, new RegExp(`"${k}":"((?:[^"\\\\]|\\\\.){1,160})`)]))
 const what = (name, raw) => {
-  const pick = k => raw.match(new RegExp(`"${k}":"((?:[^"\\\\]|\\\\.){1,160})`))?.[1]?.replace(/\\n/g, ' ').replace(/\\(.)/g, '$1')
+  const pick = k => raw.match(PICK[k])?.[1]?.replace(/\\n/g, ' ').replace(/\\(.)/g, '$1')
   return (name === 'Bash' ? pick('description') || pick('command') : pick('file_path') || pick('description') || pick('command') || pick('url') || pick('skill') || pick('query')) || null
 }
 
-function line(s, l, today) {
-  if (!s.agent && l.length < 2000 && l.includes('"ai-title"')) { try { s.title = JSON.parse(l).aiTitle || s.title } catch {} return }
+function line(s, l, { today }) {
+  if (!s.agent && l.length < 2000 && l.includes('"ai-title"')) { try { s.title = own(JSON.parse(l).aiTitle) || s.title } catch {} return }
   if (l.includes('"type":"tool_use"')) {
-    for (const m of l.matchAll(USE)) { s.uses.set(m[1], { tool: m[2], what: what(m[2], m[3]) }); if (s.uses.size > 400) s.uses.delete(s.uses.keys().next().value) }
+    for (const m of l.matchAll(USE)) { s.uses.set(own(m[1]), { tool: own(m[2]), what: own(what(m[2], m[3])) }); if (s.uses.size > 400) s.uses.delete(s.uses.keys().next().value) }
     return
   }
   if (!l.includes('"tool_result"') || !MARK.test(l)) return
@@ -66,49 +43,27 @@ function line(s, l, today) {
     const u = s.uses.get(b.tool_use_id) || {}
     const reason = kind === 'classifier' ? out.match(/Reason: \[([^\]]+)\]/)?.[1] || (/no verdict/.test(out) ? 'no verdict' : 'judged dangerous')
       : kind === 'hook' ? out.replace(/^<tool_use_error>/, '').replace(/<\/tool_use_error>$/, '').slice(0, 120) : 'prompt rejected'
-    stops.push({ id: b.tool_use_id || `${t}`, t, kind, tool: u.tool || null, what: u.what || null, reason, session: s.session, agent: s.agent, fileTitle: s.title })
+    stops.push({ id: b.tool_use_id || `${t}`, t, kind, tool: u.tool || null, what: u.what || null, reason: own(reason), session: s.session, agent: s.agent, fileTitle: s.title })
   }
 }
 
-async function read(file, size, today) {
-  let s = files.get(file)
-  if (!s || size < s.offset) { s = fresh(file); files.set(file, s) }
-  if (size <= s.offset) return
-  const fh = await fs.promises.open(file, 'r')
-  try {
-    while (s.offset < size) {
-      const buf = Buffer.alloc(Math.min(CHUNK, size - s.offset))
-      const { bytesRead } = await fh.read(buf, 0, buf.length, s.offset)
-      if (!bytesRead) break
-      s.offset += bytesRead
-      const lines = (s.rest + s.dec.write(buf.subarray(0, bytesRead))).split('\n')
-      s.rest = lines.pop()
-      for (const l of lines) if (l) line(s, l, today)
-    }
-  } finally { await fh.close() }
-}
-
-async function crawl() {
-  if (crawling) return
-  crawling = true
-  try {
-    const today = midnight()
-    if (today !== day) { day = today; stops = []; files.clear() }
-    for (const f of await listFiles(today)) {
-      let st; try { st = await fs.promises.stat(f) } catch { continue }
-      await read(f, st.size, today)
-    }
+// a transcript joins once touched since yesterday: a stop is today's, and the tool call it names is near it
+crawler.week.subscribe({
+  files: new Map(),
+  open: (e, st, { today }) => st.mtimeMs >= today - DAY ? fresh(e) : null,
+  line,
+  after({ today }) {
     const seen = new Set()
     stops = stops.filter(x => x.t >= today && !seen.has(x.id) && seen.add(x.id)).sort((a, b) => a.t - b.t).slice(-KEEP)
-    crawledAt = Date.now()
-  } catch (e) { console.error('[security-desk]', e.message) } finally { crawling = false }
-}
+  },
+})
 
 export default {
+  serves: ['security-desk'],   // only its own tower feature reads it
   snapshot(snap) {
-    if (Date.now() - crawledAt > TICK) crawl()
+    crawler.week.poke(snap.now)
     const titles = new Map(), agents = new Map()
     for (const s of snap.sessions) { titles.set(s.id, s.title); for (const g of s.agents || []) agents.set(g.id, g.description || g.type) }
-    snap.securityDesk = { day, ready: crawledAt > 0, stops: stops.map(({ fileTitle, ...x }) => ({ ...x, sessionTitle: titles.get(x.session) || fileTitle || x.session.slice(0, 8), agentName: x.agent ? agents.get(x.agent) || null : null })) }
+    snap.securityDesk = { day: crawler.week.day, ready: crawler.week.ready, stops: stops.map(({ fileTitle, ...x }) => ({ ...x, sessionTitle: titles.get(x.session) || fileTitle || x.session.slice(0, 8), agentName: x.agent ? agents.get(x.agent) || null : null })) }
   },
 }

@@ -86,6 +86,10 @@ const api = {
   header: document.querySelector('header'), hud: document.getElementById('hud'),
   view: null,                                        // the on-screen canvas (the tower sets it; the photo booth shoots it)
   on(name, fn) { if (!hooks[name]) throw new Error('unknown hook ' + name); hooks[name].push(fn) },
+  // the page's query and hash params together (?demo=x and #demo=x both count), read fresh on each call
+  get params() { return new URLSearchParams(location.search + '&' + location.hash.slice(1)) },
+  // is any of these ?demo= names on?
+  demo: (...names) => { const on = api.params.getAll('demo'); return names.some(n => on.includes(n)) },
 }
 
 let polling = false, pollAgain = false

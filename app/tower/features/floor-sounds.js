@@ -10,7 +10,7 @@ const READING = /^(Read|Grep|Glob|WebFetch|WebSearch|ToolSearch)$|^mcp__/
 const clamp = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v))
 
 export default function init(api, tower) {
-  const params = new URLSearchParams(location.search + '&' + location.hash.slice(1)), demo = params.getAll('demo').includes('floorsounds')
+  const params = api.params, demo = api.demo('floorsounds')
   const level = () => api.soundscape?.level() ?? 0
   const counts = { keys: 0, whirr: 0, crunch: 0, ding: 0, pour: 0, car: 0, horn: 0 }
   let ctx = null, master = null, noise = null, beds = null, carWas = null

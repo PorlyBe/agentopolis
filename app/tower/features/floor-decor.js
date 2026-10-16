@@ -4,9 +4,8 @@
 // setFloorStyle), so a rule change rebuilds them.
 import { setFloorStyle, IX, IX1, FW } from '../building.js'
 import { floorRuleFor } from '../../options.js'
+import { R, rnd } from '../draw.js'
 
-const R = (c, col, x, y, w = 1, h = 1) => { c.fillStyle = col; c.fillRect(Math.round(x), Math.round(y), w, h) }
-const rnd = k => { const s = Math.sin(k * 127.1 + 311.7) * 43758.5453; return s - Math.floor(s) }
 const CARPET = { blue: '#3a5a9a', green: '#3a7a4a', red: '#9a3a3a', grey: '#6a6a72', sand: '#c8b088', purple: '#6a4a9a' }
 
 function paper(c, f, kind) {

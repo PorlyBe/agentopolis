@@ -2,6 +2,8 @@
 
 **A living pixel-art skyscraper of your Claude Code sessions.**
 
+Built by [PorlyBe](https://github.com/PorlyBe) with Claude.
+
 Every running session gets its own floor. Its subagents and workflow agents walk in through the lobby, ride the glass
 elevator and sit down at the desks beside it. You watch them work, take coffee breaks, get stuck, celebrate, and queue
 outside your office when they need you. Your teammates' open pull requests line the street as neighbouring buildings,
@@ -204,12 +206,29 @@ the privacy rules every plugin follows, and how to check yours with screenshots.
 
 ## Credits
 
+**Agentopolis was built by [PorlyBe](https://github.com/PorlyBe) together with Claude** (Anthropic's model, via
+Claude Code), one floor at a time. PorlyBe dreamed up the building and kept asking for more; Claude wrote the code, often
+with a crew of subagents working in parallel, which is fitting.
+
 Character, furniture and pet sprites come from [Pixel Agents](https://github.com/pixel-agents-hq/pixel-agents)
 (MIT, © Pablo De Lucca). The characters are based on
 [JIK-A-4's Metro City](https://jik-a-4.itch.io/metrocity-free-topdown-character-pack) pack (CC0). Everything else is drawn
 in code.
 
 Not affiliated with Anthropic. "Claude" and "Claude Code" are Anthropic's trademarks.
+
+## Support
+
+Agentopolis is free and MIT-licensed. If it made your day a little better and you'd like to buy PorlyBe a coffee, tips are
+welcome (and entirely optional):
+
+| Network | Address |
+|---|---|
+| Ethereum and EVM chains | `0x569C9deDfaFfACE51dc4953b886D34a60c3a64a3` |
+| Bitcoin | `bc1qe3hqjgkemnheysjxh75fxatq4utamylv36nukt` |
+| Tron (TRX, USDT-TRC20) | `TGRPLHVEvEXFjnpi2xzecDmPKcqBd4GxaW` |
+
+Please double-check the address and network before sending; crypto transfers can't be reversed.
 
 ## License
 

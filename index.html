@@ -51,6 +51,8 @@
   #help li b { color: var(--ink); font-weight: 600; white-space: nowrap; }
   #help .dot { flex: none; width: 8px; height: 8px; border-radius: 2px; transform: translateY(-1px); }
   #help .k { flex: none; min-width: 14px; text-align: center; }
+  #help .hfoot { margin-top: 12px; padding-top: 8px; border-top: 1px solid var(--card-line); color: var(--muted); font-size: var(--fs-s); }
+  #help .hfoot button { border: 0; padding: 0; background: none; color: inherit; font: inherit; text-decoration: underline; cursor: pointer; }
   @media (max-width: 900px) { #counts, header .hsep { display: none; } }
   @media (max-width: 640px) { #conn { font-size: 0; } }
 
@@ -118,6 +120,7 @@
         <li><span class="k">⎋</span><span><b>Esc</b> closes panels · <b>space</b> plays/pauses a replay</span></li>
         <li><span class="k">✦</span><span>There are a few secrets…</span></li>
       </ul>
+      <div class="hfoot">Built by PorlyBe &amp; Claude · <button type="button" id="helpSupport">♥ support</button></div>
     </div>
   </div>
   <div id="empty">No Claude sessions running.</div>

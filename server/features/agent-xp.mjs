@@ -14,7 +14,7 @@ const dirs = new Map()     // agents dir -> mtimeMs at its last listing
 const live = new Map()     // session id -> sessionDir
 let crawling = false, fullAt = 0, quickAt = 0, cache = null, cacheAt = 0
 
-export const levelOf = xp => Math.floor(Math.sqrt(xp))
+const levelOf = xp => Math.floor(Math.sqrt(xp))
 const typeOf = (t, inWorkflow) => inWorkflow || t === 'workflow-subagent' ? 'workflow' : String(t || 'general-purpose').slice(0, 40)
 
 async function listAgents(d, inWorkflow, force) {
@@ -71,6 +71,7 @@ function aggregate() {
 }
 
 export default {
+  serves: ['agent-xp'],   // only its own tower feature reads it
   session({ id, sessionDir }) { live.set(id, sessionDir) },
   snapshot(snap) {
     const now = Date.now()

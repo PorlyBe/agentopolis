@@ -6,16 +6,16 @@
 // the floor folds away and the floors above slide down — all inside the 20 s the server keeps an ended session.
 // ?demo=moveinout fakes a session moving in, then out, on a loop.
 import { IX, IX1, BW, SEAT, DOOR_X, OUTSIDE, lampXs } from '../building.js'
+import { R } from '../draw.js'
 
 const BUILD = 2.2, STRIKE = 1.4, FOLD = 1.8, OPEN_TAG = 8
 const ZONES = [[IX, IX + 244], [IX + 244, IX + 364], [IX + 364, IX1]]     // one per lamp, switched off left to right
 const PILE_X = IX1 - 64
-const R = (c, col, x, y, w, h) => { c.fillStyle = col; c.fillRect(Math.round(x), Math.round(y), w, h) }
 const ease = t => t <= 0 ? 0 : t >= 1 ? 1 : t < 0.5 ? 4 * t ** 3 : 1 - (-2 * t + 2) ** 3 / 2
 
 export default function init(api, tower) {
   const { Z, font } = tower
-  const demo = new URLSearchParams(location.search + '&' + location.hash.slice(1)).getAll('demo').includes('moveinout')
+  const demo = api.demo('moveinout')
   const moves = new Map(), off = new Map()
   let prev = null
   const secs = (m, now) => (now - m.t0) / 1000

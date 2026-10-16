@@ -5,16 +5,14 @@
 // session outside the tower leaves through the roof. Hover a tray or hatch for the recent mail.
 // ?demo=interofficemail fakes letters and slips between the floors on screen.
 import { IX1 } from '../building.js'
+import { R, inR, easeInOut as ease } from '../draw.js'
 
 const TX = IX1 + 2, TW = 4, HX = IX1 - 9, FRESH_MS = 20_000, TRAY_MS = 4 * 60_000, MAX_CLERKS = 3, MAX_FLIGHTS = 14
-const R = (c, col, x, y, w, h) => { c.fillStyle = col; c.fillRect(Math.round(x), Math.round(y), w, h) }
-const inR = (w, r, pad = 0) => r && w.x >= r.x - pad && w.x <= r.x + r.w + pad && w.y >= r.y - pad && w.y <= r.y + r.h + pad
-const ease = t => t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2
 const STAMP = { completed: '#3e9a55', returned: '#3e9a55', message: '#3a63a8', failed: '#c0392b', killed: '#8a7a66', stopped: '#8a7a66' }
 
 export default function init(api, tower) {
   const { Z, font } = tower, esc = api.esc
-  const params = new URLSearchParams(location.search + '&' + location.hash.slice(1)), demo = params.getAll('demo').includes('interofficemail')
+  const params = api.params, demo = api.demo('interofficemail')
   const seen = new Set(), flights = [], trays = new Map(), log = []   // trays: key -> [{ e, at }]
   let primed = false, clerks = 0, demoN = 0, demoAt = 0, flown = false
 

@@ -4,11 +4,11 @@
 // whole tower; it leaves as soon as that session gets busy, and wanders to another idle floor after a while.
 // ?demo=catchaos keeps the first session idle and runs every trick in turn.
 import { IX } from '../building.js'
+import { R } from '../draw.js'
 
 const IDLE = 10 * 60_000, STAY = 7 * 60_000, REST = 90_000, HOP = 550, CX = IX + 426
 const TRICKS = ['mug', 'keyboard', 'paper', 'dot', 'pen']
 const SAY = { mug: 'knocked the mug off the desk', keyboard: 'sitting on the keyboard', paper: 'asleep in the copier paper tray', dot: 'chasing the dot on the monitor', pen: 'batting a pen around' }
-const R = (c, col, x, y, w, h) => { c.fillStyle = col; c.fillRect(Math.round(x), Math.round(y), w, h) }
 const busy = st => st === 'tool' || st === 'thinking' || st === 'delegating' || st === 'building'
 const busyAgent = st => !!st && st !== 'idle' && st !== 'done'
 const O = '#3a1d0e', B = '#d9822b', H = '#f2b264', P = '#f0a0a8', E = '#fff1d0'
@@ -18,7 +18,7 @@ const CURL = [[O, [[1, 3, 8], [2, 1, 10], [3, 0, 11], [4, 0, 11], [5, 0, 11], [6
 
 export default function init(api, tower) {
   const { Z } = tower, esc = api.esc
-  const demo = new URLSearchParams(location.search + '&' + location.hash.slice(1)).getAll('demo').includes('catchaos')
+  const demo = api.demo('catchaos')
   const cat = { npc: null, sid: null, trick: null, st: 'away', t0: 0, since: 0, rest: 0, done: new Set(), next: 0 }
   const mess = []            // { sid, kind 'shards'|'pen', parts, until }
   let snap = null, ginger = null, demoSid = null, demoT0 = 0, flown = false

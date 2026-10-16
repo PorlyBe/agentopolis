@@ -2,18 +2,19 @@
 // best (snap.records, server/features/hall-of-records.mjs). A record set today gets a spotlight and a toast. Hover a plaque for
 // its date and what set it; click the case for the full list. ?demo=hallofrecords.
 import { IX } from '../building.js'
+import { R } from '../draw.js'
 
-const R = (c, col, x, y, w, h) => { c.fillStyle = col; c.fillRect(Math.round(x), Math.round(y), w, h) }
 const CASE = { dx: IX + 332, w: 115, h: 32 }, CW = 27, CH = 13
 const SHORT = { 'longest-session': 'LONGEST RUN', 'tools-day': 'TOOLS/DAY', 'agents-once': 'AGENTS', 'biggest-pr': 'BIGGEST PR', 'priciest-day': 'PRICEY DAY', 'commits-day': 'COMMITS/DAY', 'green-streak': 'GREEN RUN' }
 const ICON = { 'longest-session': '⏱', 'tools-day': '🛠', 'agents-once': '👥', 'biggest-pr': '📜', 'priciest-day': '💰', 'commits-day': '📌', 'green-streak': '✅' }
 const dur = ms => { const m = Math.round(ms / 60000), h = Math.floor(m / 60), d = Math.floor(h / 24); return d ? `${d}d ${h % 24}h` : h ? `${h}h ${m % 60}m` : `${m}m` }
-const fmt = r => r.value == null ? '—' : r.unit === 'ms' ? dur(r.value) : r.unit === 'usd' ? '$' + r.value.toFixed(2) : r.unit === 'lines' ? r.value.toLocaleString('en-US') + ' ln' : r.value.toLocaleString('en-US')
+const NUM = new Intl.NumberFormat('en-US')   // toLocaleString builds a formatter per call, and fmt runs every frame
+const fmt = r => r.value == null ? '—' : r.unit === 'ms' ? dur(r.value) : r.unit === 'usd' ? '$' + r.value.toFixed(2) : r.unit === 'lines' ? NUM.format(r.value) + ' ln' : NUM.format(r.value)
 const date = t => { const d = new Date(t), y = d.getFullYear() !== new Date().getFullYear(); return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', ...(y ? { year: 'numeric' } : {}) }) }
 
 export default function init(api, tower) {
   const { Z, font, fitText } = tower, esc = api.esc
-  const params = new URLSearchParams(location.search + '&' + location.hash.slice(1)), demo = params.getAll('demo').includes('hallofrecords')
+  const params = api.params, demo = api.demo('hallofrecords')
   let list = [], panel = null, demoT0 = 0
   const lit = new Map(), shown = new Set()   // key -> when its spotlight came on; toasts already raised this page
 

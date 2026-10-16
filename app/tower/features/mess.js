@@ -3,8 +3,8 @@
 // sweeps, then the floor sparkles. If he never shows up, a mop wave sweeps the floor on its own.
 // Demo: ?demo=mess ramps the first floor from 0 to 100% over ~20 s, then compacts it.
 import { IX, IX1 } from '../building.js'
+import { R } from '../draw.js'
 
-const R = (c, col, x, y, w, h) => { c.fillStyle = col; c.fillRect(Math.round(x), Math.round(y), w, h) }
 const clamp = p => Math.max(0, Math.min(1, p || 0))
 const PAPER = ['#f4f1e8', '#e6e2d6', '#d4cfc0', '#ffffff']
 // [threshold, kind, where]: every 10% past 40 adds a few things
@@ -26,7 +26,7 @@ const SWEEP_S = 2.6, WAVE_S = 4, WAIT_S = 45, IN_S = 0.45, OUT_S = 0.35
 function rng(seed) { let s = seed >>> 0 || 1; return () => { s = (s + 0x6d2b79f5) >>> 0; let t = s; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296 } }
 
 export default function init(api, tower) {
-  const demo = new URLSearchParams(location.search + '&' + location.hash.slice(1)).getAll('demo').includes('mess')
+  const demo = api.demo('mess')
   const rooms = new Map()                          // session id -> { items, lv, held, clean, last }
 
   // ---------- the mess plan, deterministic per session ----------

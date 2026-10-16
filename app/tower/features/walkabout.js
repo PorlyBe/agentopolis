@@ -7,7 +7,7 @@ const R = (c, col, x, y, w, h) => { c.fillStyle = col; c.fillRect(x, y, w, h) }
 
 export default function init(api, tower) {
   const { Z } = tower
-  const demo = new URLSearchParams(location.search + '&' + location.hash.slice(1)).getAll('demo').includes('walkabout')
+  const demo = api.demo('walkabout')
   const seen = new Map()   // session id -> newest prompt time already acted on
   let primed = false, trip = null
 

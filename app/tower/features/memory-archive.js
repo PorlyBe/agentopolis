@@ -3,9 +3,8 @@
 // second cabinet rolls in once the first is full. A new filing is carried down by a clerk from the writer's floor and the
 // drawer pulls open as it goes in. Hover a drawer for the file, who wrote it, when and its first line. ?demo=memoryarchive.
 import { IX } from '../building.js'
+import { R, inR } from '../draw.js'
 
-const R = (c, col, x, y, w = 1, h = 1) => { c.fillStyle = col; c.fillRect(Math.round(x), Math.round(y), w, h) }
-const inR = (w, r, pad = 0) => r && w.x >= r.x - pad && w.x <= r.x + r.w + pad && w.y >= r.y - pad && w.y <= r.y + r.h + pad
 const CAB = [IX + 402, IX + 421], CW = 17, CH = 42, PER = 20, MAX = 40, OPEN_MS = 1400, CHUTE = IX + 471, FALL_MS = 700
 const KIND = { claude: ['#e0925a', 'CLAUDE.md'], agents: ['#d8b45a', 'AGENTS.md'], rules: ['#6a9ae0', 'rule'], skill: ['#6cc48a', 'skill'], memory: ['#b48ae8', 'memory'] }
 const STEEL = { classic: ['#7a8494', '#5a6272', '#9aa4b4'], synthwave: ['#5a3a7a', '#3a2456', '#8a5ab4'], cyberpunk: ['#3a3e56', '#24263a', '#5a5e7a'] }
@@ -14,7 +13,7 @@ const SAMPLE = [['claude', 'CLAUDE.md', 'Run the full suite before a PR'], ['mem
 
 export default function init(api, tower) {
   const { Z, font } = tower, esc = api.esc
-  const params = new URLSearchParams(location.search + '&' + location.hash.slice(1)), demo = params.getAll('demo').includes('memoryarchive')
+  const params = api.params, demo = api.demo('memoryarchive')
   let list = [], primed = false, flown = false, demoT0 = 0, rollAt = 0, wasTwo = false
   const known = new Set(), pending = new Set(), opening = new Map(), queue = [], couriers = []   // pending: on its way, not filed yet
 

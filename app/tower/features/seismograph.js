@@ -5,8 +5,8 @@
 // the paper from 00 to 24, one spike per event (tall for force push / rm -rf, small for reset --hard). Hover the drum.
 // ?demo=seismograph fakes a day of tremors and a fresh one every 10 s.
 import { IX } from '../building.js'
+import { R } from '../draw.js'
 
-const R = (c, col, x, y, w, h) => { c.fillStyle = col; c.fillRect(Math.round(x), Math.round(y), w, h) }
 const SX = IX + 52, SW = 40, PX0 = SX + 3, PW = 34, DAY = 24 * 3600_000
 const SHAKE = { 3: [2, 1900], 2: [1.5, 1400], 1: [1, 1000] }, TAG_MS = 14_000, CRACK_MS = 10 * 60_000, FRESH = 90_000
 const AMP = { 3: 5, 2: 3, 1: 2 }
@@ -14,7 +14,7 @@ const hhmm = t => new Date(t).toTimeString().slice(0, 5)
 
 export default function init(api, tower) {
   const { Z, font, fitText } = tower, esc = api.esc
-  const params = new URLSearchParams(location.search + '&' + location.hash.slice(1)), demo = params.getAll('demo').includes('seismograph')
+  const params = api.params, demo = api.demo('seismograph')
   const seen = new Set(), quakes = []   // { e, fid, t0, crackX, seed }
   let first = true, tmp = null
 
@@ -38,7 +38,7 @@ export default function init(api, tower) {
 
   // ---------- the floor shakes ----------
   function jitter(q, now) {
-    const [amp, dur] = SHAKE[q.e.size] || SHAKE[1], t = now - q.t0
+    const [amp, dur] = SHAKE[q.e.size] || SHAKE[1], t = Math.max(0, now - q.t0)   // q.t0 is set at sync, a frame's now can be a little earlier
     if (t > dur) return null
     const k = 1 - t / dur
     return { dx: Math.round(amp * k * Math.sin(t / 14)), dy: Math.round(amp * 0.6 * k * Math.sin(t / 19 + 1)) }
@@ -60,7 +60,7 @@ export default function init(api, tower) {
   function crack(c, f, q, now) {
     const a = Math.max(0, 1 - (now - q.t0) / CRACK_MS)
     if (a <= 0) return
-    const grow = Math.min(1, (now - q.t0) / 500), len = Math.round((14 + q.e.size * 6) * grow)
+    const grow = Math.min(1, Math.max(0, now - q.t0) / 500), len = Math.round((14 + q.e.size * 6) * grow)
     c.globalAlpha = 0.85 * a
     let x = q.crackX, y = f.top + 6
     for (let i = 0; i < len; i++) {
@@ -73,7 +73,7 @@ export default function init(api, tower) {
     c.globalAlpha = 1
   }
   function dust(c, f, q, now) {
-    const t = (now - q.t0) / 1000
+    const t = Math.max(0, now - q.t0) / 1000
     if (t > 3) return
     for (let i = 0; i < 6 + q.e.size * 4; i++) {
       const h = api.hash(q.e.id + i), x = q.crackX - 30 + h % 60, v = 18 + (h >>> 8) % 30, y = f.top + 3 + v * t + 6 * t * t

@@ -299,6 +299,6 @@ export default function init(api) {
   }
   btn.onclick = open
 
-  const q = new URLSearchParams(location.search + '&' + location.hash.slice(1))
+  const q = api.params
   if (q.getAll('demo').includes('reportcard')) setTimeout(open, 4000)
 }

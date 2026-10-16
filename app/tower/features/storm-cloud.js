@@ -2,14 +2,14 @@
 // since } from server/features/storm-cloud.mjs), a little rain cloud parks under that floor's ceiling and rains on the
 // desk; level 3 is dark with thunder flicker. A thanks/perfect/nice (ext.clear) or ~20 min of calm parts it: the sun
 // peeks through for a while. Hover the cloud. ?demo=stormcloud cycles one floor through drizzle, storm, thunder and sun.
+import { R } from '../draw.js'
 const CALM_MS = 20 * 60_000, SUN_MS = 45_000, FADE_MS = 1500
-const R = (c, col, x, y, w, h) => { c.fillStyle = col; c.fillRect(Math.round(x), Math.round(y), w, h) }
 const TONE = { 1: ['#e9edf2', '#c9d0da', '#aab4c2'], 2: ['#9aa3b2', '#7d8696', '#646c7c'], 3: ['#5c6270', '#474c58', '#353943'] }
 const ago = ms => ms < 60_000 ? 'just now' : ms < 3600_000 ? Math.round(ms / 60_000) + 'm' : Math.round(ms / 3600_000) + 'h'
 
 export default function init(api, tower) {
   const { Z } = tower, esc = api.esc
-  const params = new URLSearchParams(location.search + '&' + location.hash.slice(1)), demo = params.getAll('demo').includes('stormcloud')
+  const params = api.params, demo = api.demo('stormcloud')
   const clouds = new Map()   // session id -> { level, word, at, since, t0, gone?, sun? }
   let first = true, flown = false
 

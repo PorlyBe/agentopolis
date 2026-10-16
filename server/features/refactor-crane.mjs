@@ -2,14 +2,14 @@
 // my-prs: branch == head, or the PR it opened), else its branch against the merge base with origin's default branch
 // (git diff --shortstat, working tree included; read-only, one git call at a time, cached a minute per cwd+branch).
 // snap.cranes = [{ sessionId, add, del, pr, title, url, src: 'pr' | 'branch' }] for changes over MIN lines.
-import { execFile } from 'node:child_process'
+import * as exec from '../lib/exec.mjs'
 
 const MIN = 1000, TTL = 60_000
 const BASE_BRANCH = /^(trunk|main|master|develop|HEAD)$/
 const diffs = new Map()   // cwd|branch -> { add, del, at }
 let busy = false
 
-const git = (cwd, args) => new Promise(resolve => execFile('git', ['-C', cwd, ...args], { timeout: 10_000 }, (err, out) => resolve(err ? null : String(out).trim())))
+const git = (cwd, args) => exec.git(cwd, args, { timeout: 10_000 }).then(out => out?.trim() ?? null)
 async function measure(cwd, branch) {
   const key = cwd + '|' + branch
   busy = true
@@ -22,6 +22,7 @@ async function measure(cwd, branch) {
 }
 
 export default {
+  after: ['github-street', 'pr-celebration'],   // reads snap.street and session.ext['pr-celebration']
   snapshot(snap) {
     const st = snap.street || {}, mine = st.mine || [], post = new Map((st.post || []).map(p => [p.n, p]))
     const out = []

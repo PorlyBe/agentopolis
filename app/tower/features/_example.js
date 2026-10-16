@@ -5,15 +5,15 @@
 // The plugin API (every hook, the geometry, the z bands) is documented at the top of ../tower.js. Read it first; this
 // file only shows each piece once, in context.
 import { IX } from '../building.js'
+import { R } from '../draw.js'
 
 const NAME = 'example'   // session.ext[NAME] comes from server/features/<NAME>.mjs (the file name is the key)
 const DEMO = 'example'   // ?demo=<DEMO> plays this feature with invented data
 const NOTE = { dx: 214, w: 14, h: 12 }   // where on the floor: x is IX + dx, pick a free spot (see CONTRIBUTING.md)
-const R = (c, col, x, y, w, h) => { c.fillStyle = col; c.fillRect(Math.round(x), Math.round(y), w, h) }
 
 export default function init(api, tower) {
   const { Z, font } = tower
-  const params = new URLSearchParams(location.search + '&' + location.hash.slice(1))
+  const params = api.params
   const demo = params.getAll('demo').includes(DEMO)
   const notes = new Map()   // session id -> { calls, title, bump }
   let flown = false

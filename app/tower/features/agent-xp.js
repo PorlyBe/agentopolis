@@ -4,9 +4,8 @@
 // AGENT RANKS board hangs on the meeting room's back wall between the sign and the screen. ?demo=agentxp levels Explore up.
 import { IX } from '../building.js'
 import { geo } from './uniforms.js'
+import { R, inR } from '../draw.js'
 
-const R = (c, col, x, y, w = 1, h = 1) => { c.fillStyle = col; c.fillRect(Math.round(x), Math.round(y), w, h) }
-const inR = (w, r, pad = 0) => r && w.x >= r.x - pad && w.x <= r.x + r.w + pad && w.y >= r.y - pad && w.y <= r.y + r.h + pad
 const BOARD = { dx: IX + 311, dy: 10, w: 48, h: 28 }, ROWS = 5
 const typeOf = a => !a ? null : a.type === 'workflow-subagent' || a.workflow ? 'workflow' : a.type || 'general-purpose'
 const tier = lv => lv >= 40 ? ['#bfefff', '#6fc8e8'] : lv >= 20 ? ['#f4c64f', '#b8892a'] : lv >= 10 ? ['#d8dee6', '#8a94a2'] : ['#d08a4a', '#8a5a2a']
@@ -15,7 +14,7 @@ const SKIN = { classic: ['#1e2a3a', '#3b2617', '#c9a25a'], synthwave: ['#2a1640'
 
 export default function init(api, tower) {
   const { Z, font, fitText } = tower, esc = api.esc
-  const params = new URLSearchParams(location.search + '&' + location.hash.slice(1)), demo = params.getAll('demo').includes('agentxp')
+  const params = api.params, demo = api.demo('agentxp')
   let types = [], recent = [], byType = new Map(), primed = false, base = null, demoT0 = 0
   const best = new Map(), sparks = new Map(), cards = new Map()   // type -> best level seen; type -> sparkle start; agent id -> world card spot
   let boardFlash = null

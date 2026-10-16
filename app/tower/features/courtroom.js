@@ -4,9 +4,8 @@
 // GUILTY / ACQUITTED stamp lands; then the court adjourns. It waits while a stand-up or a meeting holds the room, and
 // steps aside if one starts. Hover the bench, dock or jury for the case. ?demo=courtroom holds a trial on a loop.
 import { IX, SEAT_H } from '../building.js'
-import { pixText } from './ci-subway.js'
+import { R, pixText } from '../draw.js'
 
-const R = (c, col, x, y, w, h) => { c.fillStyle = col; c.fillRect(Math.round(x), Math.round(y), w, h) }
 const BENCH = { x: IX + 44, w: 66, h: 24 }, JUDGE = IX + 77, CLERK = { x: IX + 116, w: 24, h: 13 }, DOCK = { x: IX + 150, w: 24, h: 9 }
 const JURY = { x: IX + 236, w: 92, h: 14 }, SEATS = [0, 1, 2, 3, 4, 5].map(i => IX + 246 + i * 15), DRAPE = { x: IX + 32, w: 90 }
 const SIGN = { x: IX + 204, w: 54, h: 9 }, SOCIAL_REVIEW = /review|verif|check|judge|critiq|devil|audit|assess|inspect/i
@@ -15,7 +14,7 @@ const WOOD = '#5a3a22', WOOD_HI = '#7a5232', WOOD_LO = '#3e2614', BRASS = '#c9a2
 
 export default function init(api, tower) {
   const { Z } = tower, esc = api.esc
-  const params = new URLSearchParams(location.search + '&' + location.hash.slice(1)), demo = params.getAll('demo').includes('courtroom')
+  const params = api.params, demo = api.demo('courtroom')
   let court = null, planAt = 0, demoT0 = 0
   const played = new Set(), sent = new Map()   // trial ids whose verdict was read; person id -> 'dock' | 'jury'
 

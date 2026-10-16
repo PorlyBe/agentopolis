@@ -5,6 +5,7 @@
 // office (the user's penthouse, tall) and the roof.
 // Features read every rect here through api.tower (geometry(), deskGeo(), ceoSlots()); all of them move when sessions
 // come and go, so read them every frame rather than caching them.
+import { pixText, textW } from './draw.js'
 // SHAFT spans both glass shafts: the main one (SHAFT1) against the wall and the express one (XSHAFT) right of it
 export const T = 16, FH = 80, SLAB = 6, WALL = 8, FW = 480, BW = FW + 2 * WALL, SHAFT1 = 40, XSHAFT = 36, SHAFT = SHAFT1 + XSHAFT
 export const IX = WALL, IX1 = WALL + FW
@@ -305,6 +306,9 @@ function lobbyFloor(c, fc, f) {
   R(c, '#cfc6b8', IX, f.y - 2, FW, 2)
   c.fillStyle = '#e9e4da'; for (let x = IX; x < IX1; x += 16) c.fillRect(x, f.y - 2, 8, 2)
   plant(c, IX + 16, f.y, true)
+  // the cornerstone plaque over the reception desk: who built the place
+  R(c, '#6b5038', IX + 96, f.y - 46, 64, 23); R(c, '#c9a25a', IX + 97, f.y - 45, 62, 21); R(c, '#a8823e', IX + 98, f.y - 44, 60, 19)
+  for (const [i, t] of ['AGENTOPOLIS', 'EST. 2026', 'PORLYBE+CLAUDE'].entries()) pixText(c, t, IX + 128 - textW(t) / 2, f.y - 43 + i * 6, '#3b2617')
   // reserved: the TV / wall of fame (step 2), framed on the back wall
   R(c, '#3b2617', IX + 196, f.top + 6, 160, 34); R(c, '#2a2f3a', IX + 198, f.top + 8, 156, 30)
   for (let i = 0; i < 4; i++) frame(c, IX + 206 + i * 38, f.top + 12, 26, 20, '#3a4256')

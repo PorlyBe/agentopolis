@@ -2,8 +2,7 @@
 // tendrils; days: a lush mat of leaves), a brand-new session's plaque is shiny and sparkles for its first hour and an old
 // one gathers green patina, and the base of the building weathers (grime, moss) with the repo's age.
 // Data: session.ext['ivy-wear'].start and snap.ivyWear.repoBorn (server/features/ivy-wear.mjs). ?demo=ivywear.
-const R = (c, col, x, y, w = 1, h = 1) => { c.fillStyle = col; c.fillRect(Math.round(x), Math.round(y), w, h) }
-const rnd = k => { const s = Math.sin(k * 127.1 + 311.7) * 43758.5453; return s - Math.floor(s) }
+import { R, rnd } from '../draw.js'
 const HOUR = 3600_000, DAY = 24 * HOUR
 const growth = ms => ms == null || ms < 20 * 60_000 ? 0 : Math.min(1, Math.log(1 + ms / HOUR) / Math.log(1 + 168))
 const patina = ms => ms == null ? 0 : Math.max(0, Math.min(1, (ms - 6 * HOUR) / (6 * DAY)))
@@ -13,7 +12,7 @@ const LEAF = ['#2f6a2e', '#3f8a3a', '#4f9c44', '#5aa850'], STEM = '#3d4a26', MOS
 
 export default function init(api, tower) {
   const { Z } = tower
-  const params = new URLSearchParams(location.search + '&' + location.hash.slice(1)), demo = params.getAll('demo').includes('ivywear')
+  const params = api.params, demo = api.demo('ivywear')
   const DEMO_AGES = [12 * 60_000, 3 * HOUR, 20 * HOUR, 3 * DAY, 12 * DAY, 40 * DAY]
   const cache = new Map()
   let flown = false

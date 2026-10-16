@@ -3,14 +3,14 @@
 // thought ('3rd time…'); the floor's plaque gets a tally of the tries. Hover the walker for the call it keeps retrying.
 // The loop ends when that call succeeds or the window passes. ?demo=groundhog fakes one.
 import { IX, IX1 } from '../building.js'
+import { R } from '../draw.js'
 
 const WINDOW = 10 * 60_000, PLAN_MS = 1000, SPAN = 44, PAUSE = { a: 1300, b: 1000 }
-const R = (c, col, x, y, w, h) => { c.fillStyle = col; c.fillRect(Math.round(x), Math.round(y), w, h) }
 const nth = n => n + (n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] || 'th')
 
 export default function init(api, tower) {
   const { Z, font, fitText } = tower, esc = api.esc
-  const params = new URLSearchParams(location.search + '&' + location.hash.slice(1)), demo = params.getAll('demo').includes('groundhog')
+  const params = api.params, demo = api.demo('groundhog')
   const walkers = new Map()     // person id -> { s, loop, fid, a, b, leg, arrived }
   let planAt = 0
 

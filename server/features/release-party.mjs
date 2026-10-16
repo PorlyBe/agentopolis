@@ -1,14 +1,11 @@
 // release-party: the repo's newest published releases, from one read-only gh api call every 5 min (drafts left out).
 // The repo comes from github-street's part of this snapshot (it sorts first).
-import { execFile } from 'node:child_process'
+import { gh as ghCall } from '../lib/exec.mjs'
 
 const TTL = 5 * 60_000, RETRY = 60_000
 const state = { repo: null, list: [], at: 0, tried: 0, busy: false }
 
-const gh = args => new Promise(resolve => execFile('gh', args, { timeout: 30_000, maxBuffer: 4 * 1024 * 1024 }, (err, out) => {
-  if (err) return resolve(null)
-  try { resolve(JSON.parse(out)) } catch { resolve(null) }
-}))
+const gh = args => ghCall(args, { maxBuffer: 4 * 1024 * 1024 })
 
 async function refresh(repo) {
   state.busy = true; state.tried = Date.now()
@@ -24,6 +21,8 @@ async function refresh(repo) {
 }
 
 export default {
+  serves: ['release-party'],   // only its own tower feature reads it
+  after: ['github-street'],   // reads snap.street
   snapshot(snap) {
     const repo = snap.street?.repo || null
     if (repo !== state.repo) { state.repo = repo; state.list = []; state.at = 0; state.tried = 0 }

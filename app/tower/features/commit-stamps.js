@@ -4,16 +4,14 @@
 // parcel (matched by branch through street.mine): fresh tape and a "+N commits" sticker for STICKER_MS.
 // ?demo=commitstamps fakes four commits and a push on the first floor, every 30 s.
 import { IX1 } from '../building.js'
+import { R, inR, easeInOut as ease } from '../draw.js'
 
 const TX = IX1 + 2, TW = 4, HX = IX1 - 9, STICKER_MS = 45 * 60_000, EMPTY_MS = 90_000, MAX_SHEETS = 9
-const R = (c, col, x, y, w = 1, h = 1) => { c.fillStyle = col; c.fillRect(Math.round(x), Math.round(y), w, h) }
-const inR = (w, r, pad = 0) => r && w.x >= r.x - pad && w.x <= r.x + r.w + pad && w.y >= r.y - pad && w.y <= r.y + r.h + pad
-const ease = t => t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2
 const sameBranch = (a, b) => !!a && !!b && (a === b || (Math.min(a.length, b.length) >= 8 && (a.startsWith(b) || b.startsWith(a))))
 
 export default function init(api, tower) {
   const { Z, font } = tower, esc = api.esc
-  const params = new URLSearchParams(location.search + '&' + location.hash.slice(1)), demo = params.getAll('demo').includes('commitstamps')
+  const params = api.params, demo = api.demo('commitstamps')
   const desks = new Map()      // session id -> { seen, tray: [doc], emptyAt, last: { branch, n, pr, at } }
   const stickers = new Map()   // PR number -> { n, at, subjects }
   const flights = []

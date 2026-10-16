@@ -4,7 +4,8 @@
 // Results are kept per session for the server's lifetime, so they outlive the transcript tail and finished agents.
 import fs from 'node:fs'
 import path from 'node:path'
-import { StringDecoder } from 'node:string_decoder'
+import { readSync, tailState, own } from '../lib/tail.mjs'
+import { transcriptsOf, sweep } from '../lib/transcripts.mjs'
 
 const RUNNER = /^(?:cargo\s+(?:\+\S+\s+)?(test|nextest|clippy|mutants)|pnpm\s+(?:(?:-C|--dir|--filter|-F|-r|--recursive)\s+(?:\S+\s+)?)*(?:run\s+)?(test|vitest|lint|typecheck)|(?:npx|pnpm\s+exec)\s+(vitest))\b/
 const STALE_MS = 40 * 60_000
@@ -77,9 +78,8 @@ function tail(file, bytes = 16 * 1024) {
 const textOf = c => typeof c === 'string' ? c : Array.isArray(c) ? c.map(b => b?.text || '').join('\n') : ''
 
 // one reader per transcript file: read once from near its end, then only appended bytes; only lines that can matter are parsed
-const FIRST_READ = 4 * 1024 * 1024, CHUNK = 4 * 1024 * 1024
-const scans = new Map() // file -> { offset, rest, dec, skip, uses, at, out }
-const dirs = new Map()  // session id -> { sessionDir, file }
+const FIRST_READ = 4 * 1024 * 1024
+const scans = new Map() // file -> { offset, rest, skip, uses, at, out }
 
 function entry(sc, e) {
   sc.at = Date.parse(e.timestamp) || sc.at
@@ -97,7 +97,7 @@ function entry(sc, e) {
   for (const b of content) {
     if (b?.type === 'tool_use' && b.name === 'Bash' && typeof b.input?.command === 'string') {
       const suites = suitesOf(b.input.command, e.cwd)
-      if (suites.length) sc.uses.set(b.id, { suites, at, bg: false })
+      if (suites.length) sc.uses.set(own(b.id), { suites: suites.map(s => ({ ...s, service: own(s.service) })), at, bg: false })
     } else if (b?.type === 'tool_result' && sc.uses.has(b.tool_use_id)) {
       const u = sc.uses.get(b.tool_use_id), r = e.toolUseResult
       if (r?.backgroundTaskId) { u.bg = true; continue }
@@ -118,50 +118,26 @@ function line(sc, l) {
 function scan(file, size) {
   let sc = scans.get(file)
   if (!sc || size < sc.offset) {
-    sc = { offset: Math.max(0, size - FIRST_READ), rest: '', dec: new StringDecoder('utf8'), skip: size > FIRST_READ, uses: new Map(), at: 0, out: [] }
+    sc = tailState(Math.max(0, size - FIRST_READ), { uses: new Map(), at: 0, out: [] })
     scans.set(file, sc)
   }
-  if (size > sc.offset) {
-    const fd = fs.openSync(file, 'r')
-    try {
-      while (sc.offset < size) {
-        const buf = Buffer.alloc(Math.min(CHUNK, size - sc.offset))
-        const n = fs.readSync(fd, buf, 0, buf.length, sc.offset)
-        if (!n) break
-        sc.offset += n
-        const lines = (sc.rest + sc.dec.write(buf.subarray(0, n))).split('\n')
-        sc.rest = lines.pop()
-        if (sc.skip) { lines.shift(); sc.skip = false }
-        for (const l of lines) if (l) line(sc, l)
-      }
-    } finally { fs.closeSync(fd) }
-  }
+  readSync(sc, file, size, l => line(sc, l))
   const runs = sc.out
   sc.out = []
   for (const u of sc.uses.values()) for (const s of u.suites) runs.push({ ...s, result: 'running', at: u.at })
   return runs
 }
-const ls = d => { try { return fs.readdirSync(d) } catch { return [] } }
-function agentFiles(sessionDir) {
-  const sub = path.join(sessionDir, 'subagents'), out = []
-  const visit = d => { for (const f of ls(d)) if (f.startsWith('agent-') && f.endsWith('.jsonl')) out.push(path.join(d, f)) }
-  visit(sub)
-  for (const wf of ls(path.join(sub, 'workflows'))) visit(path.join(sub, 'workflows', wf))
-  return out
-}
 function runsOf(id) {
-  const d = dirs.get(id); if (!d) return []
   const now = Date.now(), all = []
-  for (const f of [d.file, ...agentFiles(d.sessionDir)]) {
-    let st; try { st = fs.statSync(f) } catch { continue }
-    if (f !== d.file && now - st.mtimeMs > STALE_MS && !scans.has(f)) continue
-    all.push(...scan(f, st.size))
+  for (const { file: f, stat: st, main } of transcriptsOf(id)) {
+    if (!main && now - st.mtimeMs > STALE_MS && !scans.has(f)) continue
+    try { all.push(...scan(f, st.size)) } catch {}
   }
   return all.sort((a, b) => a.at - b.at)
 }
 
 export default {
-  session({ id, sessionDir, file }) { dirs.set(id, { sessionDir, file }) },
+  serves: ['test-lab'],   // only its own tower feature reads it
   snapshot(snap) {
     const now = Date.now()
     for (const s of snap.sessions) {
@@ -180,6 +156,6 @@ export default {
       if (m.size) (s.ext ||= {})['test-lab'] = { flasks: [...m.values()].sort((a, b) => a.service.localeCompare(b.service) || a.suite.localeCompare(b.suite)).slice(0, 8) }
     }
     for (const id of store.keys()) if (!snap.sessions.some(s => s.id === id)) store.delete(id)
-    for (const f of scans.keys()) if (!fs.existsSync(f)) scans.delete(f)
+    sweep(scans)
   },
 }

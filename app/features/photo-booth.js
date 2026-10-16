@@ -258,7 +258,7 @@ export default function init(api) {
     stopRec = finish
   }
 
-  const q = new URLSearchParams(location.search + '&' + location.hash.slice(1)), demo = q.getAll('demo')
+  const q = api.params, demo = q.getAll('demo')
   if (demo.includes('photo')) setTimeout(photo, 4000)
   if (demo.includes('photomenu')) setTimeout(openMenu, 3000)
   if (demo.includes('gif')) setTimeout(() => gif(Math.min(GIF_SECONDS, +q.get('seconds') || 3)), 4000)

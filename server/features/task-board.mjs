@@ -1,11 +1,11 @@
 // task-board: a session's task list, from TaskCreate/TaskUpdate (ids are per session, "Task #3 created...")
 // or TodoWrite (each call replaces the whole list). Tasks are often made early in a long transcript, so the
-// whole file is scanned once and then only the bytes appended since.
-import fs from 'node:fs'
+// whole file is read once and then only the bytes appended since, off the request path (server/lib/history.mjs).
+import * as history from '../lib/history.mjs'
+import { transcriptsOf } from '../lib/transcripts.mjs'
 
-const state = new Map() // file -> { offset, rest, tasks: Map(id -> task), order: [id], pending: Map(toolUseId -> id), next }
-
-function fresh() { return { offset: 0, rest: '', tasks: new Map(), next: 1, pending: new Map() } }
+// per file: { tasks: Map(id -> task), pending: Map(toolUseId -> id), next }
+function fresh() { return { tasks: new Map(), next: 1, pending: new Map() } }
 
 function apply(st, e) {
   const content = e.message?.content
@@ -41,29 +41,16 @@ function apply(st, e) {
   }
 }
 
-function scan(file, size) {
-  let st = state.get(file)
-  if (!st || size < st.offset) { st = fresh(); state.set(file, st) }
-  if (size === st.offset) return st
-  const fd = fs.openSync(file, 'r')
-  try {
-    const CHUNK = 4 * 1024 * 1024
-    while (st.offset < size) {
-      const len = Math.min(CHUNK, size - st.offset), buf = Buffer.alloc(len)
-      fs.readSync(fd, buf, 0, len, st.offset); st.offset += len
-      const lines = (st.rest + buf.toString('utf8')).split('\n')
-      st.rest = lines.pop()
-      for (const l of lines) {
-        if (!l.includes('"Task') && !l.includes('"TodoWrite"') && !(st.pending.size && l.includes('tool_result'))) continue
-        try { apply(st, JSON.parse(l)) } catch {}
-      }
-    }
-  } finally { fs.closeSync(fd) }
-  return st
+const sub = {
+  files: new Map(), main: true, open: fresh,
+  line(st, l) {
+    if (!l.includes('"Task') && !l.includes('"TodoWrite"') && !(st.pending.size && l.includes('tool_result'))) return
+    try { apply(st, JSON.parse(l)) } catch {}
+  },
 }
+history.subscribe(sub)
 
-function board({ file, stat }) {
-  const st = scan(file, stat.size)
+function board(st) {
   const list = [...st.tasks.entries()].sort((a, b) => Number(a[0]) - Number(b[0])).map(([, t]) => t)
   if (!list.length) return undefined
   const cur = list.find(t => t.status === 'in_progress')
@@ -75,4 +62,15 @@ function board({ file, stat }) {
   }
 }
 
-export default { session: board }
+export default {
+  snapshot(snap) {
+    const now = Date.now()
+    for (const x of snap.sessions) {
+      const t = transcriptsOf(x.id)[0]
+      const st = t && history.want(t, now) ? sub.files.get(t.file) : null
+      const b = st && board(st)
+      if (b) x.ext['task-board'] = b
+      else delete x.ext['task-board']
+    }
+  },
+}

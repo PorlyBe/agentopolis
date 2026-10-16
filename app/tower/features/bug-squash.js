@@ -2,7 +2,7 @@
 // twitching legs, +10, a squish if sound is on); squashes in quick succession combo (+20, +30…). An arcade scoreboard
 // on the lobby's back wall keeps today's score and the top five days (localStorage, this browser only). A squashed
 // critter stays gone until a new error brings a new one. ?demo=bugsquash: invented errors and a phantom player.
-const R = (c, col, x, y, w = 1, h = 1) => { c.fillStyle = col; c.fillRect(Math.round(x), Math.round(y), w, h) }
+import { R } from '../draw.js'
 const KEY = 'agentopolis:bug-squash', COMBO_MS = 1600, SPLAT_MS = 9000, FLOAT_MS = 1100, KEEP_MS = 15 * 60_000
 const BOARD = { dx: 314, w: 80, h: 29, up: 77 }   // x from the interior's left, top this far above the lobby floor
 const FONT = { A: '010101111101101', B: '110101110101110', G: '011100101101011', H: '101101111101101', N: '110101101101101', O: '111101101101111',
@@ -15,7 +15,7 @@ const pad4 = n => String(n).padStart(4, '0')
 
 export default function init(api, tower) {
   const { Z, font } = tower, esc = api.esc
-  const params = new URLSearchParams(location.search + '&' + location.hash.slice(1)), demo = params.getAll('demo').includes('bugsquash')
+  const params = api.params, demo = api.demo('bugsquash')
   const splats = [], floats = []
   let combo = 0, lastAt = 0
 

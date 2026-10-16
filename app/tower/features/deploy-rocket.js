@@ -2,7 +2,7 @@
 // on the roof terrace. A new run rolls out of the elevator machine room onto a free pad slot (three; the rest wait inside),
 // climbs while it runs, and on success boosts into orbit — a firework, then a star that hangs over the roof for ten
 // minutes. A failure sputters, tumbles back onto the pad and lies there smoking; clicking it (or the failure toast) opens
-// the run. ?demo=rocket (or #demo=rocket) fakes one deploy that succeeds and one that fails.
+// the run. ?demo=deployrocket (the old ?demo=rocket still works) fakes one deploy that succeeds and one that fails.
 const R = (c, col, x, y, w, h) => { c.fillStyle = col; c.fillRect(x, y, w, h) }
 const SLOTS = 3, S = 2, CLIMB = 62, ROLL_MS = 1800, FRESH = 3 * 60_000, STAR_MS = 10 * 60_000, WRECK_MS = 30 * 60_000
 const BAD = /failure|timed_out|startup_failure/
@@ -11,7 +11,7 @@ const wfName = w => String(w || 'deploy').replace(/^[^\p{L}\p{N}]+/u, '').trim()
 
 export default function init(api, tower) {
   const { Z, font, fitText } = tower, esc = api.esc
-  const params = new URLSearchParams(location.search + '&' + location.hash.slice(1)), demo = params.getAll('demo').includes('rocket')
+  const params = api.params, demo = api.demo('deployrocket', 'rocket')
   const rockets = new Map(), seen = new Set(), stars = [], parts = []
   let list = [], repo = null, primed = false, demoT0 = 0, failUrl = null, failText = null, waiting = 0
 
@@ -191,7 +191,7 @@ export default function init(api, tower) {
   }
   tower.on('items', (out, now, ctx) => {
     const p = pad(); if (!p || p.y < ctx.view.y0 - 200 || p.y - 200 > ctx.view.y1) return
-    out.push({ z: Z.FRONT + 1, draw: c => drawPad(c, now) })
+    out.push({ z: Z.SEATED - 1, draw: c => drawPad(c, now) })   // behind everyone on the roof, who would otherwise walk behind it
     for (const k of rockets.values()) {
       if (k.slot < 0 || k.phase === 'inside') continue
       const flame = k.phase === 'climb' ? 0.8 : k.phase === 'orbit' ? 1.6 : k.phase === 'fizzle' ? (Math.floor(now / 70) % 3 === 0 ? 0.6 : 0) : 0

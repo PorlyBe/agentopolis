@@ -1,18 +1,14 @@
 // groundhog: retry loops — the same tool call (same tool, normalized input) failing three or more times within
 // WINDOW in one transcript, its own or a subagent's. A success of that same call ends the loop. Files are read like
 // bugs.mjs: once from near their end, then only their appended bytes.
-import fs from 'node:fs'
 import path from 'node:path'
-import { StringDecoder } from 'node:string_decoder'
+import { readSync, tailState, own } from '../lib/tail.mjs'
+import { transcriptsOf, sweep } from '../lib/transcripts.mjs'
 
 const WINDOW = 10 * 60_000, MIN = 3
 const FIRST_READ = 2 * 1024 * 1024
-const CHUNK = 4 * 1024 * 1024
 const NOT_A_FAIL = /doesn't want to proceed|was rejected|Request interrupted|Permission for this action/
-const scans = new Map() // file -> { offset, rest, dec, skip, pending: Map(tool_use_id -> call), fails: Map(key -> { call, at: [ms] }) }
-const dirs = new Map()
-
-const ls = d => { try { return fs.readdirSync(d) } catch { return [] } }
+const scans = new Map() // file -> { offset, rest, skip, pending: Map(tool_use_id -> call), fails: Map(key -> { call, at: [ms] }) }
 const PATH = /(?:~|\.{1,2})?\/[^\s'"`;|&()<>]+/g
 
 function callOf(b) {
@@ -39,7 +35,8 @@ function line(s, l) {
   const at = Date.parse(e.timestamp) || 0
   for (const b of Array.isArray(e.message?.content) ? e.message.content : []) {
     if (b.type === 'tool_use' && e.type === 'assistant') {
-      s.pending.set(b.id, { tool: b.name, ...callOf(b) })
+      const c = callOf(b)
+      s.pending.set(own(b.id), { tool: own(b.name), key: own(c.key), label: own(c.label) })
       if (s.pending.size > 200) s.pending.delete(s.pending.keys().next().value)
     } else if (b.type === 'tool_result') {
       const call = s.pending.get(b.tool_use_id); if (!call) continue
@@ -54,24 +51,10 @@ function line(s, l) {
 function scan(file, size) {
   let s = scans.get(file)
   if (!s || size < s.offset) {
-    s = { offset: Math.max(0, size - FIRST_READ), rest: '', dec: new StringDecoder('utf8'), skip: size > FIRST_READ, pending: new Map(), fails: new Map() }
+    s = tailState(Math.max(0, size - FIRST_READ), { pending: new Map(), fails: new Map() })
     scans.set(file, s)
   }
-  if (size > s.offset) {
-    const fd = fs.openSync(file, 'r')
-    try {
-      while (s.offset < size) {
-        const buf = Buffer.alloc(Math.min(CHUNK, size - s.offset))
-        const n = fs.readSync(fd, buf, 0, buf.length, s.offset)
-        if (!n) break
-        s.offset += n
-        const lines = (s.rest + s.dec.write(buf.subarray(0, n))).split('\n')
-        s.rest = lines.pop()
-        if (s.skip) { lines.shift(); s.skip = false }
-        for (const l of lines) if (l) line(s, l)
-      }
-    } finally { fs.closeSync(fd) }
-  }
+  readSync(s, file, size, l => line(s, l))
   const cut = Date.now() - WINDOW, loops = []
   for (const [key, f] of s.fails) {
     if (f.at[0] < cut) f.at = f.at.filter(t => t >= cut)
@@ -81,30 +64,19 @@ function scan(file, size) {
   return loops
 }
 
-function agentFiles(sessionDir) {
-  const sub = path.join(sessionDir, 'subagents'), out = []
-  const visit = d => { for (const f of ls(d)) if (f.startsWith('agent-') && f.endsWith('.jsonl')) out.push(path.join(d, f)) }
-  visit(sub)
-  for (const wf of ls(path.join(sub, 'workflows'))) visit(path.join(sub, 'workflows', wf))
-  return out
-}
-
 export default {
-  session({ id, sessionDir, file }) { dirs.set(id, { sessionDir, file }) },
+  serves: ['groundhog'],   // only its own tower feature reads it
   snapshot(snap) {
     const now = Date.now()
     for (const s of snap.sessions) {
-      const d = dirs.get(s.id); if (!d) continue
       const loops = []
-      for (const f of [d.file, ...agentFiles(d.sessionDir)]) {
-        let st; try { st = fs.statSync(f) } catch { continue }
+      for (const { file: f, stat: st, who } of transcriptsOf(s.id)) {
         if (now - st.mtimeMs > WINDOW && !scans.has(f)) continue
-        const who = f === d.file ? s.id : path.basename(f).slice(6, -6)
-        for (const l of scan(f, st.size)) loops.push({ who, ...l })
+        try { for (const l of scan(f, st.size)) loops.push({ who, ...l }) } catch {}
       }
       if (loops.length) s.ext.groundhog = { loops: loops.sort((a, b) => b.count - a.count) }
       else delete s.ext.groundhog
     }
-    for (const f of scans.keys()) if (!fs.existsSync(f)) scans.delete(f)
+    sweep(scans)
   },
 }

@@ -1,8 +1,8 @@
 // price-billboard: a lit billboard on tall legs on the tower's own roof, above the terrace, cycling one coin at a time through the top ten by market cap: price in USD, a ▲/▼ and the 24h change, and a
 // sparkline of the last day (server snap.priceBillboard, CoinGecko, cached a minute). No reading for ten minutes: "— offline". ?demo=pricebillboard.
+import { R } from '../draw.js'
 
 const W = 104, H = 46, LEGS = 40, AT = 36
-const R = (c, col, x, y, w, h) => { c.fillStyle = col; c.fillRect(Math.round(x), Math.round(y), w, h) }
 const UP = '#3fe08a', DOWN = '#ff5a4e', FLAT = '#c8ccd4'
 const ROT = 6000, SLIDE = 420
 const TINT = { BTC: '#f7931a', ETH: '#7b8ff0', USDT: '#26a17b', XRP: '#c8ccd4', BNB: '#f3ba2f', SOL: '#a46cff', USDC: '#3a87d8', DOGE: '#c2a633',
@@ -11,7 +11,7 @@ const tintOf = sym => TINT[sym] || `hsl(${[...sym].reduce((h, ch) => h * 31 + ch
 
 export default function init(api, tower) {
   const { Z, font } = tower, esc = api.esc || (s => String(s))
-  const params = new URLSearchParams(location.search + '&' + location.hash.slice(1)), demo = params.getAll('demo').includes('pricebillboard')
+  const demo = api.demo('pricebillboard')
   let data = null
 
   if (demo) tower.on('snapshot', snap => {

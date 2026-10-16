@@ -2,7 +2,7 @@
 // by the tower's news stand and the CEO's desk. ?demo=gazette (or #demo=gazette) opens it, with a fake paper if none is printed.
 export default function init(api) {
   const { esc } = api
-  const demo = new URLSearchParams(location.search + '&' + location.hash.slice(1)).getAll('demo').includes('gazette')
+  const demo = api.demo('gazette')
   let paper = null, open = false, shownAt = 0, demoOpened = false
 
   api.on('sync', snap => {

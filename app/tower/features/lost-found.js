@@ -3,16 +3,15 @@
 // for uncommitted changes; crates untouched for a week gather dust and cobwebs. Hover a crate for it, click the cage
 // for the list. Read-only: it never removes anything. ?demo=lostfound fakes a cage of crates and flies there.
 import { IX } from '../building.js'
+import { R, inR } from '../draw.js'
 
 const X0 = IX + 206, W = 64, H = 26, CW = 9, CH = 7, COLS = 6, ROWS = 3, WEEK = 7 * 864e5
 const TAG = { MERGED: '#5fd17a', OPEN: '#f2a43a', CLOSED: '#c25a5a', none: '#8a8f9a' }
-const R = (c, col, x, y, w, h) => { c.fillStyle = col; c.fillRect(Math.round(x), Math.round(y), w, h) }
-const inR = (w, r, pad = 0) => r && w.x >= r.x - pad && w.x <= r.x + r.w + pad && w.y >= r.y - pad && w.y <= r.y + r.h + pad
 const age = ms => { const d = Math.floor(ms / 864e5); return d >= 1 ? d + 'd' : Math.max(1, Math.floor(ms / 36e5)) + 'h' }
 
 export default function init(api, tower) {
   const { Z, font } = tower, esc = api.esc
-  const params = new URLSearchParams(location.search + '&' + location.hash.slice(1)), demo = params.getAll('demo').includes('lostfound')
+  const params = api.params, demo = api.demo('lostfound')
   let data = null, flown = false, panel = null
 
   function fake() {

@@ -4,11 +4,11 @@
 // hangs by the door while it runs. Sessions waiting on the user (the waiting line) or steered by another feature stay put.
 // ?demo=standup holds one now.
 import { IX } from '../building.js'
+import { R } from '../draw.js'
 
 const KEY = 'ao-standup-date', HOUR = 10, LATE_MIN = 10, BUDGET_MS = 120_000, GATHER_MS = 40_000, CAP_MS = 200_000
 const SLOTS = [189, 215, 241, 267, 293, 163, 319, 150, 332, 137, 345, 124, 358].map(x => IX + x)
 const CLOCK = { x: IX + 140, dy: 26, r: 6 }, SIGN = { x: IX + 430, w: 35, h: 11 }
-const R = (c, col, x, y, w, h) => { c.fillStyle = col; c.fillRect(Math.round(x), Math.round(y), w, h) }
 const GLYPH = { S: '111100111001111', T: '111010010010010', A: '010101111101101', N: '101111111101101', D: '110101101101110', '-': '000000111000000', U: '101101101101111', P: '111101111100100' }
 function pixText(c, s, x, y, col) {
   c.fillStyle = col
@@ -20,7 +20,7 @@ const lsSet = v => { try { localStorage.setItem(KEY, v) } catch {} }
 
 export default function init(api, tower) {
   const { Z } = tower, esc = api.esc
-  const params = new URLSearchParams(location.search + '&' + location.hash.slice(1)), demo = params.getAll('demo').includes('standup')
+  const params = api.params, demo = api.demo('standup')
   let su = null, planAt = 0, demoAt = demo ? performance.now() + 2500 : 0
 
   const room = () => tower.floor('meeting')

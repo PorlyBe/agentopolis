@@ -4,6 +4,7 @@
 // alarm, the bin on fire, smoke under the ceiling and a red 🔥 tag on the plaque. Green again: steam and a toast.
 // ?demo=myprs (or #demo=myprs) fakes one PR going red on a live floor, another building, and the first going green.
 import * as notify from '../../features/notify.js'
+import { inR } from '../draw.js'
 
 const URGENT = [[988, 0, 0.22], [988, 0.28, 0.22], [1318.5, 0.56, 0.9]]
 const ROWS = 4, STEAM_MS = 5000, NAME_WAIT = 25_000
@@ -11,12 +12,11 @@ const COL = { failed: '#ef5a5a', running: '#f2a43a', passed: '#5fd17a', null: '#
 const CI_MARK = { failed: '✗', running: '⟳', passed: '✓' }
 const REV = { APPROVED: ['✓', '#5fd17a'], CHANGES_REQUESTED: ['✎', '#f2a43a'] }
 const R = (c, col, x, y, w, h) => { c.fillStyle = col; c.fillRect(x, y, w, h) }
-const inR = (w, r, pad = 0) => r && w.x >= r.x - pad && w.x <= r.x + r.w + pad && w.y >= r.y - pad && w.y <= r.y + r.h + pad
 const rank = p => (p.ci === 'failed' ? 0 : p.ci === 'running' ? 1 : 2) + (p.draft ? 0.5 : 0)
 
 export default function init(api, tower) {
   const { Z, font, fitText } = tower, esc = api.esc
-  const params = new URLSearchParams(location.search + '&' + location.hash.slice(1)), demo = params.getAll('demo').includes('myprs')
+  const params = api.params, demo = api.demo('myprs')
   let mine = [], repo = null, primed = false, demoT0 = 0, demoOwner = null, demoOwner2 = null
   const owners = new Map()                 // session id -> [pr] it owns
   const prevCi = new Map(), pending = new Map(), steam = new Map(), fireSince = new Map()

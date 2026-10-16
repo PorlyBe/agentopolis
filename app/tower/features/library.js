@@ -3,16 +3,16 @@
 // Web research (WebSearch / WebFetch) sends them to the glass by the elevator with binoculars. Data: ext.library
 // (server/features/library.mjs). Hover a desk's books for their names. ?demo=library fakes both on the first floors.
 import { IX, IX1 } from '../building.js'
+import { R } from '../draw.js'
 
 const SHELF = IX + 352, SHELF_AT = SHELF + 19, SLOT = { x: SHELF + 7, dy: 24, h: 8 }, WIN_X = IX1 - 14
 const FRESH = 120_000, PULL = 900, READ = 2400, LOOK_MIN = 6000, GIVE_UP = 45_000
 const WEB = /^(WebSearch|WebFetch)$/
-const R = (c, col, x, y, w, h) => { c.fillStyle = col; c.fillRect(Math.round(x), Math.round(y), w, h) }
 const short = n => n.replace(/^anthropic-skills:/, '')
 
 export default function init(api, tower) {
   const { Z, font, fitText } = tower, esc = api.esc
-  const params = new URLSearchParams(location.search + '&' + location.hash.slice(1)), demo = params.getAll('demo').includes('library')
+  const params = api.params, demo = api.demo('library')
   const who = new Map()     // person id -> { floor, sid, agent, seen, desk: [names], queue: [names], phase, t, book, web, webSeen, open }
   let first = true, deskBoxes = []
   const hue = n => api.hash(n) % 360

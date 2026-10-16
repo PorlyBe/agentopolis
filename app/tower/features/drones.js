@@ -5,8 +5,8 @@
 // keeps one drone hovering by the ledge. It stays right of the shaft, clear of the window-cleaner's gondola (on the
 // facade) and the refactor crane (on the left wall). ?demo=drones fakes deliveries on the first floors.
 import { BW, SHAFT } from '../building.js'
+import { R } from '../draw.js'
 
-const R = (c, col, x, y, w, h) => { c.fillStyle = col; c.fillRect(Math.round(x), Math.round(y), w, h) }
 const LX = BW + SHAFT, LW = 22, CW = 7, CH = 6, SLOTS = 3, MAXD = 6
 const GAP = 1.1, FLY = 2.6, LOWER = 1.0, OFF = 2.2, KEEP = 9, SLIDE = 0.6, FRESH = 5 * 60_000
 const ICON = { pnpm: '📦', npm: '📦', yarn: '🧶', cargo: '🦀', pip: '🐍', swift: '🐦', gradle: '🐘' }
@@ -14,7 +14,7 @@ const TINT = { pnpm: '#c08a3e', npm: '#b8743a', yarn: '#b88a52', cargo: '#a8643a
 
 export default function init(api, tower) {
   const { Z, font, fitText } = tower, esc = api.esc
-  const params = new URLSearchParams(location.search + '&' + location.hash.slice(1)), demo = params.getAll('demo').includes('drones')
+  const params = api.params, demo = api.demo('drones')
   const docks = new Map()   // session id -> { sid, s, queue: [], job, out (ledge 0..1), crates: [], drones: [], hover, pending }
   const seen = new Set()
   let first = true, t = 0

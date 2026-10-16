@@ -5,6 +5,7 @@
 // ?demo=towersound (fills the café's games for a minute, to hear them).
 import { BW, SHAFT } from '../building.js'
 import { holidayOf, today } from './holidays.js'
+import { R } from '../draw.js'
 
 const SEASONS = ['halloween', 'christmas', 'winter', 'spring', 'summer', 'autumn', 'lunar', 'valentine', 'none']
 const DRAWN_HERE = new Set(['halloween', 'christmas', 'lunar', 'valentine'])   // the other holidays draw themselves
@@ -16,14 +17,13 @@ function seasonOf(d = today()) {
   if (m <= 8) return 'summer'
   return 'autumn'
 }
-const R = (c, col, x, y, w = 1, h = 1) => { c.fillStyle = col; c.fillRect(Math.round(x), Math.round(y), w, h) }
 const pool = (c, x, y, r, rgb, a) => { const g = c.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, `rgba(${rgb},${a})`); g.addColorStop(1, `rgba(${rgb},0)`); c.fillStyle = g; c.fillRect(x - r, y - r, 2 * r, 2 * r) }
 const inR = (w, r, pad = 2) => w && w.x >= r.x - pad && w.x <= r.x + r.w + pad && w.y >= r.y - pad && w.y <= r.y + r.h + pad
 
 export default function init(api, tower) {
   const { Z } = tower
-  const demos = new URLSearchParams(location.search + '&' + location.hash.slice(1)).getAll('demo')
-  const forced = new URLSearchParams(location.search + '&' + location.hash.slice(1)).get('season'), season = () => SEASONS.includes(forced) ? forced : seasonOf()
+  const demos = api.params.getAll('demo')
+  const forced = api.params.get('season'), season = () => SEASONS.includes(forced) ? forced : seasonOf()
   let night = 0
   const lit = () => night > 0.25
   const hooks = { items: [], glow: [], step: [], sync: [], overlay: [], hover: [], click: [] }

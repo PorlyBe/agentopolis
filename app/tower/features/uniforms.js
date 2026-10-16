@@ -108,7 +108,7 @@ export function langOfPerson(p, now = Date.now()) {
 }
 
 export default function init(api, tower) {
-  const params = new URLSearchParams(location.search + '&' + location.hash.slice(1)), demo = params.getAll('demo').includes('uniforms')
+  const demo = api.demo('uniforms')
   const wear = (c, p, info) => {
     const lang = langOfPerson(p); if (!lang) return
     DRAW[lang](c, geo(api, p, info), info.now)

@@ -2,14 +2,12 @@
 // (the transcript's first stamped entry, read once per file) and snap.ivyWear = { repoBorn } (the oldest root commit of the
 // repo most live sessions work in; read-only git, cached for hours).
 import fs from 'node:fs'
-import path from 'node:path'
-import { execFile } from 'node:child_process'
+import * as exec from '../lib/exec.mjs'
 
 const HEAD = 64 * 1024, REPO_MS = 6 * 3600_000
 const starts = new Map()   // file -> first timestamp ms | 0
-const roots = new Map()    // cwd -> repo root | null (pending: undefined)
 const born = new Map()     // root -> { at, ms }
-const run = (args) => new Promise(resolve => execFile('git', args, { timeout: 20_000, maxBuffer: 1 << 20 }, (err, out) => resolve(err ? null : String(out))))
+const run = args => exec.run('git', args, { timeout: 20_000, maxBuffer: 1 << 20 }).then(r => r.out)
 
 function startOf(file, stat) {
   if (starts.has(file)) return starts.get(file)
@@ -25,18 +23,6 @@ function startOf(file, stat) {
   return t
 }
 
-function pickRoot(sessions) {
-  const count = new Map()
-  for (const s of sessions) {
-    if (!s.running || !s.cwd) continue
-    if (!roots.has(s.cwd)) {
-      roots.set(s.cwd, undefined)
-      run(['-C', s.cwd, 'rev-parse', '--path-format=absolute', '--git-common-dir']).then(out => roots.set(s.cwd, out ? path.dirname(out.trim()) : null))
-    }
-    const r = roots.get(s.cwd); if (r) count.set(r, (count.get(r) || 0) + 1)
-  }
-  return [...count].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null
-}
 
 function repoBorn(root, now) {
   const b = born.get(root)
@@ -55,7 +41,7 @@ function repoBorn(root, now) {
 export default {
   session: ({ file, stat }) => ({ start: startOf(file, stat) }),
   snapshot(snap) {
-    const root = pickRoot(snap.sessions)
+    const root = exec.mainRoot(snap.sessions)
     snap.ivyWear = { repoBorn: root ? repoBorn(root, snap.now) : null }
   },
 }

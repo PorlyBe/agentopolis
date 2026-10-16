@@ -5,7 +5,7 @@
 // 'attention' (tower.js); here those bubbles are red. ?demo=waitline fakes a line that moves.
 import { IX } from '../building.js'
 
-const GAP = 32, FRONT = IX + 286, CAP = 8, PLAN_MS = 1000
+const GAP = 32, FRONT = IX + 278, CAP = 8, PLAN_MS = 1000
 const ext = s => s.ext?.['waiting-line']
 const R = (c, col, x, y, w, h) => { c.fillStyle = col; c.fillRect(Math.round(x), Math.round(y), w, h) }
 const mins = ms => { const m = Math.max(0, Math.round(ms / 60000)); return m < 60 ? m + 'm' : Math.floor(m / 60) + 'h' + String(m % 60).padStart(2, '0') }

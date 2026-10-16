@@ -191,7 +191,7 @@ export default function init(api) {
     else if (e.key === ' ' && (e.target === document.body || e.target.closest?.('.hbtn, #replayBar button'))) { e.preventDefault(); playBtn.click() }
   })
 
-  const demos = new URLSearchParams(location.search + '&' + location.hash.slice(1)).getAll('demo')
+  const demos = api.params.getAll('demo')
   if (demos.includes('replay') || demos.includes('replay-back')) {
     openReplay(d => d.to - 3_600_000, 60)
     if (demos.includes('replay-back')) setTimeout(close, 6000)

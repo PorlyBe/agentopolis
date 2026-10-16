@@ -3,14 +3,14 @@
 // counts up ('jammed 6m'). Hover or click the copier for the stuck command; it clears with a paper flutter when the
 // result lands. One kicker per floor (the longest stuck), the rest are counted on the pill. ?demo=printerjam fakes one.
 import { IX } from '../building.js'
+import { R } from '../draw.js'
 
 const CX = IX + 426, CW = 18, JAM_MS = 3 * 60_000, PLAN_MS = 1000, FLUTTER_MS = 2400
-const R = (c, col, x, y, w, h) => { c.fillStyle = col; c.fillRect(Math.round(x), Math.round(y), w, h) }
 const mins = ms => { const m = Math.max(0, Math.floor(ms / 60000)); return m < 60 ? m + 'm' : Math.floor(m / 60) + 'h' + String(m % 60).padStart(2, '0') }
 
 export default function init(api, tower) {
   const { Z, font, fitText } = tower, esc = api.esc
-  const params = new URLSearchParams(location.search + '&' + location.hash.slice(1)), demo = params.getAll('demo').includes('printerjam')
+  const params = api.params, demo = api.demo('printerjam')
   let jams = new Map()          // floor id -> { s, who, j, more }
   const sent = new Map()        // person id -> floor id
   const flutters = new Map()    // floor id -> { at, sheets }

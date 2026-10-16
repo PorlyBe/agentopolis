@@ -67,10 +67,21 @@ function live(now) {
   }
   return liveSet
 }
+// Another server on this HOME (a dev copy beside the live one) writes the same file: merge its ghosts in first, so
+// neither drops the other's. Its sessions still seen running stay its own business (only ghosts are shared).
 function save() {
   dirty = false
   try {
     fs.mkdirSync(DIR, { recursive: true })
+    try {
+      const disk = JSON.parse(fs.readFileSync(FILE, 'utf8'))
+      if (disk?.day === store.day && Array.isArray(disk.ghosts)) {
+        const mine = new Set(store.ghosts.map(g => g.id)), live = new Set(Object.keys(store.seen))
+        for (const g of disk.ghosts) if (g?.id && !mine.has(g.id) && !live.has(g.id)) store.ghosts.push(g)
+        store.ghosts.sort((a, b) => b.closed - a.closed)
+        store.ghosts.length = Math.min(store.ghosts.length, MAX)
+      }
+    } catch {}
     const tmp = `${FILE}.${process.pid}.tmp`
     fs.writeFileSync(tmp, JSON.stringify(store))
     fs.renameSync(tmp, FILE)

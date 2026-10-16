@@ -4,15 +4,15 @@
 // in, and the booth's screen shows the site's host with a favicon-ish colour square. It leaves once the browser has been
 // quiet for a minute. One caller per booth. ?demo=phonebooth fakes it on the first two floors.
 import { IX } from '../building.js'
+import { R } from '../draw.js'
 
-const R = (c, col, x, y, w, h) => { c.fillStyle = col; c.fillRect(Math.round(x), Math.round(y), w, h) }
 const BW = 20, BH = 46, QUIET = 60_000, GIVE_UP = 45_000
 const TOOL = /^mcp__(claude-in-chrome|Claude_Browser|playwright|puppeteer|chrome|browser)[^_]*__|browser/i
 const CMD = /tools\/shot\.mjs|\bplaywright\b|--headless\b|headless[-_ ]?chrom/i
 
 export default function init(api, tower) {
   const { Z, font, fitText } = tower, esc = api.esc
-  const params = new URLSearchParams(location.search + '&' + location.hash.slice(1)), demo = params.getAll('demo').includes('phonebooth')
+  const params = api.params, demo = api.demo('phonebooth')
   const who = new Map()     // person id -> { sid, live, host, tool, alive }
   const booths = new Map()  // floor id -> { id (occupant), phase 'walk'|'in', t }
 

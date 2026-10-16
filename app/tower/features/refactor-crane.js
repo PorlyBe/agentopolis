@@ -2,14 +2,14 @@
 // floor whose PR or branch changes more than 1000 lines (snap.cranes, server/features/refactor-crane.mjs). It slews
 // slowly and lifts steel beams; the bigger the diff, the taller the mast, the longer the jib and the heavier the load.
 // Hover for the PR, click to open it. ?demo=refactorcrane fakes a 1.5k and a 16k change on the first session floors.
-const R = (c, col, x, y, w, h) => { c.fillStyle = col; c.fillRect(Math.round(x), Math.round(y), w, h) }
+import { R } from '../draw.js'
 const YEL = '#e8b830', YEL_D = '#b8861c', STEEL = '#8a4a32', STEEL_L = '#b0644a', CABLE = '#3a3540'
 const MX = -16, MW = 7                                 // the mast's left edge and width; brackets reach the wall at x = 0
 const kfmt = n => n >= 1000 ? `${(n / 1000).toFixed(n >= 100_000 ? 0 : 1)}k` : `${n}`
 
 export default function init(api, tower) {
   const { Z, font } = tower, esc = api.esc
-  const params = new URLSearchParams(location.search + '&' + location.hash.slice(1)), demo = params.getAll('demo').includes('refactorcrane')
+  const params = api.params, demo = api.demo('refactorcrane')
   let cranes = [], flown = false
 
   tower.on('snapshot', data => {

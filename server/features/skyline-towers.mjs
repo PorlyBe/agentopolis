@@ -1,13 +1,13 @@
 // skyline-towers: the other git repos the live sessions work in (not the street's), for the distant towers behind the
 // street. Only each live session's cwd is looked at — `git remote get-url origin` (or the repo folder's name when
 // there is no remote), once per cwd; no GitHub calls, nothing watched. snap.skyline = { main, repos: [{ name, full, sessions }] }.
-import { execFile } from 'node:child_process'
+import * as exec from '../lib/exec.mjs'
 import path from 'node:path'
 
 const MAX = 6
 const repos = new Map()   // cwd -> { name, full } | null (not a repo) ; a pending lookup has no entry yet
 const pending = new Set()
-const git = (cwd, args) => new Promise(r => execFile('git', ['-C', cwd, ...args], { timeout: 5000 }, (err, out) => r(err ? null : String(out).trim())))
+const git = (cwd, args) => exec.git(cwd, args, { timeout: 5000 }).then(out => out?.trim() ?? null)
 const nameOf = url => url.replace(/\.git$/, '').replace(/\/+$/, '').match(/([^/:]+\/[^/:]+)$/)?.[1] ?? null
 
 async function lookup(cwd) {
@@ -25,6 +25,7 @@ async function lookup(cwd) {
 }
 
 export default {
+  after: ['github-street'],   // reads snap.street
   snapshot(snap) {
     const live = snap.sessions.filter(s => s.running !== false && s.cwd)
     for (const s of live) if (!repos.has(s.cwd) && !pending.has(s.cwd)) lookup(s.cwd)

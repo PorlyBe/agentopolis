@@ -2,8 +2,8 @@
 // dim distant towers behind the street, a rooftop sign with the repo's name on each, one lit window per session working
 // there (blinking while it works). Hover for the repo and its sessions, click to open one. ?demo=skylinetowers invents six.
 import { BW, SHAFT, STREET_L } from '../building.js'
+import { R } from '../draw.js'
 
-const R = (c, col, x, y, w = 1, h = 1) => { c.fillStyle = col; c.fillRect(Math.round(x), Math.round(y), w, h) }
 const MAX = 6, PAR = 0.35, MID = (BW + SHAFT) / 2
 const SLOTS = [STREET_L - 130, BW + SHAFT + 100, STREET_L - 330, BW + SHAFT + 300, STREET_L - 520, BW + SHAFT + 490]
 const BUSY = new Set(['tool', 'thinking', 'delegating', 'building'])
@@ -20,7 +20,7 @@ const FAKE = [['acme/rocket-docs'], ['globex/data-lake'], ['initech/pixel-kit'],
 
 export default function init(api, tower) {
   const { font, fitText } = tower
-  const demo = new URLSearchParams(location.search + '&' + location.hash.slice(1)).getAll('demo').includes('skylinetowers')
+  const demo = api.demo('skylinetowers')
   let towers = [], key = ''
 
   if (demo) tower.on('snapshot', data => {

@@ -13,7 +13,7 @@ const R = (c, col, x, y, w = 1, h = 1) => { c.fillStyle = col; c.fillRect(x, y, 
 const blob = (c, x, y, r) => { for (let dy = -r; dy <= r; dy++) { const w = Math.round(Math.sqrt(r * r - dy * dy)); c.fillRect(Math.round(x - w), Math.round(y + dy), w * 2, 1) } }
 
 export default function init(api, tower) {
-  const params = new URLSearchParams(location.search + '&' + location.hash.slice(1)), demo = params.getAll('demo').includes('wardrobe')
+  const demo = api.demo('wardrobe')
   const seen = new Map()       // person key -> { outfit, from, at }
   const garments = new Map()   // `${outfit}:${row}:${frame}` -> canvas
   let ref = null               // char_0's pixels: the body every sheet shares

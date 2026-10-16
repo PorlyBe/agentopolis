@@ -1,17 +1,16 @@
 // fire-drill: is the default branch red? A workflow is red when its newest finished push run on the branch failed and
 // no newer run of it succeeded. One read-only gh run list a minute; the repo and branch come from deploys' part of the snapshot.
-import { execFile } from 'node:child_process'
+import { watched } from '../lib/transcripts.mjs'
+import { gh as ghCall } from '../lib/exec.mjs'
 
 const TICK = 60_000
 const state = { status: 'loading', repo: null, branch: null, runs: [], at: 0, busy: false, downAt: 0 }
 let last = null, timer = null
 
-const gh = args => new Promise(resolve => execFile('gh', args, { timeout: 30_000, maxBuffer: 8 * 1024 * 1024 }, (err, out) => {
-  if (err) { if (err.code === 'ENOENT' || /auth|401/i.test(String(err.message))) state.downAt = Date.now(); return resolve(null) }
-  try { resolve(JSON.parse(out)) } catch { resolve(null) }
-}))
+const gh = args => ghCall(args, { maxBuffer: 8 * 1024 * 1024 }, () => { state.downAt = Date.now() })
 
 async function tick() {
+  if (!watched() || Date.now() - (last?.now || 0) > 15_000) return   // no page open, or this feature is switched off
   const repo = last?.deploys?.repo || last?.street?.repo, branch = last?.deploys?.branch
   if (state.busy || !repo || !branch || (state.downAt && Date.now() - state.downAt < 5 * 60_000)) return
   state.busy = true
@@ -37,6 +36,7 @@ function red() {
 }
 
 export default {
+  serves: ['fire-drill'],   // only its own tower feature reads it
   snapshot(snap) {
     last = snap
     if (!timer) { timer = setInterval(tick, TICK); timer.unref?.(); setTimeout(tick, 5000) }

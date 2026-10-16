@@ -4,14 +4,12 @@
 // and cached. Nothing here ever modifies or removes a worktree.
 import fs from 'node:fs'
 import path from 'node:path'
-import { execFile } from 'node:child_process'
+import * as exec from '../lib/exec.mjs'
 
 const LIST_MS = 60_000, PRS_MS = 10 * 60_000, PRS_RETRY_MS = 3 * 60_000, DIRTY_MS = 10 * 60_000, DIRTY_PER_TICK = 3
-const roots = new Map() // session cwd -> main checkout of its repo | null
 const state = { root: null, list: [], listAt: 0, listBusy: false, prs: null, prsAt: 0, prsBusy: false, repo: null, dirty: new Map(), dirtyBusy: 0 }
 
-const run = (cmd, args, opts = {}) => new Promise(resolve =>
-  execFile(cmd, args, { timeout: 30_000, maxBuffer: 8 * 1024 * 1024, ...opts }, (err, out) => resolve(err ? null : String(out))))
+const run = (cmd, args) => exec.run(cmd, args).then(r => r.out)
 
 function parse(out) {
   const list = []
@@ -36,16 +34,7 @@ function parse(out) {
 
 // the main checkout the most live sessions work in (a worktree's common git dir sits in it)
 function pickRoot(sessions) {
-  const count = new Map()
-  for (const s of sessions) {
-    if (!s.running || !s.cwd) continue
-    if (!roots.has(s.cwd)) {
-      roots.set(s.cwd, null)
-      run('git', ['-C', s.cwd, 'rev-parse', '--path-format=absolute', '--git-common-dir']).then(out => roots.set(s.cwd, out ? path.dirname(out.trim()) : null))
-    }
-    const r = roots.get(s.cwd); if (r) count.set(r, (count.get(r) || 0) + 1)
-  }
-  const best = [...count].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null
+  const best = exec.mainRoot(sessions)
   if (best !== state.root) { state.root = best; state.list = []; state.listAt = 0; state.repo = null; state.prs = null; state.prsAt = 0 }
 }
 
@@ -88,6 +77,8 @@ function prFor(branch) {
 }
 
 export default {
+  serves: ['lost-found'],   // only its own tower feature reads it
+  after: ['github-street'],   // reads snap.street
   snapshot(snap) {
     const now = Date.now()
     pickRoot(snap.sessions)

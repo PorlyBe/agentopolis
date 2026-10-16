@@ -34,6 +34,7 @@ async function save(req, res) {
   if (buf.length > MAX_FILE) return send(res, 413, { error: 'too big (25 MB max)' })
   if (!buf.subarray(0, MAGIC[kind].length).equals(MAGIC[kind])) return send(res, 400, { error: `not a ${kind.toUpperCase()}` })
   const base = `agent-office-${stamp(new Date())}`
+  try { fs.mkdirSync(DIR, { recursive: true }) } catch (e) { return send(res, 500, { error: e.message }) }
   let file
   for (let i = 1; i < 100 && !file; i++) {
     const f = path.join(DIR, `${base}${i > 1 ? '-' + i : ''}.${kind}`)

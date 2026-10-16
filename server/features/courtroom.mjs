@@ -3,12 +3,12 @@
 // agent it launched (background ones report through a task-notification) has answered, and closes with the findings
 // as charges: ReportFindings' findings, else table rows / numbered items of the result text. Transcripts are read like
 // groundhog.mjs: once from near their end, then only their appended bytes. Attached as session.ext.courtroom.
-import fs from 'node:fs'
-import { StringDecoder } from 'node:string_decoder'
+import { readSync, tailState } from '../lib/tail.mjs'
+import { filesOf, sweep } from '../lib/transcripts.mjs'
 
-const FIRST_READ = 2 * 1024 * 1024, CHUNK = 4 * 1024 * 1024, STALE_MS = 3 * 3600_000, KEEP_MS = 10 * 60_000, MAX_CHARGES = 5
+const FIRST_READ = 2 * 1024 * 1024, STALE_MS = 3 * 3600_000, KEEP_MS = 10 * 60_000, MAX_CHARGES = 5
 const SKILL = /review|devils-advocate|code-review|security-review/i, DESC = /review/i, NOT_A_REVIEW = /^\W*(fix|apply|address|rebase|merge|build|implement)\b/i
-const scans = new Map(), files = new Map()
+const scans = new Map()
 
 const blocks = e => Array.isArray(e.message?.content) ? e.message.content : [{ type: 'text', text: String(e.message?.content ?? '') }]
 const textOf = c => typeof c === 'string' ? c : Array.isArray(c) ? c.map(b => b?.text || '').join('\n') : ''
@@ -113,39 +113,24 @@ function line(s, l) {
 function scan(file, size) {
   let s = scans.get(file)
   if (!s || size < s.offset) {
-    s = { offset: Math.max(0, size - FIRST_READ), rest: '', dec: new StringDecoder('utf8'), skip: size > FIRST_READ, trial: null }
+    s = tailState(Math.max(0, size - FIRST_READ), { trial: null })
     scans.set(file, s)
   }
-  if (size > s.offset) {
-    const fd = fs.openSync(file, 'r')
-    try {
-      while (s.offset < size) {
-        const buf = Buffer.alloc(Math.min(CHUNK, size - s.offset))
-        const n = fs.readSync(fd, buf, 0, buf.length, s.offset)
-        if (!n) break
-        s.offset += n
-        const lines = (s.rest + s.dec.write(buf.subarray(0, n))).split('\n')
-        s.rest = lines.pop()
-        if (s.skip) { lines.shift(); s.skip = false }
-        for (const l of lines) if (l) line(s, l)
-      }
-    } finally { fs.closeSync(fd) }
-  }
+  readSync(s, file, size, l => line(s, l))
   return s.trial
 }
 
 export default {
-  session({ id, file }) { files.set(id, file) },
+  serves: ['courtroom'],   // only its own tower feature reads it
   snapshot(snap) {
     const now = Date.now()
     for (const s of snap.sessions) {
-      const f = files.get(s.id); if (!f) continue
-      let st; try { st = fs.statSync(f) } catch { continue }
-      const t = scan(f, st.size)
+      const x = filesOf(s.id); if (!x) continue
+      let t; try { t = scan(x.file, x.stat.size) } catch { continue }
       if (!t || (t.end ? now - t.end > KEEP_MS : now - t.start > STALE_MS)) { delete s.ext.courtroom; continue }
       s.ext.courtroom = { id: t.id, kind: t.kind, name: t.name, start: t.start, end: t.end, jurors: t.jurors.slice(0, 6),
         ...(t.end ? { verdict: t.verdict, count: t.count, nits: t.nits, charges: t.charges } : {}) }
     }
-    for (const f of scans.keys()) if (!fs.existsSync(f)) scans.delete(f)
+    sweep(scans)
   },
 }

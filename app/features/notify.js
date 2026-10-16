@@ -59,7 +59,7 @@ export default function init(api) {
   }
   document.getElementById('tbAlerts').prepend(btn)
 
-  const demos = new URLSearchParams(location.search + '&' + location.hash.slice(1)).getAll('demo')
+  const demos = api.params.getAll('demo')
   const last = new Map()  // session id -> state at the previous poll
   const fired = new Map() // session id -> when we last alerted
   const urgent = new Map(), wasAttn = new Map()
