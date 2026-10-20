@@ -164,6 +164,7 @@ export const FEATURE_GROUPS = [
     ['bug-squash', 'Click the bug critters to squash them; lobby high scores'],
     ['easter-eggs', 'A few hidden surprises around the tower'],
     ['tamagotchi-plant', 'A plant in your office that grows with your daily streak and wilts on a day off'],
+    ['cosplay', 'On the Japan skin, people come in cosplay'],
   ] },
   { id: 'seasonal', label: 'Seasonal', features: [
     ['holidays', 'Holiday decor from the calendar (New Year, hanami, Tanabata…)'],

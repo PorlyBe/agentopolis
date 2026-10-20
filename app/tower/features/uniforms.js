@@ -110,6 +110,7 @@ export function langOfPerson(p, now = Date.now()) {
 export default function init(api, tower) {
   const demo = api.demo('uniforms')
   const wear = (c, p, info) => {
+    if (api.costume?.(p)) return                              // a cosplay costume (cosplay.js) replaces the hat
     const lang = langOfPerson(p); if (!lang) return
     DRAW[lang](c, geo(api, p, info), info.now)
   }

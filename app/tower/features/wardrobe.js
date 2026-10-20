@@ -88,6 +88,7 @@ export default function init(api, tower) {
 
   const dress = (c, p, info) => {
     const s = stateOf(p, info.now), t = info.now - s.at
+    if (api.costume?.(p)) return                             // a cosplay costume (cosplay.js) replaces the outfit
     const outfit = s.at && t < SWAP ? s.from : s.outfit; if (!outfit) return
     const g = geo(api, p, info), cv = garment(outfit, info.row, info.frame, g.y0)
     if (cv) c.drawImage(cv, 0, 0)

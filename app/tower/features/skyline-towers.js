@@ -14,6 +14,7 @@ const INK = {
   'space-station': { body: '#2a303c', side: '#1e222c', trim: '#5a6270', win: '#323a48', lit: '#9ad8ff', blink: '#f0c020', board: '#14161c', face: '#9ad8ff', leg: '#3a404c' },
   underwater: { body: '#2a6a7a', side: '#1e5a6a', trim: '#3a8090', win: '#246070', lit: '#bff4ff', blink: '#ffffff', board: '#1a3a44', face: '#bff4ff', leg: '#24525c' },
   steampunk: { body: '#8a7458', side: '#6a5a44', trim: '#c8963a', win: '#7a6650', lit: '#ffd890', blink: '#fff0c0', board: '#3a2a1a', face: '#e8c88a', leg: '#4a3020' },
+  japan: { body: '#9aa0b6', side: '#868ca4', trim: '#a8aec2', win: '#868ca2', lit: '#ffd8a0', blink: '#fff2d8', board: '#3a3442', face: '#f4e8d0', leg: '#5a5466' },
   candy: { body: '#e0b0d0', side: '#c898b8', trim: '#fff4fa', win: '#d0a0c0', lit: '#fff4fa', blink: '#ff7ab0', board: '#8a5a7a', face: '#fff4fa', leg: '#a87a9a' },
 }
 const FAKE = [['acme/recipe-box'], ['acme/pixel-quest'], ['acme/garden-planner'], ['acme/photo-gallery'], ['acme/trail-map'], ['acme/blog']]
@@ -59,6 +60,7 @@ export default function init(api, tower) {
       R(c, k.body, x0, top, t.w, t.h); R(c, k.side, x0 + t.w - 5, top, 5, t.h); R(c, k.trim, x0 - 1, top - 2, t.w + 2, 3)
       if (t.seed % 3 === 0) { R(c, k.trim, x0 + 6, top - 10, t.w - 12, 8); R(c, k.side, x0 + 6, top - 3, t.w - 12, 1) }
       if (t.seed % 2) { R(c, k.leg, x0 + t.w - 10, top - 34, 1, 32); R(c, Math.floor(now / 900 + t.seed) % 2 ? '#ff5a5a' : '#5a2a2a', x0 + t.w - 10, top - 35, 1, 1) }
+      if (api.theme?.skin === 'japan') signboard(c, t, x0, top, now)
       for (let row = 0; row < t.rows; row++) for (let col = 0; col < t.cols; col++) {
         const w = winAt(t, x0, { col, row }); if (w.y > -4) continue
         R(c, k.win, w.x, w.y, 3, 4)
@@ -73,6 +75,15 @@ export default function init(api, tower) {
       R(c, k.leg, b.x - 1, b.y - 1, b.w + 2, b.h + 2); R(c, k.board, b.x, b.y, b.w, b.h)
       if (tower.zoom * b.w < 40) for (let i = 0; i < Math.min(t.r.name.length, (b.w - 6) / 3); i++) R(c, k.face, b.x + 3 + i * 3, b.y + 4, 2, 2)   // far away: a blur of letters
     }
+  }
+  // the Japan skin: a vertical signboard down the tower's street side, glyph-like marks on it, a water tank on the roof
+  const BOARD = ['#c8463a', '#d8a83a', '#3a78c0', '#3a9a6a', '#c85a9a']
+  const boardOf = (t, x0, top) => ({ x: t.seed % 2 ? x0 + 2 : x0 + t.w - 10, y: top + 14 + t.seed % 20, w: 7, h: 44 + t.seed % 30, col: BOARD[t.seed % BOARD.length] })
+  function signboard(c, t, x0, top) {
+    const s = boardOf(t, x0, top)
+    R(c, '#4a4656', s.x - 1, s.y - 1, s.w + 2, s.h + 2); R(c, s.col, s.x, s.y, s.w, s.h)
+    for (let y = s.y + 3, k = 0; y < s.y + s.h - 4; y += 6, k++) { R(c, '#f4ecd8', s.x + 1, y + 1, 5, 1); if ((t.seed + k) % 3) R(c, '#f4ecd8', s.x + 1 + (k % 2) * 4, y, 1, 3); if ((t.seed + k) % 2) R(c, '#f4ecd8', s.x + 3, y + 2, 1, 2) }
+    if (!(t.seed % 2) || t.seed % 3) { const tx = x0 + 5; R(c, '#6a6478', tx + 1, top - 3, 1, 3); R(c, '#6a6478', tx + 7, top - 3, 1, 3); R(c, '#7a748a', tx, top - 11, 9, 8); R(c, '#9a94aa', tx + 1, top - 11, 2, 8) }
   }
   // the sign is visible unless the tower or a street building stands in front of it
   const hidden = (x, y) => (x >= -6 && x <= BW + SHAFT + 14 && y >= (tower.bounds?.y0 ?? -1e9)) || !!tower.city.buildingAt(x, y)
@@ -90,8 +101,15 @@ export default function init(api, tower) {
         c.globalAlpha = n * 0.35; R(c, busy ? k.blink : k.lit, w.x - 1, w.y - 1, 5, 6)
       }
     }
+    if (api.theme?.skin === 'japan') for (const t of towers) {          // the signboards glow
+      const x0 = xOf(t), s = boardOf(t, x0, -t.h)
+      if (hidden(s.x, s.y) || hidden(s.x + s.w, s.y + s.h)) continue
+      c.globalAlpha = n * 0.7; R(c, s.col, s.x, s.y, s.w, s.h); c.globalAlpha = n * 0.25; R(c, s.col, s.x - 2, s.y - 2, s.w + 4, s.h + 4)
+    }
     c.globalAlpha = 1
   })
+  // other skins' painters ask whether a far tower stands at a point (japan.js keeps the far signs behind them)
+  api.farTowerAt = (x, y) => towers.some(t => { const x0 = xOf(t); return x >= x0 - 1 && x <= x0 + t.w && y >= -t.h - 18 && y <= 0 })
 
   tower.on('overlay', c => {
     const z = tower.zoom, k = ink()

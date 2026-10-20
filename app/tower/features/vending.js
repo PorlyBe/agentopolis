@@ -4,6 +4,7 @@
 // Hover the machine for who is stuck, click to open the first. ?demo=vending cycles overloaded → usage limit → fixed.
 import { IX } from '../building.js'
 import { R } from '../draw.js'
+import { jihanki } from './japan-art.js'
 
 const VX = IX + 155, VW = 20, VH = 46, FRONT = VX + 10, GAP = 22, CAP = 6, PLAN_MS = 1000
 const SNACKS = ['#e0503a', '#f2c14e', '#5aa860', '#3a7ab8', '#c86ad8', '#f08a3a', '#e8e4d8', '#d84a6a', '#5fd1c8']
@@ -58,6 +59,15 @@ export default function init(api, tower) {
 
   function machine(c, y, now) {
     const out = !!v, x = VX, top = y - VH
+    if (api.theme?.skin === 'japan') {   // the Japan skin: a drinks machine, rows of cans and bottles behind lit glass
+      jihanki(c, x, y, VW, VH, 'red', { out, seed: 7 })
+      if (out) {
+        R(c, flick(now) ? '#ff5a4a' : '#5a2a2a', x + 2, top + 2, VW - 4, 2)
+        R(c, '#f4efe0', x + 4, top + 12, 12, 9); R(c, '#d84a3a', x + 5, top + 14, 10, 1); R(c, '#d84a3a', x + 5, top + 16, 7, 1); R(c, '#d84a3a', x + 5, top + 18, 8, 1)
+        R(c, 'rgba(240,230,180,.8)', x + 3, top + 11, 3, 2); R(c, 'rgba(240,230,180,.8)', x + 14, top + 11, 3, 2)
+      }
+      return
+    }
     R(c, 'rgba(0,0,0,.22)', x + 2, y - 1, VW, 1)
     R(c, '#243048', x, top, VW, VH); R(c, '#34446a', x + 1, top + 1, VW - 2, VH - 2)
     const lit = out ? flick(now) : true

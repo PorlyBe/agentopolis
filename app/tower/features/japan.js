@@ -1,11 +1,16 @@
 // japan: the Japan skin (themes.js lists it and starts its decor). Its city painters (city.js) put Mt Fuji in the far
-// sky — lit by the hour, akafuji at dusk, a silhouette at night, its snowcap deeper November to May — pagodas and tiled
-// roofs in the far skyline, sakura street trees through the seasons, red chōchin on the lantern posts, and kawara roofs,
-// shoji windows and noren on the neighbours. Its decor tiles the cornices and the roof edge, hangs a noren under the
-// awning and chōchin up the shafts' outer side, and puts a torii and a stone lantern by the street.
-import { BW, SHAFT, SLAB, PLAQUE } from '../building.js'
-import { today, holidayOf } from './holidays.js'
+// sky — lit by the hour, akafuji at dusk, a silhouette at night, its snowcap deeper November to May — a Tokyo skyline
+// (signboarded towers, neon at night, a lattice broadcast tower, a pagoda, a castle keep), sakura street trees in bloom
+// all year (momiji among them in autumn, snow on them in winter), red chōchin on the lantern posts, and machiya, a
+// konbini and an izakaya for neighbours. Its building painters put bonsai for plants, shoji in the meeting room, noren and
+// lanterns in the café, daruma, a sakura branch at the penthouse window. Its decor tiles the cornices and the roof edge,
+// hangs a noren under the awning and chōchin up the shafts' outer side, puts a torii, a stone lantern, drinks machines,
+// a ramen yatai and a zebra crossing by the street, a maneki-neko on the reception desk, koinobori in May and drifting
+// petals over the street. The painters themselves are in japan-art.js.
+import { BW, SHAFT, SLAB, PLAQUE, IX, IX1 } from '../building.js'
+import { today, holidayOf, koinobori } from './holidays.js'
 import { R, rnd } from '../draw.js'
+import { farSkyline, landmarks, jihanki, yatai, chochin as lantern, styleOf, windowOf, frontOf, frontLight, bonsai, daruma, manekiNeko, sakuraVase } from './japan-art.js'
 
 const KAWARA = '#4e556e', KAWARA_HI = '#6a728e', KAWARA_LO = '#33384c', RIDGE = '#262a3a'
 const VERM = '#c4452e', VERM_LO = '#8c2e1f', VERM_HI = '#e46a4c', INK = '#1e1a1c'
@@ -87,36 +92,25 @@ function distant(c, v, now, sky) {
   c.drawImage(cv, x, -g.H)
 }
 
-// ---------- the far skyline: tiled hip roofs on the low blocks, two pagodas ----------
+// ---------- the far skyline: tiled hip roofs on the low blocks (the towers and landmarks are japan-art.js's) ----------
 function hipRoof(c, x, y, w, col, h = 6) {
   for (let r = 0; r < h; r++) R(c, col, x - 3 + r + (r === 0 ? 0 : 1), y - r - 1, w + 6 - 2 * r - (r === 0 ? 0 : 2), 1)
   R(c, col, x - 4, y - 2, 1, 1); R(c, col, x + w + 3, y - 2, 1, 1)                   // the eaves' upturned tips
 }
-function pagoda(c, cx, base, ht, col) {
-  const tiers = 5, spire = Math.round(ht * 0.2), th = (ht - spire - 8) / tiers
-  R(c, col, cx - 22, base - 8, 44, 8)
-  for (let i = 0; i < tiers; i++) {
-    const y = Math.round(base - 8 - i * th), bw = 26 - i * 3, ew = 46 - i * 5
-    R(c, col, cx - bw / 2, y - th, bw, th)
-    for (let r = 0; r < 4; r++) R(c, col, Math.round(cx - ew / 2 + r * 2 + (r ? 1 : 0)), Math.round(y - th + 3 - r), ew - r * 4 - (r ? 2 : 0), 1)
-    R(c, col, Math.round(cx - ew / 2 - 1), Math.round(y - th + 1), 1, 2); R(c, col, Math.round(cx + ew / 2), Math.round(y - th + 1), 1, 2)
-  }
-  const top = Math.round(base - 8 - tiers * th)
-  R(c, col, cx - 1, top - spire, 2, spire)
-  for (let y = top - spire + 4; y < top - 2; y += 4) R(c, col, cx - 2, y, 4, 2)
-  R(c, col, cx - 2, top - spire - 2, 4, 3)
-}
+// the far skyline's night layer (its signs, the broadcast tower's floodlights, the lit keep) and where its signs are
+let far = { neon: null, signs: [] }, marks = null
 function skyline(c, blocks) {
-  for (const b of blocks) if (b.h < 160 && b.w > 40 && (b.x * 7 + b.h) % 3) hipRoof(c, b.x + 2, b.y, b.w - 4, b.far ? SKY_FAR : SKY_NEAR, 5 + (b.w > 70 ? 2 : 0))
-  const out = []
-  for (const [x, ht] of [[310, 206], [1010, 176]]) { pagoda(c, x, 260, ht, SKY_NEAR); out.push([x - 24, x + 24]) }
-  return out
+  far = farSkyline(c, blocks, { far: SKY_FAR, near: SKY_NEAR, hipRoof })
+  marks ||= landmarks({ near: SKY_NEAR })
+  return []
 }
+function skyNight(c, x, y, n) { if (!far.neon) return; c.globalCompositeOperation = 'lighter'; c.globalAlpha = Math.min(1, n * 1.1); c.drawImage(far.neon, x, y) }
 
 // ---------- street: sakura trees through the year, chōchin on the lantern posts ----------
+// sakura in bloom whatever the date (a fantasy skin): in autumn every third tree is a momiji maple, in winter the
+// blossom carries snow
 const LEAVES = {
-  bloom: ['#fde4ec', '#f7c0d2', '#f0a2bc', '#e2869f'], green: ['#78ae5c', '#5a9448', '#457a3a', '#2f5e2e'],
-  autumn: ['#f2b04a', '#e8803a', '#d4542e', '#9e3424'],
+  sakura: ['#fde4ec', '#f7c0d2', '#f0a2bc', '#e2869f'], momiji: ['#f2784a', '#dc4630', '#b42a26', '#7e1c1e'],
 }
 const trees = new Map()
 function treeSprite(sea) {
@@ -128,27 +122,27 @@ function treeSprite(sea) {
   const limb = (x, y, dx, dy, n) => { for (let i = 0; i <= n; i++) R(c, bark, Math.round(x + dx * i / n), Math.round(y + dy * i / n), i < n / 2 ? 2 : 1, 1) }
   limb(17, 29, -10, -9, 10); limb(17, 29, 9, -10, 10); limb(17, 29, -1, -14, 12); limb(10, 22, -5, -1, 5); limb(23, 21, 6, -1, 5)
   limb(11, 21, -1, -6, 5); limb(25, 20, 1, -6, 5); limb(16, 17, -3, -5, 4); limb(17, 17, 4, -5, 4)
-  const L = LEAVES[sea]
+  const kind = sea === 'momiji' ? 'momiji' : 'sakura', L = LEAVES[kind], snow = sea === 'snow'
   if (L) for (let i = 0; i < 120; i++) {
     const a = rnd(i * 1.7) * Math.PI * 2, r = Math.sqrt(rnd(i + 0.37)), x = 17 + Math.cos(a) * r * 12.5, y = 19 + Math.sin(a) * r * 8
     if (rnd(i + 9.1) > 0.9 && r > 0.4) continue                                  // gaps the branches show through
     const lit = (y < 16 ? 0 : y < 21 ? 1 : 2) + (x > 22 ? 1 : 0)
     R(c, L[Math.min(3, lit + (rnd(i + 4.2) > 0.75 ? 1 : 0))], Math.round(x) - 1, Math.round(y) - 1, 2, 2)
+    if (snow && y < 17 && rnd(i + 6.6) > 0.35) R(c, '#ffffff', Math.round(x) - 1, Math.round(y) - 2, 2, 1)       // snow on the upper blossom
   }
-  if (sea === 'bloom') for (let i = 0; i < 6; i++) R(c, L[i % 2], 6 + Math.round(rnd(i + 2.2) * 22), 44 + (i % 2), 1, 1)   // fallen petals
-  if (sea === 'autumn') for (let i = 0; i < 5; i++) R(c, L[1 + i % 3], 6 + Math.round(rnd(i + 5.5) * 22), 44 + (i % 2), 1, 1)
+  if (kind === 'sakura') for (let i = 0; i < 6; i++) R(c, L[i % 2], 6 + Math.round(rnd(i + 2.2) * 22), 44 + (i % 2), 1, 1)   // fallen petals
+  else for (let i = 0; i < 5; i++) R(c, L[1 + i % 3], 6 + Math.round(rnd(i + 5.5) * 22), 44 + (i % 2), 1, 1)
+  if (snow) { R(c, '#f4f6fa', 4, 44, 26, 2); R(c, '#ffffff', 16, 27, 3, 1) }
   trees.set(sea, cv)
   return cv
 }
 let sea = 'green', seaAt = 0
-const tree = (c, tx) => { const t = performance.now(); if (t - seaAt > 5000) { sea = season(); seaAt = t } c.drawImage(treeSprite(sea), tx - 10, -46) }
-export function chochin(c, cx, y) {            // a red paper lantern hung at (cx, y): caps, ribs, a highlight, its mark
-  R(c, INK, cx - 2, y, 5, 1)
-  R(c, VERM, cx - 3, y + 1, 7, 8); R(c, VERM, cx - 4, y + 2, 9, 6)
-  R(c, VERM_LO, cx - 4, y + 3, 9, 1); R(c, VERM_LO, cx - 4, y + 6, 9, 1); R(c, VERM_HI, cx - 2, y + 2, 1, 5)
-  R(c, INK, cx, y + 3, 1, 4); R(c, INK, cx - 1, y + 4, 3, 1)
-  R(c, INK, cx - 2, y + 9, 5, 1)
+const tree = (c, tx) => {
+  const t = performance.now(); if (t - seaAt > 5000) { sea = season(); seaAt = t }
+  const k = sea === 'autumn' && (Math.floor(tx / 160) % 3 + 3) % 3 === 1 ? 'momiji' : sea === 'bare' ? 'snow' : 'sakura'
+  c.drawImage(treeSprite(k), tx - 10, -46)
 }
+export const chochin = lantern
 export const LANTERN_Y = -55                   // hung above the neighbours' name boards
 function lampPost(c, lx) {
   R(c, WOOD, lx, -58, 2, 58); R(c, '#5a4232', lx, -58, 1, 58); R(c, WOOD, lx, -59, 9, 2)
@@ -156,7 +150,7 @@ function lampPost(c, lx) {
   R(c, '#7a7468', lx - 2, -2, 6, 2)
 }
 
-// ---------- the neighbours' sprites: a kawara roof, shoji windows, a noren on the shop door ----------
+// ---------- the neighbours' sprites: a kawara roof (their windows and fronts are japan-art.js's) ----------
 function roof(c, b, top) {
   const x0 = b.x0 - 6, x1 = b.x0 + b.w + 6, H = 9
   R(c, 'rgba(0,0,0,.3)', b.x0, top, b.w, 2)
@@ -170,17 +164,6 @@ function roof(c, b, top) {
   for (const x of [x0 + H + 1, x1 - H - 5]) { R(c, RIDGE, x, top - 4 - H, 4, 4); R(c, KAWARA_HI, x + 1, top - 3 - H, 1, 1) }
   R(c, KAWARA, x0 - 1, top - 4, 2, 2); R(c, KAWARA, x1 - 1, top - 4, 2, 2)              // upturned eave tips
 }
-function shoji(c, x, y, draft) {
-  R(c, draft ? '#c4c8d2' : WASHI, x, y, 12, 14); R(c, draft ? '#b2b8c4' : '#e6dabe', x, y + 10, 12, 4)
-  const k = draft ? '#6a6e7a' : '#6a4a36'
-  R(c, k, x + 4, y, 1, 14); R(c, k, x + 8, y, 1, 14); R(c, k, x, y + 4, 12, 1); R(c, k, x, y + 9, 12, 1)
-}
-function shop(c, b) {
-  const dx = b.x0 + b.w / 2 + 5
-  R(c, INDIGO, dx, -24, 16, 8)
-  for (const x of [dx + 5, dx + 10]) R(c, '#1e2a4a', x, -20, 1, 4)
-  R(c, WASHI, dx + 7, -22, 2, 2); R(c, INDIGO_HI, dx, -24, 16, 1)
-}
 
 export const JAPAN = {
   label: 'Japan',
@@ -191,6 +174,7 @@ export const JAPAN = {
     wall: '#b8402c', wallEdge: VERM_LO, footing: '#6a6862', footingLine: '#45433f', doorFrame: WOOD, glass: '#d8cfb6', skirting: '#4a3426',
     shaft: '#4a3a32', shaftHi: '#7a6250', machine: KAWARA, machineHi: KAWARA_HI, machineLo: KAWARA_LO, deck: '#8a6a4a', deckLine: '#6a4e36',
     lamp: '255,196,130', roomGlow: 'rgba(90,52,30,.55)',
+    plant: bonsai, backWall: shoji, furnish,
   },
   city: {
     skyFar: SKY_FAR, skyNear: SKY_NEAR, skyWin: '255,206,140', soil: '#4a3e34', pebble: '#5a4c40', walk: '#cdc4b2', walkLine: '#b2a996',
@@ -198,7 +182,7 @@ export const JAPAN = {
     trunk: '#4a3028', leaf: '#5a9448', leafHi: '#78ae5c', winLit: 'rgba(255,196,128,.8)',
     dayTop: [98, 146, 204], dayHz: [232, 226, 218], nightTop: [8, 10, 30], nightHz: [40, 38, 80],
     styles: [['#e8dfca', '#6a4a36', '#5a4232'], ['#4a5878', '#36405a', '#2e3348'], ['#9a6a48', '#74503a', '#4a3426'], ['#c88a52', '#a06a3a', '#5a4232']],
-    skyline, distant, tree, lampPost, roof, window: shoji, shop,
+    skyline, skyNight, distant, tree, lampPost, roof, style: styleOf, window: windowOf, front: frontOf, frontLight,
   },
   tint: [['soft-light', 'rgba(255,224,200,.18)']],
   // the Look tab's postcard: Fuji over the skyline
@@ -276,20 +260,144 @@ export function japanDecor(api, tower, on) {
     for (const f of outdoors()) { const [x, y] = lanternAt(f); R(c, WOOD, XO, y - 3, x - XO + 1, 1); R(c, WOOD, XO, y - 4, 1, 3); R(c, INK, x, y - 2, 1, 2); chochin(c, x, y) }
   }
 
+
+  // ---------- the street: drinks machines by the door, a zebra crossing, a ramen yatai, petals ----------
+  // static pieces are painted once into small sprites: sprite(key, x0, y0, w, h, paint) → { cv, x, y }
+  const sprites = new Map()
+  function sprite(key, x, y, w, h, paint) {
+    let s = sprites.get(key)
+    if (!s) { const cv = Object.assign(document.createElement('canvas'), { width: w, height: h }), c = cv.getContext('2d'); c.translate(-x, -y); paint(c); sprites.set(key, s = { cv, x, y }) }
+    return s
+  }
+  const put = (c, s) => c.drawImage(s.cv, s.x, s.y)
+  const DOOR_VEND = [[-61, 'red'], [-32, 'blue']]                // between the news box and the mailbox, and by the door
+  const street = () => sprite('street', -64, -28, 48, 29, c => DOOR_VEND.forEach(([x, col], k) => jihanki(c, x, 0, 13, 26, col, { seed: 11 + k })))
+  const CROSSINGS = [[-108, 92], [XO + 40, 64]]
+  const crossing = () => sprite('zebra', -108, 4, XO + 104 + 108, 11, c => {
+    for (const [x0, w] of CROSSINGS) { R(c, JAPAN.city.road, x0 - 2, 4, w + 2, 10); for (let x = x0; x < x0 + w; x += 6) { R(c, '#e8e2d4', x, 5, 3, 8); R(c, '#cfc8b8', x, 12, 3, 1) } }
+  })
+  // the yatai stands on the sidewalk between two neighbours' name boards, clear of the trees and lantern posts, the
+  // nearest such spot to the tower
+  let yKey = '', yX = null
+  function yataiOf() {
+    const bs = tower.street.buildings, k = bs.map(b => b.x0 + ':' + b.w).join(',')
+    if (k === yKey) return yX
+    yKey = k; yX = null
+    const e = tower.street.extent, boards = bs.map(b => [b.x0 + b.w / 2 - 46, b.x0 + b.w / 2 + 46])
+    const ok = x => {
+      const a = x - 7, z = x + 41
+      if (a < e.x0 || z > e.x1 || (z > -140 && a < XO + 40) || boards.some(([p, q]) => z > p && a < q)) return false
+      for (let k0 = Math.floor(a / 160) - 1; k0 * 160 < z + 160; k0++) { const t = k0 * 160 + 118, l = k0 * 160 + 40; if (z > t - 8 && a < t + 24 || z > l - 3 && a < l + 13) return false }
+      return true
+    }
+    for (let d = 0; d < 2000 && yX == null; d += 2) { if (ok(XO + 47 + d)) yX = XO + 47 + d; else if (ok(-182 - d)) yX = -182 - d }
+    return yX
+  }
+  const cart = () => sprite('yatai', -8, -46, 50, 47, c => yatai(c, 0, 0))
+  function steam(c, x, now) {
+    for (let i = 0; i < 4; i++) {
+      const p = ((now / 2200) + i / 4) % 1
+      c.fillStyle = `rgba(250,250,252,${0.55 * (1 - p)})`
+      c.fillRect(Math.round(x + 26 + Math.sin(p * 5 + i) * 2 + p * 3), Math.round(-27 - p * 18), p < 0.5 ? 2 : 3, p < 0.5 ? 2 : 3)
+    }
+  }
+  // sakura petals drifting down over the street, never inside the tower
+  const PETALS = ['#fde4ec', '#f7c0d2', '#f0a2bc', '#f8d0dc']
+  function petals(c, v, now) {
+    const t = now / 1000, W = v.x1 - v.x0, n = Math.min(90, Math.round(W / 7))
+    for (let i = 0; i < n; i++) {
+      const fall = 9 + rnd(i + 0.3) * 8, span = 150, ph = (rnd(i + 0.9) * span + t * fall) % span
+      const y = -140 + ph, x = v.x0 + ((rnd(i + 0.1) * W + t * (6 + rnd(i + 0.5) * 6) + Math.sin(t * 1.3 + i) * 5) % W + W) % W
+      if (x > -3 && x < XO + 3 || y > 3) continue
+      const flip = Math.floor(t * 3 + i) % 3
+      R(c, PETALS[i % 4], x, y, flip === 0 ? 2 : 1, flip === 1 ? 2 : 1)
+    }
+  }
+  // the reception desk's maneki-neko, beckoning
+  const nekoAt = f => [IX + 155, f.y - 22]                      // right of the cornerstone's lettering
+  const koiMonth = () => today().getMonth() === 4 && holidayOf()?.key !== 'goldenweek'   // May, past Golden Week's own
+
+  // the landmarks stand in front of the far skyline and behind the repos' towers, at its parallax
+  tower.city.backdrop.unshift((c, v) => {
+    if (!on() || !marks) return
+    const sx = tower.city.skyX(v)
+    for (const m of marks) { const x = Math.round(m.x + sx); if (x < v.x1 && x + m.w > v.x0) c.drawImage(m.cv, x, m.y) }
+  })
   tower.on('items', (out, now, ctx) => {
     if (!on() || !tower.floors.length) return
     roofY = roofF().y
-    out.push({ z: Z.BEHIND + 2, draw: c => { torii(c); toro(c, TORO_X) } },
-      { z: Z.OUTSIDE + 1, draw: c => { cornices(c); roofTrim(c); door(c); lanterns(c) } })
+    const v = ctx.view, yx = yataiOf(), lob = tower.floor('lobby')
+    out.push({ z: Z.BEHIND + 1, draw: c => put(c, crossing()) },
+      { z: Z.BEHIND + 2, draw: c => { torii(c); toro(c, TORO_X); put(c, street()); if (yx != null) { const s = cart(); c.drawImage(s.cv, yx + s.x, s.y); steam(c, yx, now) } } },
+      { z: Z.OUTSIDE + 1, draw: c => { cornices(c); roofTrim(c); door(c); lanterns(c) } },
+      { z: Z.OUTSIDE + 2, draw: c => petals(c, v, now) })
+    if (lob && lob.open == null) { const [x, y] = nekoAt(lob); out.push({ z: Z.FRONT + 2, draw: c => manekiNeko(c, x, y, Math.floor(now / 450) % 2 === 0) }) }
+    if (koiMonth()) out.push({ z: Z.OUTSIDE + 3, draw: c => koinobori(c, -96, now) })
   })
+  // what stands in front of the far skyline (the tower and its street furniture, the neighbours, the repos' towers)
+  const hid = (x, y) => (x >= -50 && x <= XO + 34 && y >= (tower.bounds?.y0 ?? -1e9)) || !!tower.city.buildingAt(x, y) || !!api.farTowerAt?.(x, y)
   tower.on('glow', (c, now, n, ctx) => {
     if (!on() || n < 0.05 || !tower.floors.length) return
+    const v = ctx.view
+    // the far signs, brightened again where nothing nearer stands in front of them
+    if (far.neon) {
+      const sx = tower.city.skyX(v), SW = tower.city.SKY_W
+      c.globalAlpha = Math.min(1, n * 0.8)
+      for (let k = Math.floor((v.x0 - sx) / SW); k * SW + sx < v.x1; k++) {
+        const X = Math.round(k * SW + sx)
+        for (const s of far.signs) {
+          const x = X + s.x, y = -260 + s.y
+          if (x > v.x1 || x + s.w < v.x0 || hid(x, y) || hid(x + s.w - 1, y) || hid(x, y + s.h - 1) || hid(x + s.w - 1, y + s.h - 1)) continue
+          c.drawImage(far.neon, s.x, s.y, s.w, s.h, x, y, s.w, s.h)
+        }
+      }
+    }
+    if (marks) {
+      const sx = tower.city.skyX(v)
+      for (const m of marks) {
+        const x = Math.round(m.x + sx); if (x > v.x1 || x + m.w < v.x0) continue
+        for (let y = 0; y < m.h; y += 8) { const wy = m.y + y; if (hid(x + 2, wy) || hid(x + m.w - 3, wy) || hid(x + m.w / 2, wy + 7)) continue; c.drawImage(m.night, 0, y, m.w, 8, x, wy, m.w, 8) }
+      }
+    }
     c.globalAlpha = Math.min(1, n * 1.2)
     const lit = (x, y) => { pool(c, x, y + 5, 13, '255,120,80', 0.5); c.fillStyle = 'rgba(255,150,90,.55)'; c.fillRect(x - 3, y + 2, 7, 6) }
     for (const f of outdoors()) lit(...lanternAt(f))
-    for (const lx of lampsIn(ctx.view)) lit(lx + 7, LANTERN_Y)
+    for (const lx of lampsIn(v)) lit(lx + 7, LANTERN_Y)
     pool(c, TORO_X, -18, 12, '255,200,120', 0.6); c.fillStyle = 'rgba(255,210,140,.8)'; c.fillRect(TORO_X - 1, -19, 3, 4)
+    for (const [x] of DOOR_VEND) { pool(c, x + 6, -16, 16, '200,235,255', 0.45); c.fillStyle = 'rgba(220,240,255,.55)'; c.fillRect(x + 2, -21, 9, 13) }
+    const yx = yataiOf(); if (yx != null) lit(yx - 3, -36)
     c.globalAlpha = 1
   })
+}
+
+// ---------- inside: bonsai for plants, shoji in the meeting room, noren and lanterns in the café, daruma, a sakura branch ----------
+function shoji(c, f) {   // the meeting room's back wall
+  if (f.kind !== 'meeting') return
+  const y0 = f.top + 3, y1 = f.y - 19, h = y1 - y0
+  if (h < 20) return
+  R(c, '#f1e9d6', IX, y0, IX1 - IX, h)
+  for (let y = y0 + 6; y < y1 - 2; y += 7) R(c, '#dccdb0', IX, y, IX1 - IX, 1)
+  for (let x = IX + 6; x < IX1; x += 9) R(c, '#dccdb0', x, y0, 1, h)
+  for (let x = IX; x < IX1; x += 54) { R(c, '#8a6a4a', x, y0, 2, h); R(c, '#a8845c', x, y0, 1, h) }
+  R(c, '#6a4a30', IX, y0 - 1, IX1 - IX, 2); R(c, '#6a4a30', IX, y1 - 1, IX1 - IX, 2)                            // the kamoi and shikii rails
+}
+function furnish(c, fc, lc, f) {
+  const y = f.y, t = f.top
+  if (f.kind === 'lobby') { daruma(c, IX + 383, y - 40, '#c8302a', true); daruma(c, IX + 395, y - 40, '#f0ece2') }
+  if (f.kind === 'ceo') {
+    sakuraVase(c, IX + 251, y - 28)
+    daruma(c, IX + 8, y - 40, '#c8302a', true); daruma(c, IX + 19, y - 40, '#e8b84a')
+  }
+  if (f.kind === 'cafe') {
+    // a noren over the kitchen counter (under the menu board), two chōchin over the table, ramen on it
+    R(c, WOOD, IX + 27, y - 52, 74, 2); R(c, '#5a4232', IX + 27, y - 52, 74, 1)
+    for (let p = 0; p < 6; p++) { const x = IX + 28 + p * 12; R(c, INDIGO, x, y - 50, 11, 9); R(c, INDIGO_HI, x, y - 50, 11, 1); R(c, '#1e2a4a', x, y - 42, 11, 1) }
+    R(c, WASHI, IX + 60, y - 48, 7, 5); R(c, INDIGO, IX + 62, y - 47, 3, 3); R(c, WASHI, IX + 63, y - 46, 1, 1)
+    for (const x of [IX + 118, IX + 146]) {
+      R(c, '#4a4452', x, t, 1, 22); lantern(c, x, t + 22)
+      const g = lc.createRadialGradient(x, t + 27, 0, x, t + 27, 30); g.addColorStop(0, 'rgba(255,130,90,.7)'); g.addColorStop(1, 'rgba(255,130,90,0)'); lc.fillStyle = g; lc.fillRect(x - 30, t, 60, 60)
+    }
+    for (const x of [IX + 113, IX + 139]) { R(fc, '#2a2020', x, y - 17, 7, 1); R(fc, '#f0e8d8', x, y - 16, 7, 3); R(fc, '#c8302a', x, y - 15, 7, 1); R(fc, '#c89a50', x + 1, y - 17, 5, 1); R(fc, '#d8c098', x + 5, y - 20, 1, 4); R(fc, '#d8c098', x + 6, y - 21, 1, 4) }
+  }
 }
 const pool = (c, x, y, r, rgb, a) => { const g = c.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, `rgba(${rgb},${a})`); g.addColorStop(1, `rgba(${rgb},0)`); c.fillStyle = g; c.fillRect(x - r, y - r, 2 * r, 2 * r) }

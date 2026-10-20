@@ -18,9 +18,10 @@ export const CLASSIC = {
   sky: true,      // false: the skin paints its own sky (grid paper, space, the sea), so no sun, moon, stars, clouds or weather
   own: null,      // a weather family the skin already draws itself ('rain' or 'snow'), so the real one is not drawn twice
   // optional painters a skin may add: skyline(c, blocks) over the baked far skyline (returns [x0, x1] spans to keep
-  // unlit), distant(c, v, now, sky) under the clouds and over the sun, moon and sky (destination-over: one finished
-  // image), tree(c, x) and lampPost(c, x) instead of the street's, and for a neighbour's sprite roof(c, b, top),
-  // window(c, x, y, draft) and shop(c, b)
+  // unlit), skyNight(c, x, y, n) over a far skyline tile at night, distant(c, v, now, sky) under the clouds and over the
+  // sun, moon and sky (destination-over: one finished image), tree(c, x) and lampPost(c, x) instead of the street's, and
+  // for a neighbour's sprite style(b) → [body, dark, trim], roof(c, b, top), window(c, x, y, draft, b), front(c, b)
+  // instead of the shopfront, shop(c, b) over it, and frontLight(c, b, now) for its lit front at night
 }
 
 export function createCity(api) {
@@ -45,7 +46,7 @@ export function createCity(api) {
       if (i % 2 === 0) { x0 = left - w; left = x0 - gap } else { x0 = right; right = x0 + w + gap }
       const fire = prs.map((p, j) => p.ci === 'failed' && !p.draft ? j : -1).filter(j => j >= 0)
       return { e, x0, w, prs, more: e.prs.length - prs.length, floors: prs.length + 1, h: SHOP + prs.length * STOREY + 3, cols: Math.floor((w - 30) / 20),
-        style: h % STYLES.length, seed: h, fire, burning: fire.length > 0, ci: prs.some(p => p.ci === 'running') || e.ciRunning > 0, quiet: !prs.length && !(e.level > 0) }
+        style: h % STYLES.length, seed: h, i, fire, burning: fire.length > 0, ci: prs.some(p => p.ci === 'running') || e.ciRunning > 0, quiet: !prs.length && !(e.level > 0) }
     })
   }
 
@@ -54,11 +55,11 @@ export function createCity(api) {
   const wins = (b, j) => { const y = storey(b, j).y + 7, x0 = b.x0 + 28 + Math.floor((b.w - 30 - b.cols * 20) / 2); return Array.from({ length: b.cols }, (_, k) => ({ x: x0 + k * 20, y })) }
   const plate = (b, j) => ({ x: b.x0 + 5, y: storey(b, j).y + 10, w: 19, h: 7 })
   function sprite(b) {
-    const k = `${P.id}|${b.e.login}|${b.w}|${b.quiet}|${b.prs.map(p => p.n + (p.draft ? 'd' : '')).join(',')}`
+    const k = `${P.id}|${b.e.login}|${b.i}|${b.w}|${b.quiet}|${b.prs.map(p => p.n + (p.draft ? 'd' : '')).join(',')}`
     if (cache.has(k)) return cache.get(k)
     const cv = document.createElement('canvas'); cv.width = b.w + 8; cv.height = b.h + 30
     const c = cv.getContext('2d'); c.translate(4 - b.x0, b.h + 30)    // y = 0 is the street
-    const [body, dark, trim] = P.styles[b.style % P.styles.length], top = -b.h
+    const [body, dark, trim] = P.style?.(b) || P.styles[b.style % P.styles.length], top = -b.h
     R(c, body, b.x0, top, b.w, b.h); R(c, dark, b.x0 + b.w - 4, top, 4, b.h); R(c, trim, b.x0, top, b.w, 3)
     if (P.roof) P.roof(c, b, top); else R(c, trim, b.x0 - 2, top - 3, b.w + 4, 4)              // the parapet
     b.prs.forEach((p, j) => {
@@ -66,7 +67,7 @@ export function createCity(api) {
       R(c, dark, b.x0, s.y + s.h - 1, b.w, 1)
       for (const { x, y } of wins(b, j)) {
         R(c, dark, x - 1, y - 1, 14, 16)
-        if (P.window) P.window(c, x, y, p.draft)
+        if (P.window) P.window(c, x, y, p.draft, b)
         else if (p.draft) { R(c, '#8fa6ba', x, y, 12, 14); R(c, '#a9bccc', x + 1, y + 1, 3, 5); R(c, '#7a90a6', x, y + 9, 12, 5) }
         else { R(c, '#f6d27a', x, y, 12, 14); R(c, '#e8b85a', x, y + 10, 12, 4) }
         if (!P.window) R(c, dark, x + 5, y, 1, 14)
@@ -76,8 +77,8 @@ export function createCity(api) {
     })
     // the ground floor: a shopfront with a door and the name board above it
     R(c, dark, b.x0, -SHOP - 1, b.w, 2)
-    R(c, dark, b.x0 + 4, -30, b.w - 8, 30); R(c, '#2a3040', b.x0 + 8, -26, b.w - 16, 26)
-    R(c, '#7fa0bc', b.x0 + 10, -24, b.w / 2 - 14, 22); R(c, '#5a4030', b.x0 + b.w / 2 + 6, -24, 14, 24)
+    if (P.front) P.front(c, b)
+    else { R(c, dark, b.x0 + 4, -30, b.w - 8, 30); R(c, '#2a3040', b.x0 + 8, -26, b.w - 16, 26); R(c, '#7fa0bc', b.x0 + 10, -24, b.w / 2 - 14, 22); R(c, '#5a4030', b.x0 + b.w / 2 + 6, -24, 14, 24) }
     R(c, '#3b2617', b.x0 + b.w / 2 - 44, -40, 88, 13); R(c, '#ecdcb4', b.x0 + b.w / 2 - 42, -38, 84, 9)
     P.shop?.(c, b)
     // roof furniture: a water tank or an antenna mast, a chimney
@@ -144,6 +145,7 @@ export function createCity(api) {
       c.drawImage(skyline.cv, Math.round(k * SKY_W + sx), -260)
       // far windows sit behind the near buildings, so they are lit here and the night tint only dims them
       if (n > 0.05) { c.fillStyle = `rgba(${P.skyWin},${n})`; for (const [x, y] of skyline.wins) c.fillRect(Math.round(k * SKY_W + sx + x), y, 2, 3) }
+      if (n > 0.05 && P.skyNight) { c.save(); P.skyNight(c, Math.round(k * SKY_W + sx), -260, n); c.restore() }
     }
     for (const fn of backdrop) { c.save(); try { fn(c, v, now, n) } catch (e) { console.error('[city:backdrop]', e) } c.restore() }
     // the ground: sidewalk, road, curb, then soil
@@ -229,7 +231,7 @@ export function createCity(api) {
     for (const b of buildings) {
       if (b.x0 > v.x1 || b.x0 + b.w < v.x0) continue
       b.prs.forEach((p, j) => { c.fillStyle = p.draft ? 'rgba(170,200,230,.3)' : P.winLit; for (const { x, y } of wins(b, j)) c.fillRect(x, y, 12, 14) })
-      c.fillStyle = 'rgba(160,200,240,.35)'; c.fillRect(b.x0 + 10, -24, b.w / 2 - 14, 22)
+      if (P.frontLight) P.frontLight(c, b, now); else { c.fillStyle = 'rgba(160,200,240,.35)'; c.fillRect(b.x0 + 10, -24, b.w / 2 - 14, 22) }
       for (const j of b.fire) { const s = storey(b, j); glow(c, b.x0 + b.w / 2, s.y + s.h / 2, 60, '255,120,40', 0.5 + 0.1 * Math.sin(now / 90 + j)) }
     }
     for (let n = Math.floor(v.x0 / 160) - 1; n * 160 < v.x1 + 160; n++) {
@@ -311,5 +313,5 @@ export function createCity(api) {
   // the PR numbers on the floor plates (the top one says how many more did not fit)
   function plates() { return buildings.flatMap(b => b.prs.map((p, j) => ({ ...plate(b, j), text: `${p.n}`, more: j === b.prs.length - 1 && b.more > 0 ? b.more : 0, draft: p.draft, fire: p.ci === 'failed' && !p.draft }))) }
   const extent = () => buildings.reduce((m, b) => ({ x0: Math.min(m.x0, b.x0), x1: Math.max(m.x1, b.x0 + b.w) }), { x0: LEFT0, x1: RIGHT0 })
-  return { setStreet, setTheme, backdrop, behind, drawBack, drawLive, drawLights, drawSky, drawWeather, buildingAt, floorAt, labels, plates, extent, set hover(h) { hover = h }, get repo() { return repo }, get buildings() { return buildings } }
+  return { setStreet, setTheme, skyX, SKY_W, backdrop, behind, drawBack, drawLive, drawLights, drawSky, drawWeather, buildingAt, floorAt, labels, plates, extent, set hover(h) { hover = h }, get repo() { return repo }, get buildings() { return buildings } }
 }

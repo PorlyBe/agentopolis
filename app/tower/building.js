@@ -31,6 +31,8 @@ export const CLASSIC = {
   footing: '#5f5866', footingLine: '#4a4452', doorFrame: '#6f675c', glass: '#8fa8bb', skirting: '#6e5a44',
   shaft: '#6d7684', shaftHi: '#8d96a4', machine: '#8b8490', machineHi: '#a29ba6', machineLo: '#6b6470', deck: '#9a7a56', deckLine: '#7a5e40',
   lamp: '255,200,120', roomGlow: 'rgba(70,52,30,.55)',
+  // optional skin painters: plant(c, x, y, tall) instead of the potted plant, backWall(c, f) over a room's bare wall (under
+  // its furniture), furnish(c, fc, lc, f) after a floor's furniture (back, front and lights layers)
 }
 let P = CLASSIC
 let floorStyle = () => {}
@@ -113,6 +115,7 @@ export function buildLayers(floors) {
     else if (f.kind === 'server') serverFloor(bc, f)
     else if (f.kind === 'roof') roofDeck(bc, fc, f)
     if (f.kind !== 'roof' && f.kind !== 'server') for (const x of lampXs(f)) lamp(bc, lc, x, f)
+    P.furnish?.(bc, fc, lc, f)
   })
   for (const f of floors) if (f.kind !== 'roof' && !(f.open != null && f.y - f.top < 20)) plaque(fc, lc, f)
   // interiors glow faintly at night even away from the lamps
@@ -151,6 +154,7 @@ function room(c, f) {
   R(c, k === 'server' ? '#161a26' : k === 'ceo' ? '#3e2716' : P.skirting, IX, f.y - 2, FW, 2)
   R(c, 'rgba(0,0,0,.12)', IX, f.top, FW, 2)                                      // the ceiling's shadow
   if (k === 'session') { R(c, `hsl(${f.hue} 45% 55%)`, IX, f.y - 20, FW, 1); floorStyle(c, f) }   // the session's accent, a thin rail
+  P.backWall?.(c, f)
 }
 
 // The floor plaques: a slim bronze plate set into the slab over each floor (the roof slab for the penthouse, the ground
@@ -210,6 +214,7 @@ function chair(c, seat, y) {   // an office chair facing right around a seat anc
   R(c, '#2a2a33', x + 1, y - 2, 10, 1); R(c, '#111', x + 1, y - 1, 2, 1); R(c, '#111', x + 9, y - 1, 2, 1)
 }
 function plant(c, x, y, tall = false) {
+  if (P.plant) return P.plant(c, x, y, tall)
   const h = tall ? 30 : 18
   R(c, '#8a5a3a', x + 2, y - 8, 10, 8); R(c, '#a06a44', x + 2, y - 8, 10, 2)
   c.fillStyle = '#3f8a4a'; c.fillRect(x + 4, y - h, 6, h - 8); c.fillRect(x, y - h + 6, 6, 6); c.fillRect(x + 8, y - h + 3, 6, 7)

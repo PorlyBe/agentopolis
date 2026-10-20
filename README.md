@@ -150,7 +150,7 @@ Add `?demo=<name>` to see any feature without waiting for it to happen. For exam
 `walkabout`, `reviewervisits`, `fridaydrinks`, `standup`, `lunchrush`, `screensaver`, `cisubway`, `seismograph`,
 `windowheatmap`, `readablemonitors`, `floorsounds`, `stormcloud`, `catchaos`, `tamagotchiplant`, `reportcard`,
 `hallofrecords`, `expresselevator`, `directormode`, `ghostannex`, `memoryarchive`, `agentxp`, `branchmetro`,
-`courtroom`, `bugsquash`, `ivywear`, `smokestack`, `blimp`, `uniforms`, `wardrobe`, `themes`, `skylinetowers`, `avatar`,
+`courtroom`, `bugsquash`, `ivywear`, `smokestack`, `blimp`, `uniforms`, `wardrobe`, `cosplay&theme=japan`, `themes`, `skylinetowers`, `avatar`,
 `holidays&date=2026-12-25`.
 
 `?towerzoom=min` shows the whole street.

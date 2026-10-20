@@ -124,7 +124,7 @@ function chochin(c, cx, y) {
   R(c, '#f8f0dc', cx - 3, y + 1, 7, 7); R(c, '#f8f0dc', cx - 2, y + 8, 5, 1); R(c, '#e8dcc0', cx - 3, y + 3, 7, 1); R(c, '#e8dcc0', cx - 3, y + 6, 7, 1)
   R(c, '#c8202a', cx - 1, y + 3, 3, 3); R(c, '#2a2020', cx - 2, y + 9, 5, 1)
 }
-function koinobori(c, x, now) {
+export function koinobori(c, x, now) {
   R(c, '#d8d8e0', x, -100, 1, 100); R(c, '#a8a8b0', x + 1, -100, 1, 100); R(c, 'rgba(0,0,0,.28)', x - 3, 0, 8, 1)
   R(c, '#ffd84a', x - 1, -104, 3, 3)
   const spin = Math.floor(now / 120) % 2; R(c, '#5ab0ff', x - 3 + spin * 2, -100, 3, 1); R(c, '#ff5a5a', x - spin * 2 + 1, -99, 3, 1)
