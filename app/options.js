@@ -1,8 +1,9 @@
 // options: what the settings panel offers and POST /api/settings accepts. server.mjs imports this file as well, so it
 // stays plain data with no DOM. A tower feature missing from FEATURE_GROUPS always runs and has no toggle.
-export const SKINS = ['classic', 'cyberpunk', 'cottage', 'brutalist', 'synthwave', 'noir', 'underwater', 'space-station', 'gameboy', 'blueprint', 'steampunk', 'winter-cabin', 'candy']
+export const SKINS = ['classic', 'cyberpunk', 'cottage', 'brutalist', 'synthwave', 'noir', 'underwater', 'space-station', 'gameboy', 'blueprint', 'steampunk', 'winter-cabin', 'candy', 'japan']
+export const FPS = [60, 30, 15]               // the tower's frame-rate cap (settings.fps)
 export const HOLIDAY_KEYS = ['newyear', 'valentine', 'lunar', 'hanami', 'goldenweek', 'tanabata', 'obon', 'tsukimi', 'halloween', 'christmas']
-const THEME_ALIAS = { cherryblossom: 'hanami', sakura: 'hanami', 'new-year': 'newyear', valentines: 'valentine', xmas: 'christmas', space: 'space-station', winter: 'winter-cabin', gb: 'gameboy' }
+const THEME_ALIAS = { cherryblossom: 'hanami', sakura: 'hanami', 'new-year': 'newyear', valentines: 'valentine', xmas: 'christmas', space: 'space-station', winter: 'winter-cabin', gb: 'gameboy', japanese: 'japan', fuji: 'japan' }
 
 // 'cyberpunk+halloween' → { skin, holiday, name, bad }: holiday null = the date's own, 'none' = no holiday decor;
 // bad lists the parts that are neither a skin nor a holiday (or a second of either). A saved custom theme is

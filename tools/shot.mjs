@@ -13,6 +13,8 @@ const chrome = spawn('/Applications/Google Chrome.app/Contents/MacOS/Google Chro
   '--headless=new', `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`,
   `--window-size=${width},${height}`, '--hide-scrollbars', 'about:blank',
 ], { stdio: 'ignore' })
+// an interrupted run (Ctrl-C, a timeout's SIGTERM) must not leave a headless Chrome rendering in the background
+for (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP']) process.on(sig, () => { chrome.kill(); process.exit(130) })
 
 const sleep = ms => new Promise(r => setTimeout(r, ms))
 try {

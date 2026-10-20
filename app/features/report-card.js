@@ -10,6 +10,7 @@ const SKIN = {
   classic: { bg: '#14151c', bg2: '#1c1e2a', panel: '#22242f', line: '#343748', ink: '#ecebf3', muted: '#9897a8', accent: '#f4a24f', accent2: '#63b3f0', sky: ['#3a5f8f', '#7fb0d8'] },
   cyberpunk: { bg: '#100c1e', bg2: '#1a1232', panel: '#211a3c', line: '#3d2f66', ink: '#f2ecff', muted: '#a497c8', accent: '#ff3fb4', accent2: '#3ae0ff', sky: ['#201e3c', '#4a2c6c'] },
   cottage: { bg: '#1b1912', bg2: '#25221a', panel: '#2d2a20', line: '#4a4532', ink: '#f6f0dc', muted: '#b4ab8c', accent: '#e8b04a', accent2: '#8fcf6a', sky: ['#7aa5c4', '#cfe3d4'] },
+  japan: { bg: '#15161f', bg2: '#1d1f2c', panel: '#252838', line: '#3c4058', ink: '#f3ead6', muted: '#aeb0c4', accent: '#e05a3e', accent2: '#f0a2bc', sky: ['#6292cc', '#e8e2da'] },
   brutalist: { bg: '#161616', bg2: '#1f1f1f', panel: '#262626', line: '#3f3f3f', ink: '#f0f0f0', muted: '#a0a0a0', accent: '#ff5a3c', accent2: '#d8d8d8', sky: ['#6f7378', '#a9adb2'] },
 }
 const HOLIDAY = {

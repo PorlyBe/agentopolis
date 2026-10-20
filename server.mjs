@@ -46,6 +46,7 @@ const DEFAULTS = {
   disabled: [],                        // tower features that don't start (app/options.js FEATURE_GROUPS)
   windowMin: Number(flag('window-min', 30)),
   updateCheck: true,                   // ask GitHub whether main has new commits (server/update-check.mjs)
+  fps: 60,                             // the tower's frame-rate cap (app/tower/tower.js), one of app/options.js FPS
   customThemes: [],                    // the Look tab's own themes, 'custom:<slug>' in theme (app/options.js checkCustomTheme)
   floorRules: [],                      // title pattern → floor styling (app/tower/features/floor-decor.js)
 }
@@ -73,6 +74,7 @@ const VALIDATE = {
   },
   windowMin: v => Number.isInteger(v) && v >= 5 && v <= 240 ? v : Error('windowMin: a whole number of minutes, 5–240'),
   updateCheck: v => typeof v === 'boolean' ? v : Error('updateCheck: true or false'),
+  fps: v => OPTIONS.FPS.includes(v) ? v : Error(`fps: one of ${OPTIONS.FPS.join(', ')}`),
   customThemes: v => OPTIONS.checkCustomThemes(v),
   floorRules: v => OPTIONS.checkFloorRules(v),
 }
@@ -87,7 +89,7 @@ if (!DEMO) {
 const effective = () => ({ ...DEFAULTS, ...saved })
 const settingsBody = () => ({
   effective: effective(), saved, defaults: DEFAULTS,
-  options: { skins: OPTIONS.SKINS, holidays: OPTIONS.HOLIDAY_KEYS, avatar: OPTIONS.AVATAR, features: OPTIONS.FEATURE_GROUPS, windowMin: [5, 240],
+  options: { skins: OPTIONS.SKINS, holidays: OPTIONS.HOLIDAY_KEYS, avatar: OPTIONS.AVATAR, features: OPTIONS.FEATURE_GROUPS, windowMin: [5, 240], fps: OPTIONS.FPS,
     themeSlots: OPTIONS.THEME_SLOTS, maxCustom: OPTIONS.MAX_CUSTOM, floorPresets: OPTIONS.FLOOR_PRESETS, maxFloorRules: OPTIONS.MAX_FLOOR_RULES },
   file: DEMO ? null : SETTINGS_FILE.replace(os.homedir(), '~'),
 })

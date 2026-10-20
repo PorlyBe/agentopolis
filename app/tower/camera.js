@@ -92,6 +92,7 @@ export function createCamera(st) {
   return {
     cam, vw, vh, fit, clampCam, zoomAt, flyTo, follow, step, toWorld, toScreen, size, fitZoom,
     get following() { return following },
+    get flying() { return !!flight },
     // a drag or the wheel takes the camera back from a flight (and a drag from a follow too)
     stop(unfollow = true) { flight = null; if (unfollow) following = null },
   }

@@ -17,6 +17,10 @@ export const CLASSIC = {
   dayTop: [91, 143, 208], dayHz: [183, 211, 238], nightTop: [8, 12, 32], nightHz: [30, 40, 82],
   sky: true,      // false: the skin paints its own sky (grid paper, space, the sea), so no sun, moon, stars, clouds or weather
   own: null,      // a weather family the skin already draws itself ('rain' or 'snow'), so the real one is not drawn twice
+  // optional painters a skin may add: skyline(c, blocks) over the baked far skyline (returns [x0, x1] spans to keep
+  // unlit), distant(c, v, now, sky) under the clouds and over the sun, moon and sky (destination-over: one finished
+  // image), tree(c, x) and lampPost(c, x) instead of the street's, and for a neighbour's sprite roof(c, b, top),
+  // window(c, x, y, draft) and shop(c, b)
 }
 
 export function createCity(api) {
@@ -56,15 +60,16 @@ export function createCity(api) {
     const c = cv.getContext('2d'); c.translate(4 - b.x0, b.h + 30)    // y = 0 is the street
     const [body, dark, trim] = P.styles[b.style % P.styles.length], top = -b.h
     R(c, body, b.x0, top, b.w, b.h); R(c, dark, b.x0 + b.w - 4, top, 4, b.h); R(c, trim, b.x0, top, b.w, 3)
-    R(c, trim, b.x0 - 2, top - 3, b.w + 4, 4)                                                // the parapet
+    if (P.roof) P.roof(c, b, top); else R(c, trim, b.x0 - 2, top - 3, b.w + 4, 4)              // the parapet
     b.prs.forEach((p, j) => {
       const s = storey(b, j)
       R(c, dark, b.x0, s.y + s.h - 1, b.w, 1)
       for (const { x, y } of wins(b, j)) {
         R(c, dark, x - 1, y - 1, 14, 16)
-        if (p.draft) { R(c, '#8fa6ba', x, y, 12, 14); R(c, '#a9bccc', x + 1, y + 1, 3, 5); R(c, '#7a90a6', x, y + 9, 12, 5) }
+        if (P.window) P.window(c, x, y, p.draft)
+        else if (p.draft) { R(c, '#8fa6ba', x, y, 12, 14); R(c, '#a9bccc', x + 1, y + 1, 3, 5); R(c, '#7a90a6', x, y + 9, 12, 5) }
         else { R(c, '#f6d27a', x, y, 12, 14); R(c, '#e8b85a', x, y + 10, 12, 4) }
-        R(c, dark, x + 5, y, 1, 14)
+        if (!P.window) R(c, dark, x + 5, y, 1, 14)
       }
       const q = plate(b, j)
       R(c, '#5a4220', q.x, q.y, q.w, q.h); R(c, p.draft ? '#9a8a6a' : '#c9a25a', q.x + 1, q.y + 1, q.w - 2, q.h - 2)
@@ -74,11 +79,12 @@ export function createCity(api) {
     R(c, dark, b.x0 + 4, -30, b.w - 8, 30); R(c, '#2a3040', b.x0 + 8, -26, b.w - 16, 26)
     R(c, '#7fa0bc', b.x0 + 10, -24, b.w / 2 - 14, 22); R(c, '#5a4030', b.x0 + b.w / 2 + 6, -24, 14, 24)
     R(c, '#3b2617', b.x0 + b.w / 2 - 44, -40, 88, 13); R(c, '#ecdcb4', b.x0 + b.w / 2 - 42, -38, 84, 9)
+    P.shop?.(c, b)
     // roof furniture: a water tank or an antenna mast, a chimney
     const rx = b.x0 + 26 + b.seed % Math.max(1, b.w - 60)
-    if (b.seed % 2) { R(c, '#6a5040', rx, top - 20, 16, 14); R(c, '#8a6a50', rx, top - 20, 16, 2); R(c, '#4a3a2c', rx + 2, top - 6, 2, 3); R(c, '#4a3a2c', rx + 12, top - 6, 2, 3) }
+    if (b.seed % 2 && !P.roof) { R(c, '#6a5040', rx, top - 20, 16, 14); R(c, '#8a6a50', rx, top - 20, 16, 2); R(c, '#4a3a2c', rx + 2, top - 6, 2, 3); R(c, '#4a3a2c', rx + 12, top - 6, 2, 3) }
     antenna(c, b.x0 + b.w - 18, top, (b.seed >>> 3) % 3)
-    R(c, '#7a7068', b.x0 + 10, top - 12, 8, 9)
+    if (!P.roof) R(c, '#7a7068', b.x0 + 10, top - 12, 8, 9)
     if (b.quiet) { c.fillStyle = 'rgba(28,32,52,.28)'; c.fillRect(b.x0 - 2, top - 30, b.w + 4, b.h + 30) }
     cache.set(k, cv); if (cache.size > 60) cache.delete(cache.keys().next().value)
     return cv
@@ -113,15 +119,17 @@ export function createCity(api) {
   const SKY_W = 1400
   const makeSkyline = () => {
     const cv = document.createElement('canvas'); cv.width = SKY_W; cv.height = 260
-    const c = cv.getContext('2d'), wins = []
-    let x = 0, i = 0
+    const c = cv.getContext('2d'), blocks = []
+    let wins = [], x = 0, i = 0
     while (x < SKY_W) {
       const h = api.hash('sky' + i), w = 34 + h % 60, ht = 70 + (h >>> 4) % 170, far = (h >>> 9) % 2
-      c.fillStyle = far ? P.skyFar : P.skyNear; c.fillRect(x, 260 - ht, w, ht)
+      c.fillStyle = far ? P.skyFar : P.skyNear; c.fillRect(x, 260 - ht, w, ht); blocks.push({ x, y: 260 - ht, w, h: ht, far })
       if ((h >>> 12) % 4 === 0) c.fillRect(x + w / 2 - 1, 260 - ht - 16, 2, 16)
       for (let wy = 260 - ht + 8; wy < 250; wy += 12) for (let wx = x + 5; wx < x + w - 6; wx += 9) if (api.hash(`w${i}:${wx}:${wy}`) % 7 === 0) wins.push([wx, wy - 260])
       x += w + (h >>> 7) % 10; i++
     }
+    const dark = P.skyline?.(c, blocks) || []
+    if (dark.length) wins = wins.filter(([wx]) => !dark.some(([a, b]) => wx >= a - 2 && wx <= b))
     return { cv, wins }
   }
   let skyline = makeSkyline()
@@ -149,8 +157,9 @@ export function createCity(api) {
     // street lamps and trees, kept clear of the tower and its door
     for (let k = Math.floor(v.x0 / 160) - 1; k * 160 < v.x1 + 160; k++) {
       const lx = k * 160 + 40, tx = k * 160 + 118
-      if (lx < LEFT0 - 10 || lx > RIGHT0 - 10) { R(c, P.post, lx, -48, 2, 48); R(c, P.post, lx, -48, 8, 2); R(c, P.bulb, lx + 5, -46, 4, 2) }
-      if (tx < LEFT0 - 20 || tx > RIGHT0) {
+      if (lx < LEFT0 - 10 || lx > RIGHT0 - 10) { if (P.lampPost) P.lampPost(c, lx); else { R(c, P.post, lx, -48, 2, 48); R(c, P.post, lx, -48, 8, 2); R(c, P.bulb, lx + 5, -46, 4, 2) } }
+      if ((tx < LEFT0 - 20 || tx > RIGHT0) && P.tree) P.tree(c, tx)
+      else if (tx < LEFT0 - 20 || tx > RIGHT0) {
         R(c, P.trunk, tx + 6, -16, 3, 16)
         c.fillStyle = P.leaf; c.fillRect(tx, -34, 15, 18); c.fillRect(tx + 2, -38, 11, 24); c.fillStyle = P.leafHi; c.fillRect(tx + 3, -35, 6, 6)
       }
@@ -225,7 +234,7 @@ export function createCity(api) {
     }
     for (let n = Math.floor(v.x0 / 160) - 1; n * 160 < v.x1 + 160; n++) {
       const lx = n * 160 + 40
-      if (lx < LEFT0 - 10 || lx > RIGHT0 - 10) { glow(c, lx + 7, -40, 46, P.lampGlow, 0.5); R(c, '#fff4d0', lx + 5, -46, 4, 2) }
+      if (lx < LEFT0 - 10 || lx > RIGHT0 - 10) { glow(c, lx + 7, -40, 46, P.lampGlow, 0.5); if (!P.lampPost) R(c, '#fff4d0', lx + 5, -46, 4, 2) }
     }
     c.globalAlpha = 1
   }
@@ -241,6 +250,10 @@ export function createCity(api) {
     const span = v.x1 - v.x0 + 400, cx = (v.x0 + v.x1) / 2 * 0.3
     const count = P.sky ? Math.round((clouds ?? 30) / 100 * 9) + (wet ? 5 : 0) : 0
     const cc = n > 0.6 ? [58, 66, 96] : grey ? [168, 172, 182] : [250, 251, 253]
+    const dayTop = grey ? [128, 146, 170] : P.dayTop, dayHz = grey ? [176, 186, 198] : P.dayHz
+    const tp = mix(dayTop, P.nightTop, n), warm = Math.max(0, 1 - Math.abs(n - 0.4) / 0.35) * (grey ? 0.25 : 0.65)
+    let hz = mix(dayHz, P.nightHz, n)
+    if (lightColor && warm > 0) hz = mix(hz, lightColor, warm)
     for (let i = 0; i < count; i++) {
       const h = api.hash('cloud' + i), sp = 3 + h % 6
       const x = v.x0 - 200 + (((h % 997) / 997 * span + now / 1000 * sp - cx) % span + span) % span
@@ -250,6 +263,7 @@ export function createCity(api) {
       c.fillStyle = rgb(mix(cc, [0, 0, 0], 0.12)); c.fillRect(Math.round(x), Math.round(y + 6), w, 6)
       c.fillStyle = rgb(cc); c.fillRect(Math.round(x + 4), Math.round(y), w - 8, 9); c.fillRect(Math.round(x + w * 0.25), Math.round(y - 6), w * 0.4, 8); c.fillRect(Math.round(x + w * 0.55), Math.round(y - 3), w * 0.3, 6)
     }
+    if (P.distant && P.sky) { c.save(); try { P.distant(c, v, now, { ...sun, top: tp, hz, warm, grey, wet }) } catch (e) { console.error('[city:distant]', e) } c.restore() }
     const top = v.y0, horizon = 0, skyH = Math.max(1, horizon - top)
     // sun by day, moon by night, crossing the visible sky
     const day = hour >= sr && hour <= ss
@@ -268,10 +282,6 @@ export function createCity(api) {
       }
       c.globalAlpha = 1
     }
-    const dayTop = grey ? [128, 146, 170] : P.dayTop, dayHz = grey ? [176, 186, 198] : P.dayHz
-    let tp = mix(dayTop, P.nightTop, n), hz = mix(dayHz, P.nightHz, n)
-    const warm = Math.max(0, 1 - Math.abs(n - 0.4) / 0.35) * (grey ? 0.25 : 0.65)
-    if (lightColor && warm > 0) hz = mix(hz, lightColor, warm)
     const g = c.createLinearGradient(0, top, 0, horizon)
     g.addColorStop(0, rgb(tp)); g.addColorStop(1, rgb(hz))
     c.fillStyle = g; c.fillRect(v.x0 - 2, top - 2, v.x1 - v.x0 + 4, Math.max(0, horizon - top) + 40)

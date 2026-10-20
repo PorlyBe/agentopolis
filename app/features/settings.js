@@ -1,5 +1,5 @@
-// settings: the ⚙ panel, in tabs (You · Look · Features · Updates · Advanced · About). Name, look, theme, the update check and
-// the inactive-session window save to the server as you change them (POST /api/settings, ~/.agentopolis/settings.json)
+// settings: the ⚙ panel, in tabs (You · Look · Features · Updates · Advanced · About). Name, look, theme, the update check,
+// the frame-rate cap and the inactive-session window save to the server as you change them (POST /api/settings, ~/.agentopolis/settings.json)
 // and show on the next poll; tower features are switched on or off with "Apply & reload", since the tower starts them
 // once. ?demo=settings or ?settings=open opens it on the last tab; ?settings=<tab> (you, look, features…) on that tab.
 // The Look tab holds the skin grid, the custom theme editor (live on the tower through api.theme.preview until saved) and
@@ -237,6 +237,7 @@ export default function init(api) {
       <div class="row" style="margin-top:10px"><button class="btn" data-a="updcheck">Check now</button><span class="note" style="margin:0" data-n="upd"></span></div>`)
     + panel('advanced', `
       <label class="f" for="${id('win')}">Minutes an inactive session keeps its floor (${o.windowMin[0]}–${o.windowMin[1]})<input type="number" id="${id('win')}" min="${o.windowMin[0]}" max="${o.windowMin[1]}" step="1" value="${e.windowMin}"></label>
+      ${o.fps ? `<label class="f" for="${id('fps')}" style="margin-top:10px">Animation frame rate (lower uses less CPU; dragging and zooming stay smooth)<select id="${id('fps')}">${o.fps.map(v => `<option value="${v}"${v === (e.fps ?? 60) ? ' selected' : ''}>${v} fps${v === 60 ? ' (default)' : ''}</option>`).join('')}</select></label>` : ''}
       <div class="row" style="margin-top:16px"><button class="btn danger" data-a="reset">Reset all to defaults</button></div>`)
     + panel('about', `
       <p style="margin:0 0 8px"><b>Agentopolis</b> — built by <a href="https://github.com/PorlyBe" data-a="link">PorlyBe</a> with Claude. MIT licensed.</p>
@@ -396,6 +397,7 @@ export default function init(api) {
     else if (k === 'skin' || k === 'holiday') { paintTheme(); save({ theme: themeNow() }) }
     else if (el.dataset.r && el.tagName === 'SELECT') { rules[+el.closest('.rule').dataset.i][el.dataset.r] = el.value; saveRules(200) }
     else if (el.id === id('upd')) save({ updateCheck: el.checked }, 0)
+    else if (el.id === id('fps')) save({ fps: Number(el.value) }, 0)
     else if (el.dataset.f) { if (el.checked) staged.delete(el.dataset.f); else staged.add(el.dataset.f); paintFeatures() }
     else if (el.dataset.all) {
       for (const [f] of st.options.features.find(g => g.id === el.dataset.all).features) { if (el.checked) staged.delete(f); else staged.add(f); bd.querySelector(`[data-f="${f}"]`).checked = el.checked }

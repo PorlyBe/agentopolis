@@ -9,6 +9,7 @@ import { CLASSIC as STREET } from '../city.js'
 import { HOLIDAYS, pinHoliday } from './holidays.js'
 import { parseTheme, slugOf, THEME_SLOTS } from '../../options.js'
 import floorDecor from './floor-decor.js'
+import { JAPAN, japanDecor } from './japan.js'
 import { R, rnd } from '../draw.js'
 
 const pool = (c, x, y, r, rgb, a) => { const g = c.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, `rgba(${rgb},${a})`); g.addColorStop(1, `rgba(${rgb},0)`); c.fillStyle = g; c.fillRect(x - r, y - r, 2 * r, 2 * r) }
@@ -232,9 +233,10 @@ const SKINS = {
     },
     tint: [['soft-light', 'rgba(255,170,210,.3)']],
   },
+  japan: JAPAN,
 }
 const HOLI = new Map(HOLIDAYS.map(h => [h.key, h]))
-const CYCLE = [...Object.keys(SKINS), 'halloween', 'christmas', 'newyear', 'valentine', 'lunar', 'hanami', 'goldenweek', 'tanabata', 'obon', 'tsukimi', 'cyberpunk+halloween', 'synthwave+halloween', 'steampunk+christmas']
+const CYCLE = [...Object.keys(SKINS), 'halloween', 'christmas', 'newyear', 'valentine', 'lunar', 'hanami', 'goldenweek', 'tanabata', 'obon', 'tsukimi', 'cyberpunk+halloween', 'synthwave+halloween', 'steampunk+christmas', 'japan+hanami']
 
 export default function init(api, tower) {
   const { Z, font } = tower
@@ -273,6 +275,7 @@ export default function init(api, tower) {
     preview(def) { preview = def || null; apply(wanted()) },           // the Look tab's editor, live on the tower until saved or cancelled
   }
   floorDecor(api, tower)
+  japanDecor(api, tower, () => deco() === 'japan')
 
   const roof = () => tower.floors[tower.floors.length - 1]
   const sessionFloors = () => tower.floors.filter(f => f.kind === 'session' || f.kind === 'meeting' || f.kind === 'cafe')
@@ -698,6 +701,7 @@ export function thumb(cv, which) {
   const c = cv.getContext('2d'), W = cv.width, H = cv.height
   c.globalCompositeOperation = 'source-over'
   const g = c.createLinearGradient(0, 0, 0, 31); g.addColorStop(0, hex(s.dayTop)); g.addColorStop(1, hex(s.dayHz)); c.fillStyle = g; c.fillRect(0, 0, W, 31)
+  ;(sk.thumbSky || SKINS[sk.base]?.thumbSky)?.(c)
   R(c, s.skyFar, 0, 16, 9, 15); R(c, s.skyNear, 6, 21, 9, 10); R(c, s.skyFar, 50, 14, 8, 17); R(c, s.skyNear, 56, 20, 8, 11)
   const [st0, st1] = s.styles
   R(c, st0[0], 2, 23, 13, 8); R(c, st0[2], 1, 22, 15, 1); R(c, '#f6d27a', 5, 25, 2, 2); R(c, '#f6d27a', 10, 25, 2, 2)

@@ -162,11 +162,26 @@ export default async function init(api) {
   }
 
   // ---------- the frame ----------
-  let last = performance.now()
+  // ⚙ Settings → Advanced caps the frame rate (settings.fps 60 | 30 | 15; ?fps= overrides it): frames in between are
+  // skipped whole, except while the camera flies or for a moment after any input, so dragging, zooming and hovering
+  // stay smooth. A hidden page draws nothing at all until it is shown again.
+  const urlFps = Number(params.get('fps')) || 0
+  const fpsCap = () => urlFps || api.settings?.effective?.fps || 60
+  let last = performance.now(), hotUntil = 0, paused = false
+  const poke = () => { hotUntil = performance.now() + 400 }
+  for (const ev of ['pointerdown', 'pointermove', 'wheel']) cv.addEventListener(ev, poke, { passive: true })
+  addEventListener('keydown', poke); new ResizeObserver(poke).observe(wrap)   // a resize clears the canvas: redraw at once
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden || !paused || !st.active) return
+    paused = false; last = performance.now(); poke(); requestAnimationFrame(frame)
+  })
   function frame(now) {
     if (!st.active) return
+    if (document.hidden) { paused = true; return }
     // queued first and each stage isolated: one throw must not stop movement (or drawing) until a reload
     requestAnimationFrame(frame)
+    const cap = fpsCap()
+    if (cap < 60 && now - last < 1000 / cap - 2 && now > hotUntil && !camera.flying) return
     const dt = Math.min(0.1, (now - last) / 1000); last = now
     if (!st.floors.length) return
     try { people.step(dt, now) } catch (e) { report('people', e) }

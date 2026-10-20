@@ -70,7 +70,7 @@ under **⚙ Settings → Updates**. It only checks a git clone of this repo, so 
 ### Options
 
 Most options live in the **⚙ Settings** panel at the bottom of the toolbar: your name, your character, the theme (or one
-you make in its editor, shared as a short JSON text), floor styling by session title, which features run, the update check, and how long an inactive session keeps its floor. Changes show within a couple of seconds, without a
+you make in its editor, shared as a short JSON text), floor styling by session title, which features run, the update check, the animation frame rate (60, 30 or 15 fps — lower uses less CPU), and how long an inactive session keeps its floor. Changes show within a couple of seconds, without a
 restart; switching features on or off reloads the page. The panel saves to `~/.agentopolis/settings.json`.
 
 The flags below set the startup defaults. A value saved in the panel wins over its flag, and resetting it in the panel
@@ -83,7 +83,7 @@ goes back to the flag's value.
 | `--demo` | off | An invented office; no real data is read |
 | `--window-min <n>` | `30` | How long a running but inactive session keeps its floor |
 | `--avatar "<look>"` | today's look | Your character, e.g. `"hair=bun,haircolour=red,suit=navy,skin=3,glasses=round,pet=cat"`: hair `short` `long` `bun` `curly` `bald` `mohawk`; haircolour `brown` `black` `blonde` `red` `grey` `white` `pink` `blue`; suit `charcoal` `navy` `burgundy` `forest` `cream`; skin `1`–`6`; glasses `none` `round` `square`; pet `none` `cat` `dog` `claudio`. `?avatar=` on the URL overrides it |
-| `--theme <name>` | `auto` | The tower's skin: `classic`, `cyberpunk`, `cottage`, `brutalist`, `synthwave`, `noir`, `underwater`, `space-station`, `gameboy`, `blueprint`, `steampunk`, `winter-cabin`, `candy`, a custom theme made in **⚙ Settings → Look** (`custom:<name>`), or a holiday (`halloween`, `christmas`, `newyear`, `valentine`, `lunar`, `hanami`, `goldenweek`, `tanabata`, `obon`, `tsukimi`), or a mix like `cyberpunk+halloween`. `auto` is classic plus whatever holiday the date brings. `?theme=` overrides it |
+| `--theme <name>` | `auto` | The tower's skin: `classic`, `cyberpunk`, `cottage`, `brutalist`, `synthwave`, `noir`, `underwater`, `space-station`, `gameboy`, `blueprint`, `steampunk`, `winter-cabin`, `candy`, `japan`, a custom theme made in **⚙ Settings → Look** (`custom:<name>`), or a holiday (`halloween`, `christmas`, `newyear`, `valentine`, `lunar`, `hanami`, `goldenweek`, `tanabata`, `obon`, `tsukimi`), or a mix like `cyberpunk+halloween`. `auto` is classic plus whatever holiday the date brings. `?theme=` overrides it |
 
 `?demo=<feature>` on the URL plays any single feature (see [Demos](#demos)), and `?towerzoom=min` shows the whole
 street.
