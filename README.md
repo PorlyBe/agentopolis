@@ -133,7 +133,8 @@ And a lot more, each driven by something real in your transcripts or on GitHub:
   happening, with a small caption; touching the view pauses it for a minute.
 - **More of the building:** a second express elevator opens when the line gets long; a ghost annex keeps today's
   closed sessions as translucent floors at night; a records room files every write to a CLAUDE.md or memory file;
-  the subway wall carries a metro map of your branches; a review turns the meeting room into a courtroom; ivy grows on
+  the subway wall carries a metro map of your branches (trains for new commits and merges, release stations per
+  product, red signals on branches far behind, NO SERVICE when trunk CI fails, click its header to replay the week); a review turns the meeting room into a courtroom; ivy grows on
   long-running floors; a roof smokestack puffs with the token rate; subagent types level up; and you can squash the
   bug critters for a high score.
 - **Infrastructure:** a server room with a rack per background job, a parking garage with one car per session's

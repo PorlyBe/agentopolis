@@ -1,10 +1,12 @@
 // branch-metro: the last two weeks of the live sessions' repo as a metro map for the subway's back wall. Trunk is the
 // first-parent history of the default branch; a branch forks where its merge base sits on trunk (behind count) and is
 // merged either as an ancestor of trunk or by a squash commit whose subject carries the branch's ticket token
-// (feature/abc-12-x ↔ "... [ABC-12]"). Read-only git via execFile, refreshed at most every two minutes.
+// (feature/abc-12-x ↔ "... [ABC-12]"). A branch is `mine` when its tip's author email is the repo's user.email; release
+// tags in the span come as { name, product, version, t }, the product being whatever precedes the version (site-v1.2.0 →
+// site, v3.0.0 → ''), so a monorepo's products get separate stations. Read-only git via execFile, refreshed at most every two minutes.
 import * as exec from '../lib/exec.mjs'
 
-const REFRESH_MS = 2 * 60_000, RETRY_MS = 30_000, SPAN_MS = 14 * 86400_000, MAX = 10, MERGED_MAX = 5, PROBE = 60
+const REFRESH_MS = 2 * 60_000, RETRY_MS = 30_000, SPAN_MS = 14 * 86400_000, MAX = 10, MERGED_MAX = 5, PROBE = 60, TAGS = 12
 const state = { root: null, busy: false, at: 0, data: null }
 
 const run = (args, opts) => exec.run('git', args, opts).then(r => r.out)
@@ -31,15 +33,16 @@ async function refresh() {
     const short = trunk.replace(/^origin\//, '')
     const log = await run(['-C', root, 'log', '--first-parent', '--format=%ct%x09%s', `--since=${Math.floor(since / 1000)}`, trunk]); if (log == null) throw 0
     const commits = log.split('\n').filter(Boolean).map(l => { const [t, ...s] = l.split('\t'); return { t: +t * 1000, s: s.join('\t') } })   // newest first
-    const refs = await run(['-C', root, 'for-each-ref', '--sort=-committerdate', '--format=%(refname)%09%(committerdate:unix)%09%(contents:subject)', 'refs/heads', 'refs/remotes/origin']); if (refs == null) throw 0
+    const refs = await run(['-C', root, 'for-each-ref', '--sort=-committerdate', '--format=%(refname)%09%(committerdate:unix)%09%(authoremail)%09%(contents:subject)', 'refs/heads', 'refs/remotes/origin']); if (refs == null) throw 0
+    const me = `<${(await run(['-C', root, 'config', 'user.email']))?.trim().toLowerCase() || ''}>`.replace('<>', '') || null
     const seen = new Map()
     for (const l of refs.split('\n')) {
-      const [ref, t, ...s] = l.split('\t'); if (!ref) continue
+      const [ref, t, email, ...s] = l.split('\t'); if (!ref) continue
       const remote = ref.startsWith('refs/remotes/'), name = ref.replace(/^refs\/(heads|remotes\/origin)\//, '')
       if (name === 'HEAD' || name === short || +t * 1000 < since) continue
       const b = seen.get(name)
       if (b) { b.local ||= !remote; b.remote ||= remote; continue }
-      seen.set(name, { name, ref, last: +t * 1000, subject: s.join('\t').slice(0, 120), local: !remote, remote })
+      seen.set(name, { name, ref, last: +t * 1000, subject: s.join('\t').slice(0, 120), local: !remote, remote, mine: !!me && email.toLowerCase() === me })
     }
     const out = []
     for (const b of [...seen.values()].slice(0, PROBE)) {
@@ -53,12 +56,20 @@ async function refresh() {
         if (tk.some(k => new RegExp(`(^|[^a-z0-9])${k}([^0-9]|$)`).test(s))) { merged = commits[i].t; mergedSubject = commits[i].s.slice(0, 120); break }
       }
       if (!merged && ahead === 0) { if (behind === 0) continue; merged = b.last }
-      out.push({ name: b.name, fork, last: b.last, subject: b.subject, ahead, behind, merged, mergedSubject, local: b.local, remote: b.remote })
+      out.push({ name: b.name, fork, last: b.last, subject: b.subject, ahead, behind, merged, mergedSubject, local: b.local, remote: b.remote, mine: b.mine })
     }
     const merged = out.filter(b => b.merged).sort((a, b) => b.merged - a.merged).slice(0, MERGED_MAX)
     const open = out.filter(b => !b.merged).sort((a, b) => b.last - a.last).slice(0, MAX - merged.length)
     let repo = (await run(['-C', root, 'remote', 'get-url', 'origin']))?.trim().match(/github\.com[:/]([^/]+\/[^/.\s]+)/)?.[1] ?? null
-    state.data = { at: now, since, repo, trunk: short, commits: commits.slice(0, 800).map(c => ({ t: c.t, s: c.s.slice(0, 90) })), branches: [...merged, ...open] }
+    const tagLines = (await run(['-C', root, 'for-each-ref', '--sort=-creatordate', '--count=60', '--format=%(refname:short)%09%(creatordate:unix)', 'refs/tags'])) || ''
+    const tags = []
+    for (const l of tagLines.split('\n')) {
+      const [name, t] = l.split('\t'), m = name?.match(/^(.*?)[-_/@]?v?(\d+(?:\.\d+){1,3}[\w.+-]*)$/)
+      if (m && +t * 1000 >= since && tags.length < TAGS) tags.push({ name, product: m[1].replace(/[-_/@]+$/, ''), version: m[2], t: +t * 1000 })
+    }
+    const who = (await run(['-C', root, 'config', 'user.name']))?.trim() || (me && (await run(['-C', root, 'log', '-1', `--author=${me}`, '--format=%an', trunk]))?.trim()) || ''
+    const initials = who.split(/\s+/).map(w => w[0] || '').join('').slice(0, 2).toUpperCase() || null
+    state.data = { at: now, since, repo, trunk: short, me: initials, tags, commits: commits.slice(0, 800).map(c => ({ t: c.t, s: c.s.slice(0, 90) })), branches: [...merged, ...open] }
     state.at = now
   } catch { state.at = now - REFRESH_MS + RETRY_MS }
   state.busy = false
