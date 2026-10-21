@@ -5,8 +5,8 @@
 // runs (workflow · branch · wait). Hover a passenger, a car, the board or the entrance; click opens the run.
 // ?demo=cisubway fakes a queue that builds up and drains.
 import { R, pixText } from '../draw.js'
-const SX0 = -300, SX1 = -10, CEIL = 22, HALL = 26, PLAT = 84, TUN0 = 92, RAIL = 121, TUN1 = 126
-export const WALL_MAP = { x: -298, y: 48, w: 144, h: 29 }   // the back wall between the name plates and the benches, left of the stairs (branch-metro)
+const SX0 = -380, SX1 = -10, CEIL = 22, HALL = 26, PLAT = 84, TUN0 = 92, RAIL = 121, TUN1 = 126
+export const WALL_MAP = { x: -377, y: 39, w: 225, h: 38 }   // the back wall between the name plates and the benches, left of the stairs (branch-metro)
 const TOP = { x: -92, y: HALL }, FOOT = { x: -150, y: PLAT }, BOARD = { x: -84, y: 30, w: 70, h: 32 }, TOTEM = -84
 const LOOP = 900, GAP = 3, SLOW = 26, FAST = 64, OUT = 150, WALK = 26, DELAY = 5
 const LINES = ['#d8452e', '#2f78c8', '#e8a21a', '#3a9a52', '#9a4ab8', '#1aa0a8', '#c8508a', '#8a7a5a']
@@ -116,11 +116,11 @@ export default function init(api, tower) {
     c.fillStyle = '#d6cdb6'; for (let y = HALL + 5; y < PLAT; y += 5) c.fillRect(SX0, y, SX1 - SX0, 1)
     for (let y = HALL; y < PLAT; y += 5) for (let x = SX0 + ((y / 5) % 2) * 4; x < SX1; x += 8) c.fillRect(x, y, 1, 5)
     R(c, '#2f78c8', SX0, PLAT - 26, SX1 - SX0, 3); R(c, '#d8452e', SX0, PLAT - 23, SX1 - SX0, 1)
-    R(c, '#1a3a7a', -280, 36, 60, 11); R(c, '#f4f0e6', -279, 37, 58, 9); R(c, '#1a3a7a', -278, 38, 56, 7); pixText(c, 'SKYLINE', -270, 39, '#f4f0e6')
-    R(c, '#1a3a7a', -200, 36, 26, 11); R(c, '#f4f0e6', -199, 37, 24, 9); R(c, '#d8452e', -198, 38, 22, 7); pixText(c, 'GHA', -193, 39, '#fff')
+    R(c, '#1a3a7a', -304, 27, 38, 11); R(c, '#f4f0e6', -303, 28, 36, 9); R(c, '#1a3a7a', -302, 29, 34, 7); pixText(c, 'SKYLINE', -299, 30, '#f4f0e6')
+    R(c, '#1a3a7a', -248, 27, 26, 11); R(c, '#f4f0e6', -247, 28, 24, 9); R(c, '#d8452e', -246, 29, 22, 7); pixText(c, 'GHA', -241, 30, '#fff')
     for (let x = SX0 + 20; x < SX1; x += 50) { R(c, '#3a3640', x, HALL, 1, 3); R(c, '#fff4c8', x - 4, HALL + 3, 9, 2) }
     // benches along the back wall
-    for (const bx of [-262, -214]) { R(c, '#7a5a3a', bx, PLAT - 7, 22, 2); R(c, '#4a3a2a', bx + 2, PLAT - 5, 2, 5); R(c, '#4a3a2a', bx + 18, PLAT - 5, 2, 5) }
+    for (const bx of [-340, -262, -214]) { R(c, '#7a5a3a', bx, PLAT - 7, 22, 2); R(c, '#4a3a2a', bx + 2, PLAT - 5, 2, 5); R(c, '#4a3a2a', bx + 18, PLAT - 5, 2, 5) }
     // the platform: its slab and the yellow edge, the buffer stop at the tunnel's end
     R(c, '#8a867e', SX0, PLAT, SX1 - SX0, 6); R(c, '#e8c23a', SX0, PLAT, SX1 - SX0, 1); R(c, '#6a665e', SX0, PLAT + 5, SX1 - SX0, 1)
     c.fillStyle = '#2a2630'; for (let x = SX0 + 2; x < SX1; x += 4) c.fillRect(x, PLAT + 1, 2, 1)

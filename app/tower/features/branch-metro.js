@@ -8,7 +8,7 @@ import { R, pixText } from '../draw.js'
 
 const COLS = ['#d8452e', '#2f78c8', '#e8a21a', '#3a9a52', '#9a4ab8', '#1aa0a8', '#c8508a', '#e86a1a', '#5a6ad8', '#8a7a5a']
 const TRUNK = '#22252e', INK = '#3a3640', PAPER = '#f4f0e6', LIT = '#ffe14a'
-const HEAD = 6, TY = M.y + 17, LANES = [-4, 4, -7, 7, -10, 10]
+const HEAD = 6, TY = M.y + 22, LANES = [-5, 5, -10, 10, -14, 14]
 const PX0 = M.x + 5, PX1 = M.x + M.w - 7
 const H = 3600_000, DAY = 24 * H
 const ago = ms => { const m = Math.max(0, Math.round(ms / 60000)); return m < 60 ? m + 'm' : m < 48 * 60 ? Math.round(m / 60) + 'h' : Math.round(m / 1440) + 'd' }
@@ -22,7 +22,7 @@ export default function init(api, tower) {
   tower.on('snapshot', snap => { if (demo) snap.branchMetro = fake(Date.now()) })
   tower.on('sync', snap => { data = snap.branchMetro || null; map = data ? layout(data, Date.now()) : null })
   tower.on('mode', on => {
-    if (on && demo && !params.get('towerzoom')) setTimeout(() => tower.flyTo({ x: M.x + M.w / 2, y: M.y + M.h / 2 }, 7), 600)
+    if (on && demo && !params.get('towerzoom')) setTimeout(() => tower.flyTo({ x: M.x + M.w / 2, y: M.y + M.h / 2 }, 5), 600)
   })
 
   // ---------- layout: time runs left to right on a square-root scale, so the last hours get room ----------
