@@ -96,8 +96,9 @@ street.
 - **The street is empty.** Run `gh auth status`. The repo is taken from the `origin` remote of your sessions'
   working directories, so it needs to be on GitHub, and your account needs read access to it.
 - **"Port 4747 is in use".** It's already running, or something else holds the port. Use `--port 4800`.
-- **Clicking a floor says it isn't in an Orca terminal.** Jumping to a session's terminal needs
-  Orca; everything else works without it.
+- **Clicking a floor says it isn't in an Orca or herdr terminal.** Jumping to a session's terminal, and the queue of
+  sessions waiting on a permission prompt, need the session to run in [Orca](https://www.onorca.dev) or
+  [herdr](https://herdr.dev); everything else works without them.
 
 ## What's in the building
 

@@ -1,5 +1,5 @@
 // The user at his desk in the CEO office: who needs him ('attention'), his ringing phone and desk note, and opening the
-// first of them in Orca. Drawn by render.js; the note card's text is overlay.js's.
+// first of them in its terminal. Drawn by render.js; the note card's text is overlay.js's.
 export function createCeo(st) {
   const { api } = st
   const needsPaul = () => (st.snap?.sessions || []).filter(s => s.state === 'attention' && s.running !== false)
@@ -49,7 +49,7 @@ export function createCeo(st) {
     if (!s) return api.toast('Nobody needs you right now')
     try {
       const r = await fetch('/api/focus', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id: s.id }) })
-      const j = await r.json(); api.toast(r.ok ? `Opened ${s.title} in Orca` : j.error)
+      const j = await r.json(); api.toast(r.ok ? `Opened ${s.title} in ${j.app || 'its terminal'}` : j.error)
     } catch { api.toast('Agentopolis server is offline') }
   }
   return { needsPaul, drawPaul, drawDesk, focusFirst }

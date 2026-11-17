@@ -228,7 +228,7 @@ export default function init(api, tower) {
     if (card) return `<div class="t">🕘 Time card · ${esc(card.title)}</div>`
       + `<div>${card.in ? `Clocked in <b>${hhmm(card.in)}</b>` : 'Carried over — nothing written today yet'}${card.out ? ` · out <b>${hhmm(card.out)}</b>` : ''}</div>`
       + (card.in ? `<div>${worked(card)} on the clock · ${card.hours.length} hour${card.hours.length === 1 ? '' : 's'} punched</div><div class="m">hours: ${holes(card)}</div>` : '')
-      + `<div class="m">↗ click to open in Orca</div>`
+      + `<div class="m">↗ click to open its terminal</div>`
     if (!inR(w, rackRect(), 1) && !inR(w, clockRect(), 1)) return null
     const l = list()
     return `<div class="t">🕘 Time clock — ${l.length} card${l.length === 1 ? '' : 's'}${late() ? ' · late shift' : ''}</div>${l.map(line).join('')}<div class="m">one hole per hour with transcript activity today</div>`

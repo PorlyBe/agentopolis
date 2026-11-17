@@ -83,7 +83,7 @@ export default function init(api, tower) {
     for (const [id, n] of notes) if (inR(w, rectOf(id))) return `<div class="t">${api.esc(n.title)}</div><div class="m">${n.calls} tool calls in the transcript</div>`
   })
 
-  // click: return true to consume it. focusSession opens the session's terminal (when it runs in Orca).
+  // click: return true to consume it. focusSession opens the session's terminal (when it runs in Orca or herdr).
   tower.on('click', w => {
     for (const [id, n] of notes) if (inR(w, rectOf(id))) { tower.focusSession(n.session); return true }
     return false

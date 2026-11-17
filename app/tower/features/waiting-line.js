@@ -1,7 +1,7 @@
 // waiting-line: sessions waiting on the user ('waiting' — their turn is over — or 'attention') walk up to the CEO office
 // and queue left of his desk behind a velvet rope, longest wait at the front. Each says what it last asked
 // (snap ext['waiting-line'], or the permission it needs): the front bubble in full, the rest shortened, hover for
-// the whole line, click to open that session in Orca. Answered, they ride home. The phone keeps ringing for
+// the whole line, click to open that session's terminal. Answered, they ride home. The phone keeps ringing for
 // 'attention' (ceo.js); here those bubbles are red. ?demo=waitingline (or the old waitline) fakes a line that moves.
 import { IX } from '../building.js'
 
@@ -165,7 +165,7 @@ export default function init(api, tower) {
     const s = hit(person, m); if (!s) return null
     const i = line.indexOf(s), att = s.state === 'attention'
     return `<div class="t">${esc(s.title)}</div><div class="m">${i === 0 ? 'next in line' : `#${i + 1} in line`} · waiting ${mins(Date.now() - sinceOf(s))}${att ? ' · the phone is ringing' : ''}</div>`
-      + `<div><i class="s" style="background:${colorOf(s)}"></i>${esc(says(s))}</div><div class="m">${s.running ? '↗ click to open in Orca' : 'no longer running'}</div>`
+      + `<div><i class="s" style="background:${colorOf(s)}"></i>${esc(says(s))}</div><div class="m">${s.running ? '↗ click to open its terminal' : 'no longer running'}</div>`
   })
   tower.on('click', (w, person, m) => { const s = hit(person, m); if (!s) return false; tower.focusSession(s); return true })
 

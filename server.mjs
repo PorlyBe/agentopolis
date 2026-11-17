@@ -5,6 +5,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import os from 'node:os'
 import { execFile } from 'node:child_process'
+import { ORCA, HERDR, terminalOf } from './server/lib/terminal.mjs'
 
 const args = process.argv.slice(2)
 const flag = (name, dflt) => {
@@ -16,7 +17,6 @@ const DEMO = args.includes('--demo') // synthetic data only: no transcripts, git
 const HOST = '127.0.0.1'
 const PROJECTS = path.join(os.homedir(), '.claude', 'projects')
 const LIVE_SESSIONS = path.join(os.homedir(), '.claude', 'sessions') // <pid>.json per running Claude
-const ORCA = process.env.ORCA_CLI_BIN_DIR ? path.join(process.env.ORCA_CLI_BIN_DIR, 'orca') : 'orca'
 const AGENT_LINGER_MS = 45_000 // a finished subagent stays this long so it can walk out
 const AGENT_STALE_MS = 10 * 60_000 // an unfinished subagent silent this long is dropped
 const WORKING_STALE_MS = 5 * 60_000
@@ -345,15 +345,6 @@ function transcriptFiles(id, cwd, now) {
   return [...(fileIndex.get(id) || [])]
 }
 
-// An Orca terminal exports ORCA_TERMINAL_HANDLE, and the Claude process started in it inherits it.
-function orcaTerminal(pid) {
-  return new Promise(resolve => {
-    execFile('ps', ['eww', '-o', 'command=', '-p', String(pid)], (err, out) => {
-      resolve(err ? null : out.match(/ORCA_TERMINAL_HANDLE=(term_[0-9a-f-]+)/)?.[1] ?? null)
-    })
-  })
-}
-
 async function focus(req, res) {
   // Only this page may ask: a cross-site page could otherwise POST here too.
   if (req.headers['sec-fetch-site'] !== 'same-origin') return send(res, 403, { error: 'same-origin only' })
@@ -363,11 +354,14 @@ async function focus(req, res) {
   if (!/^[0-9a-f-]{36}$/.test(id ?? '')) return send(res, 400, { error: 'bad session id' })
   const pid = liveSessions().get(id)
   if (!pid) return send(res, 404, { error: 'This session is no longer running' })
-  const handle = await orcaTerminal(pid)
-  if (!handle) return send(res, 404, { error: 'This session is not running in an Orca terminal' })
-  execFile(ORCA, ['terminal', 'switch', '--terminal', handle, '--json'], (err, _out, stderr) => {
+  const term = await terminalOf(pid)
+  if (!term) return send(res, 404, { error: 'This session is not running in an Orca or herdr terminal' })
+  const [cmd, argv] = term.app === 'Orca'
+    ? [ORCA, ['terminal', 'switch', '--terminal', term.id, '--json']]
+    : [HERDR, ['agent', 'focus', term.id]]
+  execFile(cmd, argv, (err, _out, stderr) => {
     if (err) send(res, 502, { error: (stderr || err.message).trim().split('\n')[0] })
-    else send(res, 200, { ok: true })
+    else send(res, 200, { ok: true, app: term.app })
   })
 }
 
