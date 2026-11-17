@@ -5,7 +5,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import os from 'node:os'
 import { execFile } from 'node:child_process'
-import { ORCA, HERDR, terminalOf } from './server/lib/terminal.mjs'
+import { ORCA, HERDR, terminalOf, raiseHerdr } from './server/lib/terminal.mjs'
 
 const args = process.argv.slice(2)
 const flag = (name, dflt) => {
@@ -360,8 +360,9 @@ async function focus(req, res) {
     ? [ORCA, ['terminal', 'switch', '--terminal', term.id, '--json']]
     : [HERDR, ['agent', 'focus', term.id]]
   execFile(cmd, argv, (err, _out, stderr) => {
-    if (err) send(res, 502, { error: (stderr || err.message).trim().split('\n')[0] })
-    else send(res, 200, { ok: true, app: term.app })
+    if (err) return send(res, 502, { error: (stderr || err.message).trim().split('\n')[0] })
+    if (term.app === 'herdr') raiseHerdr(term.bundle)
+    send(res, 200, { ok: true, app: term.app })
   })
 }
 
