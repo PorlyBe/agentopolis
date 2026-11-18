@@ -213,7 +213,7 @@ export default function init(api, tower) {
     const mins = Math.max(0, Math.round((Date.now() - b.c.since) / 60000))
     const files = (b.c.files || []).slice(0, 8).map(f => `<div style="font-family:ui-monospace,Menlo,monospace">${esc(f)}</div>`).join('')
     return `<div class="t">Merge conflict · ${esc(b.s.title)}</div><div class="m">${esc(b.c.op || 'merge')} hit a conflict${mins ? ` ${mins}m ago` : ''}${b.who !== b.sid ? ' · a subagent' : ''}${b.phase === 'end' ? ` · ${b.how}` : ''}</div>${files}`
-      + `<div class="m" style="font-family:ui-monospace,Menlo,monospace;white-space:pre-wrap;max-width:420px">${esc(b.c.cmd || '')}</div><div class="m">click to open in Orca</div>`
+      + `<div class="m" style="font-family:ui-monospace,Menlo,monospace;white-space:pre-wrap;max-width:420px">${esc(b.c.cmd || '')}</div><div class="m">click to open its terminal</div>`
   })
   tower.on('click', w => { const b = hit(w); if (!b) return false; tower.focusSession(b.s); return true })
 

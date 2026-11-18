@@ -2,7 +2,7 @@
 // a post room and a server room underneath and the GitHub engineers' buildings along the street. It is the whole view.
 // ?demo=towerlife sends everyone on breaks; ?towerzoom=<z>|min&towerat=<floor index> starts on a close-up or the whole street.
 // the user sits in the CEO office under the roof; when a session needs him ('attention') his desk phone rings and a note
-// lists who — clicking either opens the first one in Orca.
+// lists who — clicking either opens the first one's terminal.
 //
 // ===== Tower feature API (app/tower/features/*.js: export default function init(api, tower), tower === api.tower) =====
 // Coordinates: world pixels. x = 0 is the tower's left outer wall (interior tower.interior.x0..x1 = 8..488), the street
@@ -59,7 +59,7 @@
 // Camera: tower.flyTo(floorId | { x, y }, zoom?), tower.follow(personId | null, zoom?), tower.following, tower.fit(),
 //   tower.zoom, tower.worldToScreen(x, y) → { x, y }, tower.screenToWorld(sx, sy), tower.canvas (on-screen),
 //   tower.world (the unscaled world canvas of the last frame). Helpers: tower.font(px, weight), fitText(t, maxPx, font),
-//   bubble(sx, sy, text, color, fs?), tip(html), focusSession(session) (open in Orca), tower.snapshot, tower.active, tower.Z.
+//   bubble(sx, sy, text, color, fs?), tip(html), focusSession(session) (open its terminal), tower.snapshot, tower.active, tower.Z.
 // Floors coming and going: tower.setOpen(floorId, k 0..1 | null) squeezes a floor to k of its height (f.open = k; the
 //   floors above slide with it), tower.hide(sessionId, on) drops a floor from the plan, tower.vacate(sessionId, on) takes
 //   its people out of the crowd (those steered with sendTo keep walking until released, then leave).
@@ -216,7 +216,7 @@ export default async function init(api) {
     font, fitText: overlay.fitText, bubble: (x, y, text, color, fs = Math.max(10, Math.min(16, 5.6 * cam.zoom))) => overlay.bubble(x, y, text, color, fs), tip: input.showTip,
     focusSession: async s => {
       if (!s?.running) return api.toast(`${s?.title || 'That session'} is no longer running`)
-      try { const r = await fetch('/api/focus', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id: s.id }) }); const j = await r.json(); api.toast(r.ok ? `Opened ${s.title} in Orca` : j.error) } catch { api.toast('Agentopolis server is offline') }
+      try { const r = await fetch('/api/focus', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id: s.id }) }); const j = await r.json(); api.toast(r.ok ? `Opened ${s.title} in ${j.app || 'its terminal'}` : j.error) } catch { api.toast('Agentopolis server is offline') }
     },
     // floors coming and going: setOpen(floorId, 0..1 | null) squeezes a floor, hide(sessionId, on) drops it from the
     // plan, vacate(sessionId, on) takes its people out of the crowd (those a feature steers keep walking until released)

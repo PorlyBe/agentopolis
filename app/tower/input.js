@@ -63,11 +63,11 @@ export function createInput(st, camera, ceo, overlay) {
       const state = a?.leaving ? 'done' : d.state, doing = d.tool ? `${api.toolLabel(d.tool)}${d.detail ? ' — ' + d.detail : ''}` : state
       const where = a?.brk?.spot?.floor ? ` · on a break (${a.brk.spot.floor})` : a?.liftPhase ? ' · in the elevator' : ''
       html = !a || a.kind === 'session'
-        ? `<div class="t">${esc(d.title)}</div><div class="m">${esc(d.worktree || d.branch || '')}</div><div>${sw(api.COLORS[state] || api.COLORS.idle)}${esc(doing)}</div><div class="m">${d.agents.length} subagent(s) · ${ago(d.lastActivity)}${where}</div><div class="m">${d.running ? '↗ click to open in Orca' : 'no longer running'}</div>`
+        ? `<div class="t">${esc(d.title)}</div><div class="m">${esc(d.worktree || d.branch || '')}</div><div>${sw(api.COLORS[state] || api.COLORS.idle)}${esc(doing)}</div><div class="m">${d.agents.length} subagent(s) · ${ago(d.lastActivity)}${where}</div><div class="m">${d.running ? '↗ click to open its terminal' : 'no longer running'}</div>`
         : `<div class="t">${esc(d.description || d.type)}</div><div class="m">${esc(d.type)}${d.workflow ? ' · ' + esc(d.workflow) : ''}${d.phase ? ' · ' + esc(d.phase) : ''}</div><div>${sw(api.COLORS[state] || api.COLORS.idle)}${esc(a.leaving ? 'done' : doing)}</div><div class="m">${ago(d.lastActivity)}${where}</div>`
     } else if (hit.ceo) {
       const list = ceo.needsPaul()
-      html = `<div class="t">${esc(api.owner)} · CEO</div>${list.length ? list.slice(0, 6).map(s => `<div>${sw(api.COLORS.attention || '#ef5a5a')}${esc(s.title)} — ${esc(s.attention?.label || 'needs you')}</div>`).join('') + '<div class="m">↗ click the phone or the note to open the first in Orca</div>' : '<div class="m">nobody needs you right now — the phone is quiet</div>'}`
+      html = `<div class="t">${esc(api.owner)} · CEO</div>${list.length ? list.slice(0, 6).map(s => `<div>${sw(api.COLORS.attention || '#ef5a5a')}${esc(s.title)} — ${esc(s.attention?.label || 'needs you')}</div>`).join('') + '<div class="m">↗ click the phone or the note to open the first one in its terminal</div>' : '<div class="m">nobody needs you right now — the phone is quiet</div>'}`
     } else if (hit.job) {
       const j = hit.job
       html = `<div class="t">${esc(j.label)}</div><div class="m">${esc(j.kind)} · ${esc(j.title || '')}</div><div>${sw(j.failed ? '#ef5a5a' : '#5fd17a')}${j.failed ? 'failed' : 'running since ' + ago(j.since)}</div>`
@@ -89,7 +89,7 @@ export function createInput(st, camera, ceo, overlay) {
       if (!s.running) return api.toast(`${s.title} is no longer running`)
       try {
         const r = await fetch('/api/focus', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id: s.id }) })
-        const j = await r.json(); api.toast(r.ok ? `Opened ${s.title} in Orca` : j.error)
+        const j = await r.json(); api.toast(r.ok ? `Opened ${s.title} in ${j.app || 'its terminal'}` : j.error)
       } catch { api.toast('Agentopolis server is offline') }
       return
     }

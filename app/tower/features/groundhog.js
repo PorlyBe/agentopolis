@@ -119,7 +119,7 @@ export default function init(api, tower) {
     const q = person && walkers.get(person.id); if (!q) return null
     const l = q.loop, mins = Math.max(1, Math.round((l.last - l.first) / 60000))
     return `<div class="t">Groundhog Day · ${esc(q.s.title)}</div><div class="m">${l.count} failed tries of the same ${esc(l.tool)} call in ${mins}m${person.id !== q.s.id ? ' · a subagent' : ''}</div>`
-      + `<div style="font-family:ui-monospace,Menlo,monospace;white-space:pre-wrap;max-width:420px">${esc(l.label)}</div><div class="m">time to step in? click to open in Orca</div>`
+      + `<div style="font-family:ui-monospace,Menlo,monospace;white-space:pre-wrap;max-width:420px">${esc(l.label)}</div><div class="m">time to step in? click to open its terminal</div>`
   })
   tower.on('click', (w, person) => { const q = person && walkers.get(person.id); if (!q) return false; tower.focusSession(q.s); return true })
 

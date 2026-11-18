@@ -12,7 +12,7 @@ export default function init(api, tower) {
   const nameOf = p => p.kind === 'session' ? p.data?.title : (p.data?.description || p.data?.type)
   let shift = false, lastUp = null, prevUp = null
   addEventListener('pointerup', e => { shift = e.shiftKey; prevUp = lastUp; lastUp = { t: e.timeStamp, x: e.clientX, y: e.clientY } }, true)
-  // the second click of a double-click must not ask Orca (or the panel) twice
+  // the second click of a double-click must not ask the terminal app (or the panel) twice
   const second = () => !!(prevUp && lastUp.t - prevUp.t < 450 && Math.hypot(lastUp.x - prevUp.x, lastUp.y - prevUp.y) < 8)
 
   // ---------- the side panel: side-panel.js's own, opened from here in tower mode ----------

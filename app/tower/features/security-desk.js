@@ -2,7 +2,7 @@
 // prompt, a hook or harness block, an auto-mode classifier denial. A guard keeps a desk at the right end of the lobby,
 // before the elevator, with a cork board of today's stops behind him. A fresh stop brings the one who tried it down to the
 // desk: the guard holds up a hand and a big red DENIED stamp lands on a new slip on the board. Hover the board for the
-// list (session, agent, tool), a slip for that one stop; click opens the session in Orca. ?demo=securitydesk fakes stops.
+// list (session, agent, tool), a slip for that one stop; click opens the session's terminal. ?demo=securitydesk fakes stops.
 import { IX } from '../building.js'
 import { R } from '../draw.js'
 
@@ -170,7 +170,7 @@ export default function init(api, tower) {
   tower.on('hover', (w, person) => {
     if (person) return null
     const s = slipAt(w)
-    if (s) return `<div class="t">${KIND[s.kind]?.icon || ''} DENIED · ${esc(KIND[s.kind]?.name || s.kind)}</div><div><b>${esc(s.tool || '?')}</b>${s.what ? ' · ' + esc(s.what) : ''}</div><div class="m">${esc(s.reason || '')}</div><div class="m">${time(s.t)} · ${esc(who(s))} · ↗ click to open in Orca</div>`
+    if (s) return `<div class="t">${KIND[s.kind]?.icon || ''} DENIED · ${esc(KIND[s.kind]?.name || s.kind)}</div><div><b>${esc(s.tool || '?')}</b>${s.what ? ' · ' + esc(s.what) : ''}</div><div class="m">${esc(s.reason || '')}</div><div class="m">${time(s.t)} · ${esc(who(s))} · ↗ click to open its terminal</div>`
     const b = board()
     if (!b || !(inR(w, b, 1) || onDesk(w))) return null
     const list = [...stops].reverse()
